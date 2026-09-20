@@ -1,0 +1,62 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+        working-directory: app
+
+      - run: npm run typecheck
+        working-directory: app
+
+      - run: npm run build
+        working-directory: app
+        env:
+          # Absolute URL of the Cloudflare Worker that runs Ask Siraj.
+          # Set it in Settings > Secrets and variables > Actions > Variables
+          # as CHAT_ENDPOINT. Without it the app still works; the suggested
+          # question pills answer offline from bundled text.
+          #
+          # NOTE: OPENAI_API_KEY must NOT be used here. An Actions secret
+          # baked into a static build is public. The key belongs on the
+          # Worker only. See AGENTS.md section 6.
+          VITE_CHAT_ENDPOINT: ${{ vars.CHAT_ENDPOINT }}
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

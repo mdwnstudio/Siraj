@@ -16,7 +16,10 @@ export interface AskResult {
   code?: string
 }
 
-const ENDPOINT = '/api/chat'
+/* Same-origin by default (Vercel/Netlify). On GitHub Pages the site is
+   static, so the function lives elsewhere: set VITE_CHAT_ENDPOINT to the
+   Worker's absolute URL at build time. */
+const ENDPOINT = import.meta.env.VITE_CHAT_ENDPOINT || '/api/chat'
 
 /* The suggested-question pills answer from bundled text, so the feature
    still demonstrates itself with no server and no network. */

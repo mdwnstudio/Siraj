@@ -37,10 +37,11 @@ h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.2;letter-
 .num{direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
 
 /* ---------- app shell ---------- */
-#root{min-height:100dvh;display:flex;justify-content:center;background:var(--bg)}
+#root{min-height:100dvh;height:100dvh;display:flex;justify-content:center;background:var(--bg);overflow:hidden}
 .shell{
   width:var(--shell);
-  min-height:100dvh;
+  height:100%;
+  min-height:0;
   position:relative;
   display:flex;
   flex-direction:column;
@@ -57,7 +58,8 @@ h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.2;letter-
     padding:24px 0;
   }
   .shell{
-    min-height:min(880px, calc(100dvh - 48px));
+    height:min(880px, calc(100dvh - 48px));
+    min-height:0;
     max-height:min(880px, calc(100dvh - 48px));
     border-radius:38px;
     box-shadow:var(--lift-3), 0 0 0 1px var(--paper-edge);

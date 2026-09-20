@@ -2,13 +2,16 @@ import { memo } from 'react'
 
 export type Mood = 'idle' | 'wave' | 'cheer' | 'think' | 'sad' | 'peek'
 
+/* BASE_URL, not a leading slash: GitHub Pages serves this from /Siraj/,
+   and Vite only rewrites asset paths it can see in HTML and CSS, never
+   plain strings in JS. */
+const B = import.meta.env.BASE_URL
+const MAIN = `${B}img/siraj-main.webp`
+const WAVE = `${B}img/siraj-wave.webp`
+
 const SRC: Record<Mood, string> = {
-  idle: '/img/siraj-main.webp',
-  think: '/img/siraj-main.webp',
-  sad: '/img/siraj-main.webp',
-  peek: '/img/siraj-main.webp',
-  wave: '/img/siraj-wave.webp',
-  cheer: '/img/siraj-wave.webp',
+  idle: MAIN, think: MAIN, sad: MAIN, peek: MAIN,
+  wave: WAVE, cheer: WAVE,
 }
 
 /* Two source images, six moods. The difference is rigging, not artwork:

@@ -1,0 +1,12 @@
+name = "siraj-chat"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# OPENAI_API_KEY is a SECRET, never put it here:
+#   npx wrangler secret put OPENAI_API_KEY
+#
+# Browser CORS allow-list. This is not authentication, so keep the OpenAI
+# project spend cap enabled and add a Cloudflare rate-limit rule if needed.
+[vars]
+ALLOWED_ORIGINS = "https://mdwnstudio.github.io"
+# OPENAI_MODEL = "gpt-5.6-luna"   # only if it differs from DEFAULT_MODEL
