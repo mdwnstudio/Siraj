@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Lantern } from '../icons/SirajIcons'
 
-/* The brand opening. Held just long enough to read, never longer.
-   The yellow here matches the inlined #FEBD01 in index.html, so the
-   handoff from "page loading" to "app running" is seamless. */
+const B = import.meta.env.BASE_URL
+const CHARACTER = `${B}img/siraj-splash.webp`
+const WORDMARK = `${B}img/siraj-wordmark-ar.svg`
+
+/* The brand opening. The artwork and wordmark come directly from the
+   visual identity, and the background matches the source image exactly. */
 export function Splash({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const t = setTimeout(onDone, 1550)
@@ -17,10 +19,22 @@ export function Splash({ onDone }: { onDone: () => void }) {
       exit={{ opacity: 0, scale: 1.06 }}
       transition={{ duration: 0.45, ease: [0.32, 0, 0.67, 0] }}
     >
-      <span className="splash__glow" />
       <div className="splash__mark">
-        <span className="splash__lamp"><Lantern size={120} /></span>
-        <span className="splash__word">سراج</span>
+        <img
+          className="splash__character"
+          src={CHARACTER}
+          alt=""
+          width="900"
+          height="900"
+          fetchPriority="high"
+        />
+        <img
+          className="splash__wordmark"
+          src={WORDMARK}
+          alt="سراج"
+          width="475"
+          height="238"
+        />
       </div>
     </motion.div>
   )

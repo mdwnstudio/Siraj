@@ -162,7 +162,7 @@ export function AskSiraj({
 
       <p className="ask__note">يجيب سراج نقلًا عن مصادر موثوقة فقط.</p>
 
-      <div style={{ paddingBottom: 'calc(14px + var(--safe-b))' }}>
+      <div className="ask__finish">
         <Button block tone={msgs.length ? 'primary' : 'quiet'} onClick={onFinish}>
           {msgs.length ? 'تابع' : 'تخطّي'}
         </Button>
