@@ -1,11 +1,11 @@
-# سراج — Siraj
+# سراج: Siraj
 
 > The Duolingo for learning Islam. A staircase you climb, one step at a time.
 
 Built for a hackathon on the track **«التجارب التفاعلية والرحلة المعرفية للتعريف بالإسلام وتعلمه»**.
 The tech demo covers **أركان الإسلام الخمسة** (the five pillars).
 
-This file is the contract for anyone — human or agent — working on this repo.
+This file is the contract for anyone: human or agent: working on this repo.
 Read it before touching anything.
 
 ---
@@ -129,7 +129,7 @@ Do not add an eighth without a very good reason.
 | **Flame** | الشعلة | Streak. The lamp stays lit. |
 
 Grammar: 24x24 box, solid fills, `currentColor`, rounded corners via the
-fill+stroke trick. They must stay legible at 20px — that is the real constraint.
+fill+stroke trick. They must stay legible at 20px: that is the real constraint.
 
 The droplet-as-oil idea is load-bearing: it is a better metaphor than hearts
 because the lamp is the brand.
@@ -148,21 +148,21 @@ because the lamp is the brand.
 ```
 
 ### Card kinds
-- `fact` — one atomic idea. Optional `term` renders a tap-to-reveal definition.
+- `fact`: one atomic idea. Optional `term` renders a tap-to-reveal definition.
   Optional `art` shows Siraj or one of the seven icons.
-- `quote` — آية or حديث, in the reverent gold frame. **Always cite the source.**
-- `list` — the numbered/iconed list (the five pillars, the five prayers).
+- `quote`: آية or حديث, in the reverent gold frame. **Always cite the source.**
+- `list`: the numbered/iconed list (the five pillars, the five prayers).
 
 ### Exercise kinds (five, all implemented)
 | Kind | Arabic | Mechanic |
 |---|---|---|
-| `order` | رتّب الخطوات | Tap items into sequence. **The signature mechanic** — ritual order (wudu, prayer times) is genuinely what a beginner needs to learn. |
+| `order` | رتّب الخطوات | Tap items into sequence. **The signature mechanic**: ritual order (wudu, prayer times) is genuinely what a beginner needs to learn. |
 | `choice` | اختر الصحيح | Multiple choice, tiles not radio buttons |
 | `boolean` | صح أم خطأ | Two big tiles. Good for misconceptions. |
 | `match` | طابِق | Two columns, tap a pair. Correct pairs pop and vanish. Self-resolving. |
 | `sort` | صنّف | One card at a time, flung into one of two buckets. Self-resolving. |
 
-`match` and `sort` have **no check button** — they resolve as you go. The footer
+`match` and `sort` have **no check button**: they resolve as you go. The footer
 shows a hint instead. If you add a sixth kind, wire it in `grading.ts`,
 `Exercises.tsx`, and the `canCheck` logic in `Lesson.tsx`.
 
@@ -175,13 +175,13 @@ Writing those three is the single highest-value next task.
 
 ## 6. Ask Siraj (the AI)
 
-### Where the key lives — read this before debugging
+### Where the key lives: read this before debugging
 
 `OPENAI_API_KEY` must be set as an **environment variable on the host that runs
 the serverless function** (Vercel / Netlify / Cloudflare project settings).
 
 A **GitHub Actions repo secret does not work for this.** Actions secrets are
-injected only into CI workflow runs — never into a deployed function, and never
+injected only into CI workflow runs: never into a deployed function, and never
 into a browser. Keeping the Actions secret is fine and safe (it is encrypted,
 and safe even in a public repo); it simply is not what powers this endpoint.
 **Set the key in both places.**
@@ -193,11 +193,11 @@ Also set `OPENAI_MODEL` to the exact model id from the OpenAI project.
 
 ### The guardrail: two independent locks
 
-1. **`buildSystemPrompt()`** (`core/ai/systemPrompt.ts`) — instructs the model to
+1. **`buildSystemPrompt()`** (`core/ai/systemPrompt.ts`): instructs the model to
    quote rather than improvise, to follow the salafi manhaj, to refuse anything
    outside the current lesson's taught concepts, to never issue a personal fatwa,
    and to say «لم أجد لهذا جوابًا في مصادري الموثوقة» rather than guess.
-2. **`allowed_domains`** on the `web_search` tool — the model physically cannot
+2. **`allowed_domains`** on the `web_search` tool: the model physically cannot
    read anything outside:
    - `islamqa.info`
    - `dorar.net`
@@ -211,7 +211,7 @@ third belt.
 
 The prompt also receives the learner's current unit, lesson, and the exact
 concepts those cards taught, so "on topic" is defined by what they have actually
-seen — it can never drift from the content.
+seen: it can never drift from the content.
 
 ### The $5 spend cap
 
@@ -238,7 +238,7 @@ questions spend money.
 The content sticks to broadly agreed, introductory-level material and cites every
 آية (surah:ayah) and حديث (collection). Pillar ordering follows حديث جبريل
 (رواه مسلم) so the teaching card and the ordering exercise can never contradict
-each other — if you change one, change both.
+each other: if you change one, change both.
 
 **Before this ships publicly, the content must be reviewed by a qualified person.**
 There is a note to this effect at the top of `lessons.ts` and in the app's
@@ -252,7 +252,7 @@ actually contain.
 
 ## 8. RTL traps that have already bitten us
 
-The app is `dir="rtl"`. These cost real debugging time — do not repeat them.
+The app is `dir="rtl"`. These cost real debugging time: do not repeat them.
 
 - **Centring must be physical.** `inset-inline-start: 50%` + `translateX(-50%)`
   double-shifts in RTL. Use `left: 50%`.
@@ -262,7 +262,7 @@ The app is `dir="rtl"`. These cost real debugging time — do not repeat them.
 - **Numbers need isolation.** `.num` sets `direction: ltr; unicode-bidi: isolate`.
   Any suffix (`٪`, `%`) must live **inside** that span or RTL throws it to the
   far side of the number.
-- **Stats use Western digits** deliberately — they scan far faster. Arabic-Indic
+- **Stats use Western digits** deliberately: they scan far faster. Arabic-Indic
   `٠` renders as a small dot and reads as a rendering bug. `toAr()` is for
   ordinals in prose only.
 - **Gender agreement:** «يومٌ متتالٍ» (singular) vs «أيام متتالية» (plural).
@@ -344,7 +344,7 @@ logo's lettering). Both are in `/Fonts` at the repo root, subset into
 `app/public/fonts`.
 
 Character: **Siraj**, a little lamp with a scholar's cap. Two source images
-(`Siraj Main`, `Siraj Wave`) drive six moods — the difference is **rigging, not
+(`Siraj Main`, `Siraj Wave`) drive six moods: the difference is **rigging, not
 artwork**: squash-and-stretch, tilt and bob in CSS (`.siraj--cheer` etc).
 That is how he feels alive on a 35 KB budget. More poses can be added later as
 images; the mood API in `components/Siraj.tsx` will not need to change.
