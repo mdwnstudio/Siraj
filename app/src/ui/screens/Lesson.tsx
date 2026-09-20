@@ -7,7 +7,7 @@ import type { LessonOutcome } from '../../core/engine/progress'
 import { getLesson } from '../../core/content/lessons'
 import { UNIT_OF } from '../../core/content/path'
 import { useApp, useCalmMotion } from '../state'
-import { Icon, Sparkle, Droplet, Star, Crescent } from '../icons/SirajIcons'
+import { Icon, Sparkle, Droplet, Star, Crescent, type SirajIconName } from '../icons/SirajIcons'
 import { Button, IconButton } from '../components/Button'
 import { ProgressBar } from '../components/Bars'
 import { Siraj } from '../components/Siraj'
@@ -165,6 +165,7 @@ export function Lesson({
             <motion.div key={`e${exAt}`} className="ex"
               initial={{ opacity: 0, x: 34 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -34 }}
               transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}>
+              {!calm && <ExerciseOrbit seed={exAt} />}
               <span className="ex__kicker">
                 <Star size={13} /> تمرين {toAr(exAt + 1)} من {toAr(total)}
               </span>
@@ -255,6 +256,26 @@ export function Lesson({
 
 const GOOD = ['أحسنت!', 'ممتاز!', 'بالضبط!', 'رائع!', 'أصبتَ!', 'تمامًا!']
 const pick = (a: string[], i: number) => a[i % a.length]
+
+const ORBITS: SirajIconName[][] = [
+  ['Crescent', 'Sparkle', 'Lantern'],
+  ['Sun', 'Droplet', 'Star'],
+  ['Flame', 'Crescent', 'Sparkle'],
+  ['Lantern', 'Star', 'Sun'],
+]
+
+function ExerciseOrbit({ seed }: { seed: number }) {
+  const icons = ORBITS[seed % ORBITS.length]
+  return (
+    <div className="ex__orbit" aria-hidden>
+      {icons.map((name, i) => (
+        <span key={name} className={`ex__orb ex__orb--${i + 1}`}>
+          <Icon name={name} size={i === 0 ? 50 : i === 1 ? 38 : 28} />
+        </span>
+      ))}
+    </div>
+  )
+}
 
 /* ---------------- a teaching card ---------------- */
 

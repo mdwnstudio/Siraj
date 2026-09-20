@@ -7,7 +7,7 @@ import {
   currentNodeId, isCompleted, isUnlocked, NODE_INDEX_SAFE,
 } from '../../core/engine/pathView'
 import { useApp, useCalmMotion } from '../state'
-import { Icon, Star, Sparkle, Lantern, Droplet } from '../icons/SirajIcons'
+import { Icon, Star, Sparkle, Lantern, Droplet, Crescent, Flame } from '../icons/SirajIcons'
 import { Siraj } from '../components/Siraj'
 import { Button } from '../components/Button'
 import { Burst } from '../components/Burst'
@@ -24,6 +24,13 @@ const SKY: Record<Unit['tone'], string> = {
 /** how far a step sits off the centre line - a gentle wind, not a zigzag */
 const dx = (i: number) => Math.round(Math.sin(i * 0.82) * 48)
 
+const TRAIL_Y = 100
+const trail = (i: number) => {
+  const x = dx(i - 1) - dx(i)
+  const length = Math.sqrt(TRAIL_Y ** 2 + x ** 2)
+  return { length, angle: -Math.asin(x / length) * (180 / Math.PI) }
+}
+
 export function Home({
   onStart, celebrate, onCelebrated,
 }: {
@@ -34,6 +41,7 @@ export function Home({
   const { progress, dispatch } = useApp()
   const calm = useCalmMotion()
   const [picked, setPicked] = useState<PathNode | null>(null)
+  const [reward, setReward] = useState<PathNode | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const currentRef = useRef<HTMLDivElement>(null)
 
@@ -46,7 +54,7 @@ export function Home({
 
   useLayoutEffect(() => {
     currentRef.current?.scrollIntoView({ block: 'center' })
-  }, [])
+  }, [current])
 
   // the newly-lit step gets a beat of glory, then settles
   useEffect(() => {
@@ -61,34 +69,45 @@ export function Home({
     primeAudio()
     if (n.soon) { sfx.wrong(); return }
     if (!isUnlocked(progress, n.id)) { sfx.wrong(); haptic('wrong'); return }
+    if (n.kind !== 'lesson' && isCompleted(progress, n.id)) { sfx.tap(); return }
     sfx.tap()
     haptic('tap')
     if (n.kind === 'lesson') setPicked(n)
     else {
-      // chests and trophies open straight away - they're a reward, not a task
       sfx.chest()
       haptic('win')
-      dispatch({
-        type: 'set',
-        progress: {
-          ...progress,
-          xp: progress.xp + (n.kind === 'trophy' ? 60 : 30),
-          completed: { ...progress.completed, [n.id]: { stars: 3, bestAccuracy: 1, at: Date.now() } },
-        },
-      })
+      dispatch({ type: 'claim-reward', nodeId: n.id })
+      setReward(n)
     }
   }
+
+  useEffect(() => {
+    if (!reward) return
+    const t = setTimeout(() => setReward(null), 1450)
+    return () => clearTimeout(t)
+  }, [reward])
+
+  const unitDone = unit.nodes.filter((n) => isCompleted(progress, n.id)).length
 
   return (
     <div className="home" style={{ ['--sky-near' as string]: SKY[unit.tone] }}>
       <span className="sky" />
+      <div className="skybits" aria-hidden>
+        <span className="skybit skybit--a"><Crescent size={34} /></span>
+        <span className="skybit skybit--b"><Sparkle size={24} /></span>
+        <span className="skybit skybit--c"><Flame size={28} /></span>
+      </div>
 
       <div className={`unitcard unitcard--${unit.tone}`}>
         <div style={{ flex: 1 }}>
           <div className="unitcard__kicker">الوحدة {toAr(unit.index + 1)}</div>
           <div className="unitcard__title">{unit.title}</div>
+          <div className="unitcard__subtitle">{unit.subtitle}</div>
         </div>
-        <span className="unitcard__ico"><Icon name={unit.icon} size={30} /></span>
+        <div className="unitcard__progress" aria-label={`${unitDone} من ${unit.nodes.length}`}>
+          <span className="unitcard__ico"><Icon name={unit.icon} size={29} /></span>
+          <span className="num">{unitDone}/{unit.nodes.length}</span>
+        </div>
       </div>
 
       <div className="stairwrap scroll" ref={scroller}>
@@ -101,6 +120,8 @@ export function Home({
             const ahead = Math.max(0, i - currentIdx)
             const lesson = n.lessonId ? getLesson(n.lessonId) : undefined
             const lighting = celebrate === n.id
+            const path = trail(i)
+            const rewardXp = n.kind === 'trophy' ? 60 : 30
 
             return (
               <div
@@ -120,25 +141,36 @@ export function Home({
                   ['--dx' as string]: `${dx(i)}px`,
                   ['--op' as string]: String(Math.max(0.3, 1 - ahead * 0.085)),
                   ['--sc' as string]: String(Math.max(0.78, 1 - ahead * 0.028)),
+                  ['--trail-h' as string]: `${path.length}px`,
+                  ['--trail-r' as string]: `${path.angle}deg`,
                 }}
               >
+                {i > 0 && <span className="step__trail" aria-hidden />}
                 {isCurrent && !calm && <span className="step__ring" />}
                 {lighting && <Burst count={18} flavour="gold" spread={130} />}
 
                 <button
                   className="slab"
                   onClick={() => openNode(n)}
-                  disabled={!open}
+                  disabled={!open || (done && n.kind !== 'lesson')}
                   aria-label={lesson?.title ?? n.label ?? 'خطوة'}
                 >
-                  {n.kind === 'chest' ? (
-                    <Sparkle size={24} />
-                  ) : n.kind === 'trophy' ? (
-                    <Lantern size={24} />
-                  ) : lesson ? (
-                    <Icon name={lesson.icon} size={24} />
-                  ) : (
-                    <Droplet size={24} />
+                  <span className="slab__glyph">
+                    {n.kind === 'chest' ? (
+                      <Sparkle size={24} />
+                    ) : n.kind === 'trophy' ? (
+                      <Lantern size={24} />
+                    ) : lesson ? (
+                      <Icon name={lesson.icon} size={24} />
+                    ) : (
+                      <Droplet size={24} />
+                    )}
+                  </span>
+
+                  {n.kind !== 'lesson' && (
+                    <span className="slab__reward">
+                      {done ? 'تم الاستلام' : <>مكافأة <b className="num">+{rewardXp}</b></>}
+                    </span>
                   )}
 
                   {done && n.kind === 'lesson' && (
@@ -153,7 +185,7 @@ export function Home({
 
                 {isCurrent && (
                   <>
-                    <span className="step__cta">ابدأ</span>
+                    <span className="step__cta">{n.kind === 'lesson' ? 'ابدأ' : 'افتح المكافأة'}</span>
                     <span className={`step__siraj${dx(i) > 0 ? ' step__siraj--flip' : ''}`}>
                       <Siraj mood="idle" size={76} flip={dx(i) > 0} />
                     </span>
@@ -166,6 +198,18 @@ export function Home({
       </div>
 
       <AnimatePresence>
+        {reward && (
+          <motion.div className="reward-pop"
+            initial={{ opacity: 0, scale: 0.55, y: 24 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.82, y: -18 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 18 }}>
+            {!calm && <Burst count={28} flavour="gold" spread={180} />}
+            <span className="reward-pop__icon"><Sparkle size={38} /></span>
+            <strong>مكافأة الطريق</strong>
+            <span className="reward-pop__xp"><span className="num">+{reward.kind === 'trophy' ? 60 : 30}</span> نقطة</span>
+          </motion.div>
+        )}
         {picked && (
           <StepSheet
             node={picked}
