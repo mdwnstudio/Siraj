@@ -49,21 +49,32 @@ cd app && npm run build     # -> app/dist
 
 ~147 KB gzipped, fonts subset to woff2, artwork in WebP.
 
-## Ask Siraj setup
+## Deploying
 
-The assistant runs through a serverless proxy (`api/chat.ts`) so the API key
-never reaches the browser. Set on your **hosting provider**:
+The site is static and goes to **GitHub Pages**. Ask Siraj needs a secret, and
+Pages cannot hold one, so the assistant runs on a small **Cloudflare Worker**
+(free tier). Pushing to `main` deploys the site automatically.
 
+```bash
+# 1. the assistant
+cd worker
+npm ci
+npm run deploy
+npx wrangler secret put OPENAI_API_KEY      # paste the key, it never touches the repo
+
+# 2. tell the site where it lives
+#    repo Settings > Secrets and variables > Actions > Variables
+#    CHAT_ENDPOINT = https://siraj-chat.<subdomain>.workers.dev
+
+# 3. Settings > Pages > Source: GitHub Actions, then push
 ```
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=<model id from your OpenAI project>
-```
 
-> A GitHub Actions repo secret will **not** reach the deployed function or the
-> browser. Set the key in the hosting provider's environment variables too.
+Without step 1 the app still works end to end; the suggested-question pills
+answer from bundled text with no network call.
 
-Without it, the app works fully; the suggested-question pills answer from
-bundled text offline.
+> Do **not** put `OPENAI_API_KEY` in an Actions secret expecting it to work.
+> Actions secrets never reach a deployed function or a browser, and baking one
+> into a static build publishes it. The key belongs on the Worker only.
 
 ## Structure
 

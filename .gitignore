@@ -8,5 +8,6 @@ dist/
 .DS_Store
 ._*
 .vercel
+.wrangler/
 *.log
 *.tsbuildinfo

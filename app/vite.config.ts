@@ -1,8 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
-  plugins: [react()],
+/* GitHub Pages serves a project site from /<repo>/, so the production
+   build needs that prefix. Override with SIRAJ_BASE=/ when moving to a
+   custom domain or another host. */
+const BASE = process.env.SIRAJ_BASE ?? '/Siraj/'
+
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? BASE : '/',
   build: {
     target: 'es2020',
     cssCodeSplit: false,
@@ -15,4 +20,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

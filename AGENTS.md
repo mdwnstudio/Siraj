@@ -177,19 +177,56 @@ Writing those three is the single highest-value next task.
 
 ### Where the key lives: read this before debugging
 
-`OPENAI_API_KEY` must be set as an **environment variable on the host that runs
-the serverless function** (Vercel / Netlify / Cloudflare project settings).
+**GitHub Pages is static hosting. It cannot run `api/chat.ts`, and there is
+nowhere on Pages to hide a key.** Anything shipped to the browser is public, and
+an exposed OpenAI key gets drained within hours. So the deployment is split:
 
-A **GitHub Actions repo secret does not work for this.** Actions secrets are
-injected only into CI workflow runs: never into a deployed function, and never
-into a browser. Keeping the Actions secret is fine and safe (it is encrypted,
-and safe even in a public repo); it simply is not what powers this endpoint.
-**Set the key in both places.**
+| piece | host | holds the key? |
+|---|---|---|
+| the site (`app/dist`) | GitHub Pages | no |
+| Ask Siraj (`server/chatHandler.ts`) | Cloudflare Worker | **yes** |
 
-Never put the key in client code. Anything shipped to the browser is public and
-an exposed OpenAI key gets drained within hours.
+The handler lives in `server/chatHandler.ts` and is shared verbatim by two thin
+entries: `worker/src/index.ts` (Cloudflare) and `api/chat.ts` (Vercel/Netlify,
+kept for portability). Only one needs to be deployed.
 
-Also set `OPENAI_MODEL` to the exact model id from the OpenAI project.
+Set on the **Worker**, never in the repo and never in the build:
+
+```bash
+cd worker
+npx wrangler secret put OPENAI_API_KEY
+```
+
+Set on the **repo** (Settings > Secrets and variables > Actions > *Variables*):
+
+```
+CHAT_ENDPOINT = https://siraj-chat.<subdomain>.workers.dev
+```
+
+That is a public URL, so it is a variable and not a secret. The build bakes it
+in as `VITE_CHAT_ENDPOINT`.
+
+> A GitHub **Actions secret** never reaches a deployed function or a browser.
+> It is encrypted and safe to keep, but it cannot power this endpoint, and
+> baking it into a static build would publish it. The workflow deliberately
+> does not read `OPENAI_API_KEY`.
+
+**The model id** is `DEFAULT_MODEL` in `server/chatHandler.ts`. The OpenAI API
+requires a model name on every request even when a project permits only one, so
+the id string still has to be sent. Override per-deployment with `OPENAI_MODEL`.
+
+**CORS:** the site and the Worker are different origins, so `ALLOWED_ORIGINS` in
+`worker/wrangler.toml` must list the Pages origin. This blocks other browser
+origins from reading responses, but it is not authentication. Keep the OpenAI
+project spend cap enabled, and add a Cloudflare rate-limit rule if abuse becomes
+a concern.
+
+**Base path:** Pages serves a project site from `/Siraj/`, so `vite.config.ts`
+sets that as the production `base`. Vite rewrites asset URLs in HTML and CSS
+automatically, but **not plain strings in JS** - `components/Siraj.tsx` builds
+its image paths from `import.meta.env.BASE_URL` for exactly this reason. If you
+add an asset path in JS, do the same. Moving to a custom domain means
+`SIRAJ_BASE=/`.
 
 ### The guardrail: two independent locks
 
@@ -359,8 +396,10 @@ Light theme by default. Dark mode exists and is selectable in Settings, but
 Roughly in priority order.
 
 1. **Write units ٣ الزكاة, ٤ الصوم, ٥ الحج.** The stair already shows them.
-2. **Wire the deployment env vars** (`OPENAI_API_KEY`, `OPENAI_MODEL`) and verify
-   the live Ask Siraj path end to end. Only the canned pills are proven today.
+2. **Wire the deployment env vars** (`OPENAI_API_KEY` on the Worker and
+   `CHAT_ENDPOINT` in GitHub Actions) and verify the live Ask Siraj path end to
+   end. The default model is `gpt-5.6-luna`; only the canned pills are proven
+   today.
 3. **Arabic content review by a qualified person.** Blocking for public release.
 4. Real localisation. The language picker shows eight languages; all currently
    open Arabic. `progress.language` is already stored.
