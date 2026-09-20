@@ -1,0 +1,87 @@
+@import './tokens.css';
+@import './app.css';
+
+/* ---------- fonts ---------- */
+@font-face{font-family:'Ping';src:url('/fonts/ping-regular.woff2')format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Ping';src:url('/fonts/ping-medium.woff2')format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'Ping';src:url('/fonts/ping-bold.woff2')format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'Ping';src:url('/fonts/ping-black.woff2')format('woff2');font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:'Norsal';src:url('/fonts/norsal.woff2')format('woff2');font-weight:400 900;font-style:normal;font-display:swap}
+
+/* ---------- reset ---------- */
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{
+  font-family:var(--font-ui);
+  font-weight:500;
+  color:var(--ink);
+  background:var(--bg);
+  min-height:100dvh;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  overscroll-behavior-y:none;
+  -webkit-tap-highlight-color:transparent;
+}
+button,input,textarea,select{font:inherit;color:inherit;background:none;border:none}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+img,svg{display:block;max-width:100%}
+ul,ol{list-style:none}
+:focus-visible{outline:3px solid var(--orange);outline-offset:3px;border-radius:6px}
+::selection{background:var(--yellow);color:var(--maroon)}
+
+h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.2;letter-spacing:-.01em}
+
+/* Numbers should always read LTR even inside RTL text. */
+.num{direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
+
+/* ---------- app shell ---------- */
+#root{min-height:100dvh;display:flex;justify-content:center;background:var(--bg)}
+.shell{
+  width:var(--shell);
+  min-height:100dvh;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  background:var(--bg);
+  overflow:hidden;
+}
+/* On desktop the shell becomes a device-like column with a warm surround. */
+@media (min-width:900px){
+  #root{
+    background:
+      radial-gradient(120vw 80vh at 50% -10%, var(--yellow-soft), transparent 60%),
+      var(--bg-sunk);
+    align-items:center;
+    padding:24px 0;
+  }
+  .shell{
+    min-height:min(880px, calc(100dvh - 48px));
+    max-height:min(880px, calc(100dvh - 48px));
+    border-radius:38px;
+    box-shadow:var(--lift-3), 0 0 0 1px var(--paper-edge);
+    overflow:hidden;
+  }
+}
+
+/* ---------- scroll ---------- */
+.scroll{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ---------- utility ---------- */
+.stack{display:flex;flex-direction:column}
+.row{display:flex;align-items:center}
+.center{display:flex;align-items:center;justify-content:center}
+.grow{flex:1 1 auto;min-height:0}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+    scroll-behavior:auto!important;
+  }
+}

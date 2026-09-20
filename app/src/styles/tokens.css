@@ -1,0 +1,139 @@
+/* ============================================================
+   SIRAJ - design tokens
+   Single source of truth for colour, type, depth and motion.
+   Anything visual in the app reads from here. When this app is
+   ported to native, this file becomes the tokens object.
+   ============================================================ */
+
+:root {
+  /* ---- brand core ---- */
+  --orange:        #FE6209;
+  --yellow:        #FEBD01;
+  --maroon:        #450705;
+  --cream:         #F9E8CC;
+
+  /* ---- brand ramps (deep = the 3D under-edge of a pressed surface) ---- */
+  --orange-soft:   #FFE6D2;
+  --orange-lit:    #FF8236;
+  --orange-deep:   #D24700;
+
+  --yellow-soft:   #FFF3CD;
+  --yellow-lit:    #FFD44A;
+  --yellow-deep:   #DE9A00;
+
+  --maroon-lit:    #6B1512;
+  --maroon-soft:   #8C6A5C;
+  --maroon-ghost:  #B9A296;
+
+  --cream-deep:    #E8D4B2;
+  --cream-lit:     #FFF6E6;
+
+  /* ---- surfaces (warm, never neutral grey) ---- */
+  --bg:            #FFFBF3;
+  --bg-sunk:       #FBF2E2;
+  --paper:         #FFFFFF;
+  --paper-edge:    #EFE2CB;
+
+  /* ---- locked / inert (cream-tinted greys, so nothing looks dead) ---- */
+  --inert:         #EFE6D6;
+  --inert-mid:     #DBCDB6;
+  --inert-deep:    #C2B098;
+  --inert-ink:     #A89478;
+
+  /* ---- semantic ---- */
+  --good:          #5DAE2F;
+  --good-deep:     #45901F;
+  --good-soft:     #EAF7DC;
+  --bad:           #E23E3E;
+  --bad-deep:      #BF2626;
+  --bad-soft:      #FDE8E8;
+  --info:          #2F9BD6;
+  --info-deep:     #1E7AAE;
+  --info-soft:     #E2F2FB;
+
+  /* ---- text ---- */
+  --ink:           var(--maroon);
+  --ink-2:         #7D5347;
+  --ink-3:         #A78878;
+  --ink-on-dark:   #FFF6E6;
+
+  /* ---- type ---- */
+  --font-ui:      'Ping', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Norsal', 'Ping', system-ui, sans-serif;
+
+  --t-hero:   clamp(2.25rem, 9vw, 3.25rem);
+  --t-title:  clamp(1.5rem, 5.5vw, 2rem);
+  --t-lead:   clamp(1.15rem, 4.4vw, 1.45rem);
+  --t-body:   1rem;
+  --t-sm:     0.875rem;
+  --t-xs:     0.75rem;
+
+  /* ---- depth: the chunky solid under-edge, Duolingo's signature ---- */
+  --depth:       5px;
+  --depth-lg:    7px;
+  --lift-1: 0 2px 6px rgba(69, 7, 5, .06);
+  --lift-2: 0 6px 18px rgba(69, 7, 5, .10);
+  --lift-3: 0 16px 40px rgba(69, 7, 5, .16);
+  --glow-gold: 0 0 0 6px rgba(254, 189, 1, .22), 0 0 34px rgba(254, 189, 1, .45);
+
+  /* ---- radii ---- */
+  --r-sm: 10px;
+  --r:    16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+  --r-pill: 999px;
+
+  /* ---- motion ---- */
+  --e-out:      cubic-bezier(.23, 1, .32, 1);      /* quint - things arriving */
+  --e-in-out:   cubic-bezier(.645, .045, .355, 1); /* things moving across  */
+  --e-in:       cubic-bezier(.32, 0, .67, 0);      /* things leaving        */
+  --e-back:     cubic-bezier(.34, 1.56, .64, 1);   /* the pop (overshoot)   */
+  --e-elastic:  cubic-bezier(.22, 1.4, .36, 1);    /* the big win           */
+
+  --d-tap:   110ms;
+  --d-quick: 180ms;
+  --d-base:  260ms;
+  --d-slow:  420ms;
+  --d-scene: 620ms;
+
+  /* ---- layout ---- */
+  --shell:   min(100%, 460px);
+  --gutter:  20px;
+  --nav-h:   68px;
+  --safe-b:  env(safe-area-inset-bottom, 0px);
+  --safe-t:  env(safe-area-inset-top, 0px);
+}
+
+/* Dark mode: the lamp at night. Warm blacks, never blue-grey. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:          #1C0806;
+    --bg-sunk:     #140504;
+    --paper:       #2A0F0C;
+    --paper-edge:  #3E1A15;
+    --cream:       #3E1A15;
+    --cream-deep:  #2A0F0C;
+    --cream-lit:   #4A221C;
+    --inert:       #331411;
+    --inert-mid:   #46201B;
+    --inert-deep:  #5A2C25;
+    --inert-ink:   #8A6257;
+    --ink:         #FFF3E0;
+    --ink-2:       #D7B4A4;
+    --ink-3:       #A87F70;
+    --good-soft:   #1E3311;
+    --bad-soft:    #3B1414;
+    --info-soft:   #10283A;
+    --lift-1: 0 2px 6px rgba(0,0,0,.4);
+    --lift-2: 0 6px 18px rgba(0,0,0,.5);
+    --lift-3: 0 16px 40px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#1C0806; --bg-sunk:#140504; --paper:#2A0F0C; --paper-edge:#3E1A15;
+  --cream:#3E1A15; --cream-deep:#2A0F0C; --cream-lit:#4A221C;
+  --inert:#331411; --inert-mid:#46201B; --inert-deep:#5A2C25; --inert-ink:#8A6257;
+  --ink:#FFF3E0; --ink-2:#D7B4A4; --ink-3:#A87F70;
+  --good-soft:#1E3311; --bad-soft:#3B1414; --info-soft:#10283A;
+  --lift-1:0 2px 6px rgba(0,0,0,.4); --lift-2:0 6px 18px rgba(0,0,0,.5); --lift-3:0 16px 40px rgba(0,0,0,.6);
+}

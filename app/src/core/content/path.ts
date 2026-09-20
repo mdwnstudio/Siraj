@@ -1,0 +1,100 @@
+import type { Unit } from '../types'
+
+/* ============================================================
+   THE STAIR - الدرج
+   Read bottom to top. node[0] is the lowest step; the learner
+   climbs. Units 3-5 are on the stair but not yet written, so the
+   destination is always visible ahead. That visibility is the
+   whole point of the stair metaphor.
+   ============================================================ */
+
+export const UNITS: Unit[] = [
+  {
+    id: 'u-intro',
+    index: 0,
+    title: 'البداية',
+    subtitle: 'ما هو الإسلام؟',
+    icon: 'Sun',
+    tone: 'gold',
+    nodes: [
+      { id: 'n-intro-1', unitId: 'u-intro', kind: 'lesson', lessonId: 'l-intro-1' },
+      { id: 'n-intro-2', unitId: 'u-intro', kind: 'lesson', lessonId: 'l-intro-2' },
+      { id: 'n-intro-chest', unitId: 'u-intro', kind: 'chest', label: 'صندوق' },
+    ],
+  },
+  {
+    id: 'u-shahada',
+    index: 1,
+    title: 'الشهادة',
+    subtitle: 'الركن الأول',
+    icon: 'Star',
+    tone: 'ember',
+    nodes: [
+      { id: 'n-shahada-1', unitId: 'u-shahada', kind: 'lesson', lessonId: 'l-shahada-1' },
+      { id: 'n-shahada-2', unitId: 'u-shahada', kind: 'lesson', lessonId: 'l-shahada-2' },
+      { id: 'n-shahada-chest', unitId: 'u-shahada', kind: 'chest', label: 'صندوق' },
+    ],
+  },
+  {
+    id: 'u-salah',
+    index: 2,
+    title: 'الصلاة',
+    subtitle: 'الركن الثاني',
+    icon: 'Sun',
+    tone: 'gold',
+    nodes: [
+      { id: 'n-salah-1', unitId: 'u-salah', kind: 'lesson', lessonId: 'l-salah-1' },
+      { id: 'n-salah-2', unitId: 'u-salah', kind: 'lesson', lessonId: 'l-salah-2' },
+      { id: 'n-salah-trophy', unitId: 'u-salah', kind: 'trophy', label: 'إنجاز' },
+    ],
+  },
+  {
+    id: 'u-zakah',
+    index: 3,
+    title: 'الزكاة',
+    subtitle: 'الركن الثالث',
+    icon: 'Droplet',
+    tone: 'sand',
+    nodes: [
+      { id: 'n-zakah-1', unitId: 'u-zakah', kind: 'lesson', soon: true, label: 'معنى الزكاة' },
+      { id: 'n-zakah-2', unitId: 'u-zakah', kind: 'lesson', soon: true, label: 'النصاب' },
+      { id: 'n-zakah-chest', unitId: 'u-zakah', kind: 'chest', soon: true },
+    ],
+  },
+  {
+    id: 'u-sawm',
+    index: 4,
+    title: 'الصوم',
+    subtitle: 'الركن الرابع',
+    icon: 'Crescent',
+    tone: 'deep',
+    nodes: [
+      { id: 'n-sawm-1', unitId: 'u-sawm', kind: 'lesson', soon: true, label: 'رمضان' },
+      { id: 'n-sawm-2', unitId: 'u-sawm', kind: 'lesson', soon: true, label: 'السحور والإفطار' },
+      { id: 'n-sawm-chest', unitId: 'u-sawm', kind: 'chest', soon: true },
+    ],
+  },
+  {
+    id: 'u-hajj',
+    index: 5,
+    title: 'الحج',
+    subtitle: 'الركن الخامس',
+    icon: 'Lantern',
+    tone: 'ember',
+    nodes: [
+      { id: 'n-hajj-1', unitId: 'u-hajj', kind: 'lesson', soon: true, label: 'مكة والكعبة' },
+      { id: 'n-hajj-2', unitId: 'u-hajj', kind: 'lesson', soon: true, label: 'الإحرام والطواف' },
+      { id: 'n-hajj-trophy', unitId: 'u-hajj', kind: 'trophy', soon: true, label: 'الختام' },
+    ],
+  },
+]
+
+/** the whole stair, flattened bottom → top */
+export const PATH = UNITS.flatMap((u) => u.nodes)
+
+export const NODE_INDEX = new Map(PATH.map((n, i) => [n.id, i]))
+export const UNIT_OF = new Map(UNITS.flatMap((u) => u.nodes.map((n) => [n.id, u] as const)))
+
+export function unitById(id: string) {
+  return UNITS.find((u) => u.id === id)
+}
