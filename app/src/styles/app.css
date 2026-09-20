@@ -251,31 +251,32 @@
 .splash{
   position:fixed;inset:0;z-index:100;
   display:grid;place-items:center;
-  background:var(--yellow);
+  overflow:hidden;
+  background:#FEBD00;
 }
-.splash__mark{display:grid;place-items:center;gap:26px}
-.splash__lamp{color:var(--maroon);animation:splash-pop .75s var(--e-elastic) both}
+.splash__mark{
+  position:relative;
+  display:flex;flex-direction:column;align-items:center;
+  gap:8px;
+}
+.splash__character{
+  display:block;
+  width:min(64vw,300px);height:auto;
+  animation:splash-pop .75s var(--e-elastic) both;
+}
 @keyframes splash-pop{
   0%  {transform:scale(.3) translateY(26px);opacity:0}
   60% {opacity:1}
   100%{transform:scale(1) translateY(0);opacity:1}
 }
-.splash__word{
-  font-family:var(--font-display);
-  font-size:3.4rem;font-weight:700;color:var(--maroon);
+.splash__wordmark{
+  display:block;
+  width:min(46vw,220px);height:auto;
   animation:splash-word .6s var(--e-out) .34s both;
 }
 @keyframes splash-word{
-  0%  {transform:translateY(16px);opacity:0;letter-spacing:.12em}
-  100%{transform:translateY(0);opacity:1;letter-spacing:0}
-}
-.splash__glow{
-  position:absolute;width:min(90vw,520px);aspect-ratio:1;border-radius:50%;
-  background:radial-gradient(circle,rgba(255,255,255,.65),transparent 62%);
-  animation:splash-glow 1.5s var(--e-out) both;
-}
-@keyframes splash-glow{
-  0%{transform:scale(.2);opacity:0}45%{opacity:.9}100%{transform:scale(1.6);opacity:0}
+  0%  {transform:translateY(16px);opacity:0}
+  100%{transform:translateY(0);opacity:1}
 }
 
 /* =========================================================
@@ -739,7 +740,12 @@
    9. اسأل سراج
    ========================================================= */
 
-.ask{position:absolute;inset:0;display:flex;flex-direction:column;padding:0 var(--gutter)}
+.ask{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  min-height:0;overflow:hidden;
+  padding:0 var(--gutter);
+}
 .ask__head{
   display:flex;align-items:flex-start;gap:12px;padding:6px 0 14px;
   position:relative;z-index:2;background:var(--bg);flex:0 0 auto;
@@ -751,7 +757,14 @@
   height:30px;margin-bottom:-30px;pointer-events:none;
   background:linear-gradient(to bottom,var(--bg) 12%,transparent);
 }
-.ask__thread{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:10px;scrollbar-width:none}
+.ask__thread{
+  flex:1 1 0;min-height:0;
+  overflow-x:hidden;overflow-y:auto;
+  overscroll-behavior:contain;touch-action:pan-y;
+  -webkit-overflow-scrolling:touch;
+  display:flex;flex-direction:column;gap:12px;
+  padding-bottom:10px;scrollbar-width:none;
+}
 .ask__thread::-webkit-scrollbar{display:none}
 /* pins a short thread to the bottom so replies grow upward like a real
    chat, instead of sitting at the top and lurching down as they arrive */
@@ -787,7 +800,7 @@
 .thinking span:nth-child(2){animation-delay:.16s}
 .thinking span:nth-child(3){animation-delay:.32s}
 
-.ask__pills{display:flex;flex-direction:column;padding:6px 0 12px}
+.ask__pills{display:flex;flex:0 0 auto;flex-direction:column;padding:6px 0 12px}
 .ask__pills .pill+.pill{margin-top:9px}
 .pill{
   align-self:flex-end;max-width:95%;overflow:hidden;
@@ -802,8 +815,8 @@
 @keyframes pill-float{0%{transform:translateY(14px) scale(.92);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
 
 .ask__compose{
-  display:flex;align-items:center;gap:9px;
-  padding:10px 0 calc(12px + var(--safe-b));
+  display:flex;flex:0 0 auto;align-items:center;gap:9px;
+  padding:10px 0 12px;
 }
 /* shared field look; .ask__input adds flex:1 only inside the compose row */
 .field{
@@ -831,7 +844,12 @@
 }
 .ask__send:active:not(:disabled){transform:translateY(4px);box-shadow:0 0 0 var(--orange-deep)}
 .ask__send:disabled{opacity:.4}
-.ask__note{font-size:.74rem;color:var(--ink-3);text-align:center;font-weight:600;padding-bottom:6px}
+.ask__note{flex:0 0 auto;font-size:.74rem;color:var(--ink-3);text-align:center;font-weight:600;padding-bottom:6px}
+.ask__finish{
+  flex:0 0 auto;
+  padding-bottom:calc(14px + var(--safe-b));
+  background:var(--bg);
+}
 
 /* =========================================================
    10. RESULT - أحسنت
