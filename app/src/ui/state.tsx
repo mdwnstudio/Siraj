@@ -3,7 +3,7 @@ import {
 } from 'react'
 import type { Progress, Settings } from '../core/types'
 import { webStore } from '../platform/webStorage'
-import { applyLesson, grantAchievement, type LessonOutcome, type ApplyResult } from '../core/engine/progress'
+import { applyLesson, claimReward, grantAchievement, type LessonOutcome, type ApplyResult } from '../core/engine/progress'
 import { setSound } from '../platform/sound'
 import { setHaptics } from '../platform/haptics'
 
@@ -11,6 +11,7 @@ type Action =
   | { type: 'hydrate'; progress: Progress }
   | { type: 'onboard'; name: string | null; language: string }
   | { type: 'finish-lesson'; outcome: LessonOutcome }
+  | { type: 'claim-reward'; nodeId: string }
   | { type: 'grant'; id: string }
   | { type: 'settings'; patch: Partial<Settings> }
   | { type: 'reset' }
@@ -25,6 +26,8 @@ function reducer(state: Progress, action: Action): Progress {
       return { ...state, onboarded: true, name: action.name, language: action.language }
     case 'finish-lesson':
       return applyLesson(state, action.outcome).progress
+    case 'claim-reward':
+      return claimReward(state, action.nodeId)
     case 'grant':
       return grantAchievement(state, action.id)
     case 'settings':

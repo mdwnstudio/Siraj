@@ -42,9 +42,11 @@ export function Result({
   return (
     <div className={`result${calm ? ' calm' : ''}`}>
       <div className="result__stage">
+        {!calm && <span className="result__rays" />}
         {!calm && <span className="lightsweep" />}
         {!calm && <Shockwave />}
-        {!calm && <Burst count={34} flavour="gold" spread={260} />}
+        {!calm && <Burst count={44} flavour="gold" spread={280} />}
+        {!calm && <Burst count={22} flavour="mixed" spread={210} className="burst--late" />}
 
         <motion.div
           initial={{ scale: 0.2, y: 40, opacity: 0 }}
@@ -52,9 +54,15 @@ export function Result({
           transition={{ type: 'spring', stiffness: 260, damping: 14, mass: 0.9 }}
           style={{ display: 'grid', placeItems: 'center', gap: 18 }}
         >
-          <div className="medal">
-            {perfect ? <Sparkle size={52} /> : <Star size={48} />}
+          <div className="result__crest">
+            <span className="result__orbit result__orbit--a"><Star size={18} /></span>
+            <span className="result__orbit result__orbit--b"><Sparkle size={16} /></span>
+            <span className="result__orbit result__orbit--c"><Star size={13} /></span>
+            <div className="medal">
+              {perfect ? <Sparkle size={56} /> : <Star size={52} />}
+            </div>
           </div>
+          <span className="result__kicker">أضاءت درجة جديدة</span>
           <h1 className="result__title">{perfect ? 'بلا خطأ!' : 'أحسنت!'}</h1>
         </motion.div>
 
@@ -114,9 +122,10 @@ export function Result({
         </motion.div>
       </div>
 
-      <div style={{ padding: '0 var(--gutter) calc(20px + var(--safe-b))' }}>
+      <motion.div className="result__action"
+        initial={{ opacity: 0, y: 18 }} animate={{ opacity: beat >= 2 ? 1 : 0, y: beat >= 2 ? 0 : 18 }}>
         <Button block tone="gold" onClick={onDone}>تابِع الصعود</Button>
-      </div>
+      </motion.div>
     </div>
   )
 }

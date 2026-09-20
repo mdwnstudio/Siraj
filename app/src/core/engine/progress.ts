@@ -96,7 +96,10 @@ export function currentNodeId(p: Progress): string {
     if (n.soon) break
     if (!isCompleted(p, n.id)) return n.id
   }
-  return PATH[PATH.length - 1].id
+  for (let i = PATH.length - 1; i >= 0; i--) {
+    if (!PATH[i].soon) return PATH[i].id
+  }
+  return PATH[0].id
 }
 
 export function completedCount(p: Progress): number {
@@ -105,6 +108,23 @@ export function completedCount(p: Progress): number {
 
 export function totalPlayable(): number {
   return PATH.filter((n) => !n.soon).length
+}
+
+/** Claim a path reward exactly once. Keeping this in core makes rapid taps,
+ *  stale UI renders and future native clients unable to mint XP twice. */
+export function claimReward(p: Progress, nodeId: string): Progress {
+  const node = PATH.find((n) => n.id === nodeId)
+  if (!node || node.kind === 'lesson' || node.soon) return p
+  if (isCompleted(p, nodeId) || !isUnlocked(p, nodeId)) return p
+
+  return {
+    ...p,
+    xp: p.xp + (node.kind === 'trophy' ? 60 : 30),
+    completed: {
+      ...p.completed,
+      [nodeId]: { stars: 3, bestAccuracy: 1, at: Date.now() },
+    },
+  }
 }
 
 /* ---------------- levels ---------------- */

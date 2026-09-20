@@ -6,6 +6,8 @@ import { currentOil, currentStreak, MAX_OIL } from '../../core/engine/progress'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
 
+const WORDMARK = `${import.meta.env.BASE_URL}img/siraj-wordmark-ar.svg`
+
 /* ---------------- a number that rolls up instead of snapping ---------------- */
 
 export function Counter({ value, duration = 900, className = '', suffix = '' }: { value: number; duration?: number; className?: string; suffix?: string }) {
@@ -42,17 +44,20 @@ export function StatBar({ onOpenOil }: { onOpenOil?: () => void }) {
   const oil = currentOil(p)
   return (
     <header className="statbar">
-      <Stat icon={<Flame size={22} />} value={streak} tone="flame" label="أيام متتالية" />
-      <Stat icon={<Star size={22} />} value={p.xp} tone="star" label="نقاط الخبرة" />
-      <button
-        className="stat stat--oil"
-        onClick={onOpenOil}
-        onPointerDown={() => { primeAudio(); sfx.tap(); haptic('tap') }}
-        aria-label={`قطرات الزيت: ${oil} من ${MAX_OIL}`}
-      >
-        <span className="stat__icon"><Droplet size={22} /></span>
-        <span className="stat__val num">{oil}</span>
-      </button>
+      <img className="statbar__wordmark" src={WORDMARK} alt="سراج" />
+      <div className="statbar__stats">
+        <Stat icon={<Flame size={22} />} value={streak} tone="flame" label="أيام متتالية" />
+        <Stat icon={<Star size={22} />} value={p.xp} tone="star" label="نقاط الخبرة" />
+        <button
+          className="stat stat--oil"
+          onClick={onOpenOil}
+          onPointerDown={() => { primeAudio(); sfx.tap(); haptic('tap') }}
+          aria-label={`قطرات الزيت: ${oil} من ${MAX_OIL}`}
+        >
+          <span className="stat__icon"><Droplet size={22} /></span>
+          <span className="stat__val num">{oil}</span>
+        </button>
+      </div>
     </header>
   )
 }
