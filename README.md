@@ -1,6 +1,6 @@
 <div align="center">
 
-# سراج — Siraj
+# سراج: Siraj
 
 **The Duolingo for learning Islam.** A staircase you climb, one step at a time.
 
