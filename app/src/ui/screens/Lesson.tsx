@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import type { Card, Lesson as LessonT } from '../../core/types'
 import type { Answer } from '../../core/engine/grading'
 import { correctAnswerText, isCorrect } from '../../core/engine/grading'

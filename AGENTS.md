@@ -362,10 +362,11 @@ Budget: near-instant load. Current production build, gzipped:
 
 | | size |
 |---|---|
-| app JS | ~27 KB |
+| app JS, first load (splash + stair) | ~25 KB |
+| app JS, lazy (lesson, result, onboarding, other tabs) | ~19 KB |
 | React | ~69 KB |
-| Framer Motion | ~42 KB |
-| CSS (single file) | ~9 KB |
+| Framer Motion (`LazyMotion` + `domAnimation`) | ~31 KB |
+| CSS (single file) | ~14 KB |
 | fonts (3 preloaded, subset woff2) | ~160 KB |
 | Siraj artwork (2 x WebP) | ~76 KB |
 
@@ -381,6 +382,33 @@ Rules that keep it there:
 - **The splash is inlined in `index.html`** as a solid `#FEBD01` div, so the brand
   colour paints before any JS parses and hands off seamlessly to the React splash.
 - CSS is a single file (`cssCodeSplit: false`); vendor chunks are split manually.
+- **Screens a tap away are lazy chunks** (`App.tsx`): onboarding, lesson, result
+  and the other tabs. They, and Siraj's second drawing, are fetched when the
+  browser is idle after the stair appears, so nothing waits when opened.
+- **Framer Motion is the slim build.** Every file imports `m as motion`, inside
+  `<LazyMotion features={domAnimation} strict>`. There are no layout animations;
+  a `layout` prop does nothing, and `motion.div` throws. Keep it that way.
+
+### Low-end devices: the lite tier
+
+`ui/perf.ts` puts `html.lite` on weak hardware (4 cores or fewer, 2 GB or less,
+or Data Saver), and permanently on any device where a third of the stair's
+scrolled frames arrive late. Lite keeps every screen, colour and transition;
+it only redraws the costly things a cheaper way (app.css section 15):
+
+- no mask over the whole moving stair: the camera fades each body by where it
+  lands instead (`fog()` in `PathLandscape.tsx`, whose stops must match `.stage`)
+- the islands' inner parallax layers hold still, so each island is one texture
+- no backdrop blur behind sheets, half the burst particles, no SVG glow filter
+
+Rules for anything drawn on the stair, in either tier:
+
+- **No filters, masks or opacity on a layer that moves every frame.** Put them
+  on a child that does not move, so they are painted once into the texture
+  (see `.landscape__view` and `.landscape__far svg`).
+- **Write a style only when its value changed.** The camera caches every
+  transform, opacity and visibility it sets.
+- The cloud banks are tiled background images per theme, not masks.
 
 If you add a dependency, check the gzip delta. Framer Motion is the heaviest
 thing here and it earns its place; a second animation library would not.

@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './ui/perf' // sets html.lite before the first paint
 import './styles/global.css'
 import App from './App'
 

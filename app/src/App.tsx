@@ -1,18 +1,37 @@
-import { useCallback, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { AnimatePresence, LazyMotion, domAnimation, m as motion } from 'framer-motion'
 import type { Lesson as LessonT } from './core/types'
 import type { ApplyResult, LessonOutcome } from './core/engine/progress'
 import { PATH } from './core/content/path'
 import { AppProvider, useApp, useCalmMotion } from './ui/state'
 import { StatBar, NavBar, SideNav, type Tab } from './ui/components/Bars'
 import { Rail } from './ui/components/Rail'
+import { preloadSiraj } from './ui/components/Siraj'
 import { useLayout } from './ui/useLayout'
 import { Splash } from './ui/screens/Splash'
-import { Onboarding } from './ui/screens/Onboarding'
 import { Home } from './ui/screens/Home'
-import { Lesson } from './ui/screens/Lesson'
-import { Result } from './ui/screens/Result'
-import { WinsPage, ReviewPage, AskPage, MePage } from './ui/screens/Pages'
+
+/* Only the splash and the stair are in the first download. Everything a
+   tap away arrives in its own chunk, fetched while the device is idle, so
+   a budget phone parses less before the first frame and nothing waits
+   when it is opened. */
+const loadOnboarding = () => import('./ui/screens/Onboarding')
+const loadLesson = () => import('./ui/screens/Lesson')
+const loadResult = () => import('./ui/screens/Result')
+const loadPages = () => import('./ui/screens/Pages')
+const Onboarding = lazy(() => loadOnboarding().then((m) => ({ default: m.Onboarding })))
+const Lesson = lazy(() => loadLesson().then((m) => ({ default: m.Lesson })))
+const Result = lazy(() => loadResult().then((m) => ({ default: m.Result })))
+const WinsPage = lazy(() => loadPages().then((m) => ({ default: m.WinsPage })))
+const ReviewPage = lazy(() => loadPages().then((m) => ({ default: m.ReviewPage })))
+const AskPage = lazy(() => loadPages().then((m) => ({ default: m.AskPage })))
+const MePage = lazy(() => loadPages().then((m) => ({ default: m.MePage })))
+
+const whenIdle = (fn: () => void) => {
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }
+  if (w.requestIdleCallback) w.requestIdleCallback(fn, { timeout: 2500 })
+  else setTimeout(fn, 600)
+}
 
 type Scene =
   | { at: 'splash' }
@@ -24,7 +43,11 @@ type Scene =
 export default function App() {
   return (
     <AppProvider>
-      <Shell />
+      {/* the slim motion build: every screen uses `m`, never `motion`, and
+          strict turns a stray `motion.div` into an error instead of 30 KB */}
+      <LazyMotion features={domAnimation} strict>
+        <Shell />
+      </LazyMotion>
     </AppProvider>
   )
 }
@@ -42,6 +65,17 @@ function Shell() {
   const [scene, setScene] = useState<Scene>({ at: 'splash' })
   const [tab, setTab] = useState<Tab>('path')
   const [celebrate, setCelebrate] = useState<string | null>(null)
+
+  // a first visit goes to onboarding straight after the splash: fetch it now
+  useEffect(() => {
+    if (!progress.onboarded) void loadOnboarding()
+  }, [progress.onboarded])
+
+  // once the stair is up, quietly bring in everything one tap away
+  const inApp = scene.at === 'app'
+  useEffect(() => {
+    if (inApp) whenIdle(() => { void loadLesson(); void loadResult(); void loadPages(); preloadSiraj() })
+  }, [inApp])
 
   const afterSplash = useCallback(() => {
     setScene(progress.onboarded ? { at: 'app' } : { at: 'onboarding' })
@@ -75,7 +109,9 @@ function Shell() {
 
         {scene.at === 'onboarding' && (
           <motion.div key="ob" {...fade} transition={{ duration: 0.3 }} style={{ flex: 1, minHeight: 0 }}>
-            <Onboarding onDone={() => setScene({ at: 'app' })} />
+            <Suspense fallback={null}>
+              <Onboarding onDone={() => setScene({ at: 'app' })} />
+            </Suspense>
           </motion.div>
         )}
 
@@ -100,10 +136,12 @@ function Shell() {
                     {tab === 'path' && (
                       <Home onStart={startNode} celebrate={celebrate} onCelebrated={() => setCelebrate(null)} />
                     )}
-                    {tab === 'review' && <ReviewPage onStart={startNode} />}
-                    {tab === 'ask' && <AskPage />}
-                    {tab === 'wins' && <WinsPage />}
-                    {tab === 'me' && <MePage />}
+                    <Suspense fallback={null}>
+                      {tab === 'review' && <ReviewPage onStart={startNode} />}
+                      {tab === 'ask' && <AskPage />}
+                      {tab === 'wins' && <WinsPage />}
+                      {tab === 'me' && <MePage />}
+                    </Suspense>
                   </motion.div>
                 </AnimatePresence>
               </main>
@@ -120,18 +158,22 @@ function Shell() {
             style={{ position: 'absolute', inset: 0, zIndex: 40 }}
             initial={{ y: '100%', opacity: 0.6 }} animate={{ y: 0, opacity: 1 }} exit={{ y: '100%', opacity: 0.6 }}
             transition={{ type: 'spring', stiffness: 300, damping: 34 }}>
-            <Lesson
-              nodeId={scene.nodeId}
-              lessonId={scene.lessonId}
-              onExit={() => setScene({ at: 'app' })}
-              onDone={lessonDone}
-            />
+            <Suspense fallback={null}>
+              <Lesson
+                nodeId={scene.nodeId}
+                lessonId={scene.lessonId}
+                onExit={() => setScene({ at: 'app' })}
+                onDone={lessonDone}
+              />
+            </Suspense>
           </motion.div>
         )}
 
         {scene.at === 'result' && (
           <motion.div key="result" style={{ position: 'absolute', inset: 0, zIndex: 50 }} {...fade} transition={{ duration: 0.3 }}>
-            <Result outcome={scene.outcome} applied={scene.applied} onDone={resultDone} />
+            <Suspense fallback={null}>
+              <Result outcome={scene.outcome} applied={scene.applied} onDone={resultDone} />
+            </Suspense>
           </motion.div>
         )}
       </AnimatePresence>

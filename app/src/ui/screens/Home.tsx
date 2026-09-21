@@ -1,8 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import { UNIT_OF, unitById } from '../../core/content/path'
 import { getLesson } from '../../core/content/lessons'
-import type { PathNode } from '../../core/types'
+import type { PathNode, Progress } from '../../core/types'
 import {
   currentNodeId, isCompleted, isUnlocked, NODE_INDEX_SAFE,
 } from '../../core/engine/pathView'
@@ -13,6 +13,7 @@ import { focusStep, LANDSCAPE_UNITS, PathLandscape, PathSky, useLandscapeParalla
 import { Button } from '../components/Button'
 import { Burst } from '../components/Burst'
 import { useLayout } from '../useLayout'
+import { useLite } from '../perf'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
 
@@ -28,6 +29,7 @@ export function Home({
 }) {
   const { progress, dispatch } = useApp()
   const calm = useCalmMotion()
+  const lite = useLite()
   const [picked, setPicked] = useState<PathNode | null>(null)
   const [reward, setReward] = useState<PathNode | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
@@ -38,7 +40,7 @@ export function Home({
   const [shownUnit, setShownUnit] = useState<string | null>(null)
   const unit = (shownUnit && unitById(shownUnit)) || UNIT_OF.get(current) || unitById('u-intro')!
 
-  useLandscapeParallax(scroller, calm, { sky, onUnit: setShownUnit })
+  useLandscapeParallax(scroller, calm, { sky, onUnit: setShownUnit, lite })
 
   useLayoutEffect(() => {
     focusStep(scroller.current, currentRef.current)
@@ -53,7 +55,7 @@ export function Home({
     return () => clearTimeout(t)
   }, [celebrate, onCelebrated])
 
-  const openNode = (n: PathNode) => {
+  const openNodeNow = (n: PathNode) => {
     primeAudio()
     if (n.soon) { sfx.wrong(); return }
     if (!isUnlocked(progress, n.id)) { sfx.wrong(); haptic('wrong'); return }
@@ -69,6 +71,11 @@ export function Home({
     }
   }
 
+  // one stable handler for the memoised stair, always reading fresh progress
+  const openLatest = useRef(openNodeNow)
+  openLatest.current = openNodeNow
+  const openNode = useCallback((n: PathNode) => openLatest.current(n), [])
+
   useEffect(() => {
     if (!reward) return
     const t = setTimeout(() => setReward(null), 1450)
@@ -81,100 +88,8 @@ export function Home({
     <div className="home">
       <PathSky skyRef={sky} />
 
-      <div className="stairwrap scroll" ref={scroller}>
-        <div className="stage">
-        <div className="stair">
-          {LANDSCAPE_UNITS.map((landscapeUnit) => (
-            <section className="path-unit" key={landscapeUnit.id} data-unit={landscapeUnit.id} aria-label={landscapeUnit.title}>
-              <PathLandscape unitId={landscapeUnit.id} />
-              <div className="path-unit__caption" data-persp aria-hidden="true">
-                <span>{toAr(landscapeUnit.index)}</span>{landscapeUnit.title}
-              </div>
-              {[...landscapeUnit.nodes].reverse().map((n) => {
-                const i = NODE_INDEX_SAFE(n.id)
-                const done = isCompleted(progress, n.id)
-                const isCurrent = n.id === current
-                const open = isUnlocked(progress, n.id)
-                const lesson = n.lessonId ? getLesson(n.lessonId) : undefined
-                const lighting = celebrate === n.id
-                const rewardXp = n.kind === 'trophy' ? 60 : 30
-
-                return (
-                  <div
-                    key={n.id}
-                    ref={isCurrent ? currentRef : undefined}
-                    data-persp
-                    data-dx={dx(i)}
-                    className={[
-                      'step',
-                      done && 'step--done',
-                      isCurrent && 'step--current',
-                      open && 'step--open',
-                      !open && 'step--locked',
-                      n.soon && 'step--soon',
-                      n.kind !== 'lesson' && 'step--chest',
-                      lighting && 'step--lighting',
-                    ].filter(Boolean).join(' ')}
-                    style={{
-                      ['--dx' as string]: `${dx(i)}px`,
-                      // higher treads sit in front, so each one's shadow falls on the tread below
-                      zIndex: i + 1,
-                    }}
-                  >
-                    {lighting && <Burst count={18} flavour="gold" spread={130} />}
-
-                    <button
-                      className="slab"
-                      onClick={() => openNode(n)}
-                      disabled={!open || (done && n.kind !== 'lesson')}
-                      aria-label={lesson?.title ?? n.label ?? 'خطوة'}
-                    >
-                      <span className="slab__medal">
-                        {n.kind === 'chest' ? (
-                          <Sparkle size={24} />
-                        ) : n.kind === 'trophy' ? (
-                          <Lantern size={24} />
-                        ) : lesson ? (
-                          <Icon name={lesson.icon} size={24} />
-                        ) : (
-                          <Droplet size={24} />
-                        )}
-                      </span>
-
-                      {n.kind !== 'lesson' && (
-                        <span className="slab__reward">
-                          {done ? 'تم الاستلام' : <>مكافأة <b className="num">+{rewardXp}</b></>}
-                        </span>
-                      )}
-
-                      {done && n.kind === 'lesson' && (
-                        <span className="slab__stars">
-                          {Array.from({ length: progress.completed[n.id]?.stars ?? 1 }, (_, k) => (
-                            <Star key={k} size={11} />
-                          ))}
-                        </span>
-                      )}
-                      {n.soon && <span className="slab__soon">قريبًا</span>}
-                    </button>
-
-                    {isCurrent && (
-                      <>
-                        <span className="step__cta">{n.kind === 'lesson' ? 'ابدأ' : 'افتح المكافأة'}</span>
-                        <span className={`step__siraj${dx(i) < 0 ? ' step__siraj--flip' : ''}`}>
-                          <span className="step__plinth" aria-hidden />
-                          <Siraj mood="idle" size={76} flip={dx(i) < 0} />
-                        </span>
-                      </>
-                    )}
-                  </div>
-                )
-              })}
-            </section>
-          ))}
-        </div>
-        </div>
-        <div className="stair-spacer" aria-hidden />
-      </div>
+      <Stair scroller={scroller} currentRef={currentRef} progress={progress} current={current}
+        celebrate={celebrate} onOpen={openNode} />
 
       <div className={`unitcard unitcard--${unit.tone}`}>
         <div className="unitcard__main">
@@ -211,6 +126,115 @@ export function Home({
     </div>
   )
 }
+
+/* ---------------- the stair itself ----------------
+   Memoised: the unit banner changes as you scroll, and that must not
+   re-render thirty steps in the middle of a flick. */
+const Stair = memo(function Stair({ scroller, currentRef, progress, current, celebrate, onOpen }: {
+  scroller: RefObject<HTMLDivElement | null>
+  currentRef: RefObject<HTMLDivElement | null>
+  progress: Progress
+  current: string
+  celebrate: string | null
+  onOpen: (n: PathNode) => void
+}) {
+  return (
+    <div className="stairwrap scroll" ref={scroller}>
+      <div className="stage">
+      <div className="stair">
+        {LANDSCAPE_UNITS.map((landscapeUnit) => (
+          <section className="path-unit" key={landscapeUnit.id} data-unit={landscapeUnit.id} aria-label={landscapeUnit.title}>
+            <PathLandscape unitId={landscapeUnit.id} />
+            <div className="path-unit__caption" data-persp aria-hidden="true">
+              <span>{toAr(landscapeUnit.index)}</span>{landscapeUnit.title}
+            </div>
+            {[...landscapeUnit.nodes].reverse().map((n) => {
+              const i = NODE_INDEX_SAFE(n.id)
+              const done = isCompleted(progress, n.id)
+              const isCurrent = n.id === current
+              const open = isUnlocked(progress, n.id)
+              const lesson = n.lessonId ? getLesson(n.lessonId) : undefined
+              const lighting = celebrate === n.id
+              const rewardXp = n.kind === 'trophy' ? 60 : 30
+
+              return (
+                <div
+                  key={n.id}
+                  ref={isCurrent ? currentRef : undefined}
+                  data-persp
+                  data-dx={dx(i)}
+                  className={[
+                    'step',
+                    done && 'step--done',
+                    isCurrent && 'step--current',
+                    open && 'step--open',
+                    !open && 'step--locked',
+                    n.soon && 'step--soon',
+                    n.kind !== 'lesson' && 'step--chest',
+                    lighting && 'step--lighting',
+                  ].filter(Boolean).join(' ')}
+                  style={{
+                    ['--dx' as string]: `${dx(i)}px`,
+                    // higher treads sit in front, so each one's shadow falls on the tread below
+                    zIndex: i + 1,
+                  }}
+                >
+                  {lighting && <Burst count={18} flavour="gold" spread={130} />}
+
+                  <button
+                    className="slab"
+                    onClick={() => onOpen(n)}
+                    disabled={!open || (done && n.kind !== 'lesson')}
+                    aria-label={lesson?.title ?? n.label ?? 'خطوة'}
+                  >
+                    <span className="slab__medal">
+                      {n.kind === 'chest' ? (
+                        <Sparkle size={24} />
+                      ) : n.kind === 'trophy' ? (
+                        <Lantern size={24} />
+                      ) : lesson ? (
+                        <Icon name={lesson.icon} size={24} />
+                      ) : (
+                        <Droplet size={24} />
+                      )}
+                    </span>
+
+                    {n.kind !== 'lesson' && (
+                      <span className="slab__reward">
+                        {done ? 'تم الاستلام' : <>مكافأة <b className="num">+{rewardXp}</b></>}
+                      </span>
+                    )}
+
+                    {done && n.kind === 'lesson' && (
+                      <span className="slab__stars">
+                        {Array.from({ length: progress.completed[n.id]?.stars ?? 1 }, (_, k) => (
+                          <Star key={k} size={11} />
+                        ))}
+                      </span>
+                    )}
+                    {n.soon && <span className="slab__soon">قريبًا</span>}
+                  </button>
+
+                  {isCurrent && (
+                    <>
+                      <span className="step__cta">{n.kind === 'lesson' ? 'ابدأ' : 'افتح المكافأة'}</span>
+                      <span className={`step__siraj${dx(i) < 0 ? ' step__siraj--flip' : ''}`}>
+                        <span className="step__plinth" aria-hidden />
+                        <Siraj mood="idle" size={76} flip={dx(i) < 0} />
+                      </span>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+          </section>
+        ))}
+      </div>
+      </div>
+      <div className="stair-spacer" aria-hidden />
+    </div>
+  )
+})
 
 /* ---------------- the step preview ---------------- */
 

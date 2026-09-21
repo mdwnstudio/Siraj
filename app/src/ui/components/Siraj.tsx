@@ -14,6 +14,16 @@ const SRC: Record<Mood, string> = {
   wave: WAVE, cheer: WAVE,
 }
 
+/** Warm the cache for both drawings. The stair only shows the idle one, so
+ *  without this the lesson's warmup (wave) could open on an empty frame. */
+export function preloadSiraj() {
+  for (const src of [MAIN, WAVE]) {
+    const img = new Image()
+    img.decoding = 'async'
+    img.src = src
+  }
+}
+
 /* Two source images, six moods. The difference is rigging, not artwork:
    squash-and-stretch, tilt and bob are applied in CSS, which is why the
    character feels alive on a 35KB budget. */

@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { AnimatePresence, animate, motion } from 'framer-motion'
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { AnimatePresence, animate, m as motion } from 'framer-motion'
 import type { Lesson } from '../../core/types'
 import { askSirajStream } from '../../core/ai/askSiraj'
 import { parseAnswer } from '../../core/ai/answerText'
@@ -151,15 +151,18 @@ export function AskSiraj({
     react('answer')
   }
 
-  const startTyping = () => {
+  // stable, so a typed character re-renders only the live row (MsgRow is memoised)
+  const tickLatest = useRef(tick)
+  tickLatest.current = tick
+  const startTyping = useCallback(() => {
     window.clearTimeout(typer.current)
-    typer.current = window.setTimeout(tick, 16)
-  }
+    typer.current = window.setTimeout(() => tickLatest.current(), 16)
+  }, [])
 
-  const pinToBottom = () => {
+  const pinToBottom = useCallback(() => {
     const el = thread.current
     if (el) el.scrollTop = el.scrollHeight
-  }
+  }, [])
 
   /** let the typewriter finish, then seal the bubble */
   const finishReply = () =>
@@ -256,28 +259,7 @@ export function AskSiraj({
 
       <div className="ask__thread" ref={thread} aria-live="polite">
         {msgs.map((m) => (
-          /* No layout animation here: a gliding row passes over the new one
-             as it arrives, so the question would slide across the reply.
-             Earlier rows move before paint; only the new row fades up. */
-          <motion.div key={m.id} className={`msg-row msg-row--${m.who}`}
-            // a reply is the thinking bubble itself, grown: no fade
-            initial={m.who === 'siraj' ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}>
-            {m.who === 'siraj' && <span className={`ask__face${m.live ? ' ask__face--talk' : ''}`} aria-hidden />}
-            <GrowBubble className={`msg msg--${m.who}`} from={m.live ? m.grow : undefined} calm={calm}
-              onStep={pinToBottom} onGrown={startTyping}>
-              {m.who === 'siraj' ? <Answer text={m.text} full={m.full} sources={m.sources} live={m.live} /> : m.text}
-              {!!m.sources?.length && (
-                <div className={`msg__src${m.live ? ' is-waiting' : ''}`}>
-                  {m.sources.map((s) => (
-                    <a key={s.url} className="msg__srclink" href={s.url} target="_blank" rel="noreferrer noopener">
-                      {sourceLabel(s.title)}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </GrowBubble>
-          </motion.div>
+          <MsgRow key={m.id} m={m} calm={calm} onStep={pinToBottom} onGrown={startTyping} />
         ))}
         {/* no exit animation: the reply takes this row's place in the same
             frame, instead of both sharing the space while it collapses */}
@@ -303,8 +285,9 @@ export function AskSiraj({
       <div className="ask__pills">
         <AnimatePresence>
           {left.slice(0, 3).map((s, i) => (
+            /* no layout prop: the exit collapses the pill's own height, so
+               the ones below close up with it (LazyMotion ships no layout code) */
             <motion.button key={s.q} className="pill" style={{ animationDelay: `${i * 70}ms` }}
-              layout
               exit={{
                 opacity: 0, scale: 0.92, height: 0, paddingTop: 0, paddingBottom: 0,
                 marginTop: 0, borderWidth: 0,
@@ -346,6 +329,40 @@ export function AskSiraj({
     </>
   )
 }
+
+/** One message. Memoised: while a reply types, only the live row's `m`
+ *  changes, so the rest of the thread is not re-rendered 60 times a second. */
+const MsgRow = memo(function MsgRow({ m, calm, onStep, onGrown }: {
+  m: Msg
+  calm: boolean
+  onStep: () => void
+  onGrown: () => void
+}) {
+  return (
+    /* No layout animation here: a gliding row passes over the new one
+       as it arrives, so the question would slide across the reply.
+       Earlier rows move before paint; only the new row fades up. */
+    <motion.div className={`msg-row msg-row--${m.who}`}
+      // a reply is the thinking bubble itself, grown: no fade
+      initial={m.who === 'siraj' ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}>
+      {m.who === 'siraj' && <span className={`ask__face${m.live ? ' ask__face--talk' : ''}`} aria-hidden />}
+      <GrowBubble className={`msg msg--${m.who}`} from={m.live ? m.grow : undefined} calm={calm}
+        onStep={onStep} onGrown={onGrown}>
+        {m.who === 'siraj' ? <Answer text={m.text} full={m.full} sources={m.sources} live={m.live} /> : m.text}
+        {!!m.sources?.length && (
+          <div className={`msg__src${m.live ? ' is-waiting' : ''}`}>
+            {m.sources.map((s) => (
+              <a key={s.url} className="msg__srclink" href={s.url} target="_blank" rel="noreferrer noopener">
+                {sourceLabel(s.title)}
+              </a>
+            ))}
+          </div>
+        )}
+      </GrowBubble>
+    </motion.div>
+  )
+})
 
 /** A bubble that, given `from`, starts at that size and springs out to
  *  its natural size, then calls onGrown. Real width and height are
@@ -421,7 +438,8 @@ function Answer({ text, full, sources, live }: { text: string; full?: string; so
   )
 }
 
-function Segments({ text, sources, live }: { text: string; sources?: Msg['sources']; live?: boolean }) {
+// memoised so the invisible full-length ghost is parsed once, not on every typed tick
+const Segments = memo(function Segments({ text, sources, live }: { text: string; sources?: Msg['sources']; live?: boolean }) {
   return (
     <>
       {parseAnswer(text, sources, { streaming: live }).map((p, i) =>
@@ -435,7 +453,7 @@ function Segments({ text, sources, live }: { text: string; sources?: Msg['source
       )}
     </>
   )
-}
+})
 
 /** "Sahih al-Bukhari 8 - Belief - Sunnah.com - Sayings and..." -> "Sahih al-Bukhari 8" */
 function sourceLabel(title: string): string {

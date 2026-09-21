@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import { Siraj } from '../components/Siraj'
 import { Button } from '../components/Button'
 import { Burst, Shockwave } from '../components/Burst'
