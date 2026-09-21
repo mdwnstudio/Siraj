@@ -36,7 +36,12 @@
   "fullScopeUrl": "https://mdwnstudio.github.io/Siraj/",
   "minSdkVersion": 21,
   "orientation": "default",
-  "fingerprints": [],
+  "fingerprints": [
+    {
+      "name": "upload key",
+      "value": "42:65:30:DC:32:DA:67:A4:6D:F3:5B:D2:2B:A0:20:4C:45:49:1A:74:E0:CE:33:8E:AE:A1:B7:8F:1E:88:AE:41"
+    }
+  ],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
   "protocolHandlers": [],
