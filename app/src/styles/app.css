@@ -391,7 +391,7 @@
 }
 .sky__clouds--far {opacity:.45}
 .sky__clouds--mid {opacity:.7}
-.sky__clouds--near{opacity:.95;filter:drop-shadow(0 10px 0 rgba(120,150,190,.12))}
+.sky__clouds--near{opacity:.7;filter:drop-shadow(0 10px 0 rgba(120,150,190,.12))}
 :root[data-theme="dark"] .sky{
   --sky-low-a:#2E120D;--sky-low-b:#1C0806;--sky-high-a:#120F26;--sky-high-b:#20152C;
   --cloud:rgba(255,236,220,.09);--sun:rgba(255,170,90,.16);
@@ -455,34 +455,34 @@
 .path-unit:last-child{padding-bottom:64px}
 .path-unit__caption{
   position:absolute;top:92px;left:0;right:0;width:max-content;margin-inline:auto;
-  display:flex;align-items:center;gap:7px;white-space:nowrap;
-  padding:5px 13px 5px 7px;border-radius:var(--r-pill);
-  background:color-mix(in srgb,var(--paper) 78%,transparent);
-  box-shadow:0 3px 0 color-mix(in srgb,var(--paper-edge) 70%,transparent);
-  color:var(--ink-2);font-size:.78rem;font-weight:800;
+  /* a quiet divider, not another object on the road */
+  display:flex;align-items:center;gap:8px;white-space:nowrap;
+  color:var(--ink-3);font-size:.74rem;font-weight:800;letter-spacing:.02em;
 }
-.path-unit__caption span{
-  display:grid;place-items:center;width:22px;height:22px;border-radius:50%;
-  background:var(--bg-sunk);color:var(--ink-3);font-size:.68rem;
+.path-unit__caption::before,.path-unit__caption::after{
+  content:'';width:26px;height:2px;border-radius:2px;background:currentColor;opacity:.35;
 }
+.path-unit__caption span{font-size:.7rem;opacity:.8}
 
-.landscape{
-  transform-origin:50% 50%;will-change:transform,opacity;
+.landscape,.scene{
   --land-stone:#EAC797;--land-shadow:#CEA374;--land-light:#FFF0CE;
   --land-recess:#B38459;--land-accent:#DE9355;--land-leaf:#9BA570;
   --land-glow:#F4C665;--land-hill:#EEDAB5;--land-dune:#F3E2C4;
   --land-ground:#EFDBB6;--land-cloud:#FFFFFF;--land-water:#ACCCC1;
   --land-kaaba:#49392E;--land-kaaba-side:#63503D;--land-kaaba-top:#7B6650;
+}
+.landscape{
+  transform-origin:50% 50%;will-change:transform,opacity;
   /* extra room above and below so the slow layers can drift without a hard cut */
   /* 180% wide: once the camera shrinks an island there is still ground
      at its sides, which then melts into the sky instead of ending in a wall */
   position:absolute;inset:60px -40% -60px;z-index:-1;pointer-events:none;
   overflow:clip;contain:paint;
   -webkit-mask-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.45) 30%,#000 70%,#000 calc(100% - 70px),transparent),
-                     linear-gradient(to right,transparent 6%,#000 24%,#000 76%,transparent 94%);
+                     linear-gradient(to right,transparent 6%,#000 24%,rgba(0,0,0,.4) 40%,rgba(0,0,0,.4) 60%,#000 76%,transparent 94%);
   -webkit-mask-composite:source-in;
   mask-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.45) 30%,#000 70%,#000 calc(100% - 70px),transparent),
-             linear-gradient(to right,transparent 6%,#000 24%,#000 76%,transparent 94%);
+             linear-gradient(to right,transparent 6%,#000 24%,rgba(0,0,0,.4) 40%,rgba(0,0,0,.4) 60%,#000 76%,transparent 94%);
   mask-composite:intersect;
 }
 .landscape--u-shahada{--land-stone:#E4B18C;--land-shadow:#C68E70;--land-accent:#D18155;--land-hill:#EED0B5;--land-dune:#F2DCC8;--land-ground:#EDD2B7}
@@ -490,39 +490,34 @@
 .landscape--u-zakah{--land-stone:#DFCB9A;--land-shadow:#B5A374;--land-leaf:#88A274;--land-hill:#D5DFC0;--land-dune:#E5E8CE;--land-ground:#DFDFC0}
 .landscape--u-sawm{--land-stone:#BAA8BC;--land-shadow:#9985A0;--land-recess:#76657E;--land-light:#F5DFCA;--land-accent:#C4936C;--land-hill:#D4C8DB;--land-dune:#E1D4DF;--land-ground:#D7C7D1;--land-cloud:#F5EAF1;--land-leaf:#949084;--land-glow:#FFE0A0}
 .landscape--u-hajj{--land-hill:#DDC6B0;--land-dune:#EDDBC8;--land-ground:#E7D1B7;--land-stone:#D9BD97;--land-shadow:#B89C7A}
-.landscape__far,.landscape__architecture,.landscape__near{
+.landscape__far,.landscape__architecture{
   position:absolute;width:55.56%;height:auto;aspect-ratio:460/380;bottom:40px;left:22.22%;
   will-change:transform;
 }
 .landscape__far svg,.landscape__architecture svg{display:block;width:100%;height:auto;overflow:visible}
 /* atmospheric perspective: the further back, the more it melts into the sky */
 .landscape__far{opacity:.3;filter:saturate(.7)}
-.landscape__architecture{opacity:.82;filter:saturate(.82)}
-.landscape__near{bottom:18px;overflow:visible}
-:root[data-theme="dark"] 
-.landscape{
-  transform-origin:50% 50%;will-change:transform,opacity;
+.landscape__architecture{opacity:.82;filter:saturate(.62) contrast(.84) brightness(1.05)}
+:root[data-theme="dark"] :is(.landscape,.scene){
   --land-stone:#76533E;--land-shadow:#51382C;--land-light:#A77D50;
   --land-recess:#35251F;--land-accent:#A87540;--land-leaf:#535C3B;
   --land-glow:#D9A754;--land-hill:#3C2A24;--land-dune:#453026;
   --land-ground:#50382B;--land-cloud:#4A3530;--land-water:#52665A;
   --land-kaaba:#29201D;--land-kaaba-side:#3D3027;--land-kaaba-top:#56432F;
 }
-:root[data-theme="dark"] .landscape--u-sawm{
+:root[data-theme="dark"] :is(.landscape,.scene).landscape--u-sawm{
   --land-stone:#665268;--land-shadow:#46364D;
   --land-recess:#302635;--land-hill:#3A2C40;--land-dune:#423248;--land-ground:#4A394B;
 }
 @media(prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) 
-.landscape{
-  transform-origin:50% 50%;will-change:transform,opacity;
+  :root:not([data-theme="light"]) :is(.landscape,.scene){
     --land-stone:#76533E;--land-shadow:#51382C;--land-light:#A77D50;
     --land-recess:#35251F;--land-accent:#A87540;--land-leaf:#535C3B;
     --land-glow:#D9A754;--land-hill:#3C2A24;--land-dune:#453026;
     --land-ground:#50382B;--land-cloud:#4A3530;--land-water:#52665A;
     --land-kaaba:#29201D;--land-kaaba-side:#3D3027;--land-kaaba-top:#56432F;
   }
-  :root:not([data-theme="light"]) .landscape--u-sawm{
+  :root:not([data-theme="light"]) :is(.landscape,.scene).landscape--u-sawm{
     --land-stone:#665268;--land-shadow:#46364D;
     --land-recess:#302635;--land-hill:#3A2C40;--land-dune:#423248;--land-ground:#4A394B;
   }
@@ -531,6 +526,12 @@
   .landscape [data-depth],.sky__clouds{transform:none!important}
 }
 .calm .landscape [data-depth],.calm .sky__clouds{transform:none!important}
+
+.stair{--tread-top:#FBFAF8;--tread-face:#DCD8D2;--tread-rim:#C9C3BB;--tread-ink:#ADA59B}
+:root[data-theme="dark"] .stair{--tread-top:#43302C;--tread-face:#2E201D;--tread-rim:#251917;--tread-ink:#8C7770}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .stair{--tread-top:#43302C;--tread-face:#2E201D;--tread-rim:#251917;--tread-ink:#8C7770}
+}
 
 /* ---- a tread ----
    Flat colour only: a pale top face, a tall riser in the main colour, and a
@@ -544,7 +545,7 @@
 }
 
 .slab{
-  --face:var(--inert-mid);--top:var(--inert);--rim:var(--inert-deep);--fg:var(--inert-deep);
+  --face:var(--tread-face);--top:var(--tread-top);--rim:var(--tread-rim);--fg:var(--tread-ink);
   --rise:24px;--face-h:34px;
   position:relative;
   z-index:2;display:flex;align-items:center;justify-content:center;gap:10px;
@@ -583,8 +584,9 @@
   background:repeating-linear-gradient(100deg,var(--top) 0 14px,color-mix(in srgb,var(--top) 55%,#fff) 14px 40px,var(--top) 40px 54px);
 }
 .step--current .slab{--face:var(--orange);--top:color-mix(in srgb,var(--orange-lit) 78%,#fff);--rim:var(--orange-deep);--fg:#fff}
-.step--chest .slab  {--face:#D9C39C;--top:var(--cream-deep);--rim:#C2A87C;--fg:var(--maroon);width:220px;justify-content:flex-start;padding-inline:18px}
-.step--chest .slab__medal{left:auto;inset-inline-end:14px;margin-left:0}
+.step--chest .slab  {--fg:var(--maroon);width:220px;justify-content:flex-start;padding-inline:18px}
+/* a reward is the same neutral tread with a gold disc: gold already means "earned" */
+.step--chest .slab__medal{left:auto;inset-inline-end:14px;margin-left:0;background:var(--yellow);color:var(--maroon);box-shadow:0 7px 0 var(--yellow-deep)}
 .step--done.step--chest .slab{--face:var(--yellow);--top:var(--yellow-lit);--rim:var(--yellow-deep)}
 .step--done.step--chest .slab:disabled{opacity:.8;cursor:default}
 .step--locked{cursor:default}
@@ -602,6 +604,12 @@
   font-size:.68rem;font-weight:800;color:var(--ink-3);white-space:nowrap;
 }
 .step--current{z-index:50!important}
+/* a flat contact shadow, so the tread sits on the air instead of on the scenery */
+.step::after{
+  content:'';position:absolute;z-index:0;pointer-events:none;
+  left:10%;right:10%;bottom:-12px;height:16px;border-radius:50%;
+  background:rgba(69,7,5,.1);
+}
 
 .step__cta{
   position:absolute;bottom:calc(100% + 26px);left:50%;z-index:5;
@@ -709,6 +717,20 @@
   padding:6px 13px;border-radius:var(--r-pill);
 }
 .kcard__title{font-size:var(--t-title);line-height:1.25}
+
+/* the unit's world in miniature above a teaching card */
+.scene{position:relative;margin:0 calc(-1 * var(--gutter) + 6px)}
+.scene__art{display:block;width:100%;height:auto;max-height:34vh;overflow:visible}
+.scene__actor{
+  position:absolute;left:50%;bottom:22%;transform:translateX(-50%);
+  display:grid;place-items:end center;
+}
+.scene__medal{
+  display:grid;place-items:center;width:64px;height:64px;border-radius:50%;
+  color:var(--orange);background:var(--paper);
+  box-shadow:0 7px 0 var(--paper-edge);
+  margin-bottom:10px;
+}
 .kcard__body{font-size:var(--t-lead);font-weight:600;line-height:1.85;color:var(--ink)}
 
 /* tap-to-reveal term */
@@ -776,26 +798,6 @@
 
 .ex{position:absolute;inset:0;display:flex;flex-direction:column;padding:0 var(--gutter);overflow-y:auto;scrollbar-width:none;isolation:isolate}
 .ex::-webkit-scrollbar{display:none}
-.ex > :not(.ex__orbit){position:relative;z-index:1}
-.ex__orbit{position:absolute;inset:62px 0 118px;z-index:0;pointer-events:none;overflow:hidden;color:var(--orange)}
-.ex__orbit::before,.ex__orbit::after{
-  content:'';position:absolute;border-radius:50%;border:2px dashed currentColor;opacity:.08;
-}
-.ex__orbit::before{width:210px;height:210px;left:-54px;bottom:-42px}
-.ex__orbit::after{width:128px;height:128px;right:-22px;bottom:20%}
-.ex__orb{position:absolute;display:grid;place-items:center;opacity:.15;will-change:transform}
-.ex__orb--1{left:7%;top:34%;animation:question-orbit-a 11s linear infinite}
-.ex__orb--2{right:8%;top:58%;color:var(--yellow-deep);animation:question-orbit-b 9s linear infinite}
-.ex__orb--3{left:44%;bottom:5%;color:var(--info);animation:question-orbit-c 7s var(--e-in-out) infinite alternate}
-@keyframes question-orbit-a{
-  from{transform:rotate(0deg) translateX(10px) rotate(0deg)}
-  to{transform:rotate(360deg) translateX(10px) rotate(-360deg)}
-}
-@keyframes question-orbit-b{
-  from{transform:rotate(360deg) translateX(14px) rotate(-360deg)}
-  to{transform:rotate(0deg) translateX(14px) rotate(0deg)}
-}
-@keyframes question-orbit-c{from{transform:translate3d(-8px,8px,0) rotate(-10deg)}to{transform:translate3d(12px,-12px,0) rotate(14deg)}}
 .ex__kicker{
   align-self:flex-start;display:inline-flex;align-items:center;gap:7px;
   font-size:.72rem;font-weight:900;letter-spacing:.09em;
@@ -803,6 +805,14 @@
   padding:6px 13px;border-radius:var(--r-pill);margin-bottom:12px;
 }
 .ex__prompt{font-size:var(--t-title);line-height:1.35;margin-bottom:20px}
+
+/* Siraj asks the question from beside a speech bubble */
+.host{display:flex;align-items:flex-end;gap:16px;margin:2px 0 22px}
+.host__siraj{flex:0 0 auto;margin-bottom:-6px}
+.host__bubble{flex:1;min-width:0;padding:14px 16px;align-self:center}
+.host__bubble .ex__prompt{font-size:1.14rem;line-height:1.5;margin:0}
+.host__bubble.bubble--side::before,.host__bubble.bubble--side::after{top:auto;bottom:22px}
+
 .ex__statement{
   background:var(--paper);border:2.5px solid var(--paper-edge);
   border-radius:var(--r-lg);padding:20px 18px;
@@ -1303,6 +1313,8 @@
   background:var(--yellow);
 }
 .warmup__inner{display:grid;place-items:center;gap:20px;text-align:center}
+/* inner rim light (see InnerGlow in Lesson.tsx) plus a barely-there shadow */
+.warmup .siraj img{filter:url(#siraj-inner-glow) drop-shadow(0 6px 10px rgba(120,54,0,.08))}
 .warmup__title{font-family:var(--font-display);font-size:1.9rem;font-weight:700;color:var(--maroon)}
 .warmup__ring{
   width:54px;height:54px;border-radius:50%;
