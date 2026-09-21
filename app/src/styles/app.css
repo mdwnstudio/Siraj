@@ -955,7 +955,7 @@
   padding:0 var(--gutter);
 }
 .ask__head{
-  display:flex;align-items:flex-start;gap:12px;padding:6px 0 14px;
+  display:flex;flex-direction:row-reverse;align-items:flex-start;gap:12px;padding:6px 0 14px;
   position:relative;z-index:2;background:var(--bg);flex:0 0 auto;
 }
 /* softens the seam where the thread scrolls under the pinned header,
@@ -980,15 +980,13 @@
 
 .msg{max-width:88%;padding:13px 16px;border-radius:var(--r-lg);font-size:.97rem;line-height:1.75;font-weight:600}
 .msg--me{
-  align-self:flex-end;
   background:var(--orange);color:#fff;font-weight:700;
-  border-end-end-radius:6px;
+  border-end-start-radius:6px;
 }
-/* Siraj answers on the side his head is on, mirrored for RTL */
+/* Siraj answers on the side his head is on: the left */
 .msg--siraj{
-  align-self:flex-start;
   background:var(--paper);border:2px solid var(--paper-edge);
-  border-end-start-radius:6px;box-shadow:var(--lift-1);
+  border-end-end-radius:6px;box-shadow:var(--lift-1);
 }
 .msg--err{align-self:center;background:var(--bad-soft);color:var(--bad-deep);font-weight:700;text-align:center;max-width:100%}
 .msg__src{
@@ -1002,14 +1000,52 @@
 }
 
 @keyframes think-dot{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-6px);opacity:1}}
-.thinking{display:flex;gap:5px;align-self:flex-start;padding:16px 18px;background:var(--paper);
-  border:2px solid var(--paper-edge);border-radius:var(--r-lg);box-shadow:var(--lift-1)}
-.thinking span{width:8px;height:8px;border-radius:50%;background:var(--orange);animation:think-dot 1.25s var(--e-in-out) infinite}
-.thinking span:nth-child(2){animation-delay:.16s}
-.thinking span:nth-child(3){animation-delay:.32s}
+.thinking{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--paper);
+  border:2px solid var(--paper-edge);border-radius:var(--r-lg);border-end-end-radius:6px;box-shadow:var(--lift-1)}
+.thinking__dots{display:flex;gap:5px;flex:0 0 auto}
+.thinking__dots span{width:8px;height:8px;border-radius:50%;background:var(--orange);animation:think-dot 1.25s var(--e-in-out) infinite}
+.thinking__dots span:nth-child(2){animation-delay:.16s}
+.thinking__dots span:nth-child(3){animation-delay:.32s}
+.thinking__say{font-size:.86rem;font-weight:700;color:var(--ink-2)}
+
+/* a message and, for Siraj, his little face beside it: the answer
+   visibly comes from him, not from a box under the header */
+.msg-row{display:flex;align-items:flex-end;gap:8px;max-width:92%}
+.msg-row--me{align-self:flex-start}
+.msg-row--siraj{align-self:flex-end;flex-direction:row-reverse}
+.msg-row--err{align-self:center;max-width:100%}
+.msg-row .msg{max-width:none;min-width:0}
+.ask__face{
+  flex:0 0 auto;width:34px;height:34px;border-radius:50%;
+  background:var(--orange-soft) url('/img/siraj-answer.webp') 50% 55%/170% auto no-repeat;
+  border:2px solid var(--paper-edge);
+}
+.ask__face--think{background-image:url('/img/siraj-think.webp');background-position:48% 55%}
+@keyframes face-talk{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-3px) rotate(-6deg)}60%{transform:translateY(-1px) rotate(4deg)}}
+@keyframes face-think{0%,100%{transform:rotate(0)}50%{transform:rotate(-10deg) translateY(-2px)}}
+.ask__face--talk{animation:face-talk .5s var(--e-in-out) infinite}
+.ask__face--think{animation:face-think 1.4s var(--e-in-out) infinite}
+
+.msg__body{white-space:pre-wrap;overflow-wrap:anywhere}
+.msg__link{color:var(--info-deep);font-weight:800;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px;unicode-bidi:isolate}
+@keyframes caret-blink{0%,100%{opacity:1}50%{opacity:0}}
+.msg__caret{display:inline-block;width:3px;height:1.05em;margin-inline-start:3px;vertical-align:-.15em;
+  border-radius:2px;background:var(--orange);animation:caret-blink .9s steps(1) infinite}
+.ask__say{flex:1;font-size:1rem;margin-top:8px}
+/* Siraj stands on the left here, so the tail flips to point at him */
+.ask__say::before,.ask__say::after{right:auto;border-left:0}
+.ask__say::before{left:-15px;border-right:15px solid var(--paper-edge)}
+.ask__say::after {left:-11px;border-right:11px solid var(--paper)}
+
+/* the chat's drawn poses: a fixed box so swapping pictures never
+   nudges the layout, each pose standing on the same floor */
+.pose{position:relative;flex:0 0 auto}
+.pose__frame{position:absolute;inset:0;display:flex;align-items:flex-end;transform-origin:50% 100%}
 
 .ask__pills{display:flex;flex:0 0 auto;flex-direction:column;padding:6px 0 12px}
 .ask__pills .pill+.pill{margin-top:9px}
+/* the learner's side of the chat */
+.ask__pills .pill{align-self:flex-start}
 .pill{
   align-self:flex-end;max-width:95%;overflow:hidden;
   padding:11px 16px;border-radius:var(--r-pill);
@@ -1274,8 +1310,8 @@
    ========================================================= */
 
 @media (prefers-reduced-motion:reduce){
-  .siraj img,.step__cta,.step__ring,.thinking span{animation:none!important}
+  .siraj img,.step__cta,.step__ring,.thinking span,.ask__face,.msg__caret{animation:none!important}
   .burst,.shockwave,.lightsweep{display:none!important}
 }
-.calm .siraj img,.calm .step__cta,.calm .step__ring,.calm .thinking span{animation:none!important}
+.calm .siraj img,.calm .step__cta,.calm .step__ring,.calm .thinking span,.calm .ask__face,.calm .msg__caret{animation:none!important}
 .calm .burst,.calm .shockwave,.calm .lightsweep{display:none!important}

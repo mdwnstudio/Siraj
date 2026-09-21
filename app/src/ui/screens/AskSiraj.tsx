@@ -1,9 +1,10 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Lesson } from '../../core/types'
-import { askSiraj } from '../../core/ai/askSiraj'
+import { askSirajStream } from '../../core/ai/askSiraj'
+import { parseAnswer } from '../../core/ai/answerText'
 import { conceptsFromLesson } from '../../core/ai/systemPrompt'
-import { Siraj } from '../components/Siraj'
+import { SirajPose, usePreloadPoses, type Pose } from '../components/SirajPose'
 import { Button } from '../components/Button'
 import { useApp } from '../state'
 import { sfx, primeAudio } from '../../platform/sound'
@@ -14,7 +15,23 @@ interface Msg {
   who: 'me' | 'siraj' | 'err'
   text: string
   sources?: { title: string; url: string }[]
+  /** still being written: hide half-finished markdown, show a caret */
+  live?: boolean
 }
+
+/* What Siraj says he is doing while the learner waits. The stages follow
+   the real stream (searching, then writing); the later lines only appear
+   if a search genuinely runs long, so the wait always has a voice. */
+type Stage = 'reading' | 'searching' | 'digging' | 'patient' | 'writing'
+const STAGE_TEXT: Record<Stage, string> = {
+  reading: 'أقرأ سؤالك…',
+  searching: 'أبحث في مصادري الموثوقة…',
+  digging: 'أراجع ما وجدتُ لأنقله بدقّة…',
+  patient: 'ما زلت أبحث، الجواب الدقيق يستحق لحظة صبر…',
+  writing: 'وجدتُ الجواب، أكتبه لك…',
+}
+
+const AFTER = ['هل بقي شيء غير واضح؟', 'تفضّل بسؤال آخر.', 'اسألني عن أي شيء في هذا الدرس.']
 
 export function AskSiraj({
   lesson, unitTitle, onFinish,
@@ -27,9 +44,13 @@ export function AskSiraj({
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
+  const [stage, setStage] = useState<Stage>('reading')
   const [used, setUsed] = useState<string[]>([])
+  const [pose, setPose] = useState<Pose>('listen')
+  const [say, setSay] = useState<string | null>(null)
   const thread = useRef<HTMLDivElement>(null)
   const seq = useRef(0)
+  const moodTimer = useRef<number>(0)
 
   const left = lesson.ask.filter((s) => !used.includes(s.q))
 
@@ -38,89 +59,222 @@ export function AskSiraj({
   useLayoutEffect(() => {
     const el = thread.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [msgs, busy])
+  }, [msgs, busy, stage])
 
-  const push = (m: Omit<Msg, 'id'>) => setMsgs((prev) => [...prev, { ...m, id: seq.current++ }])
+  useEffect(() => {
+    return () => { window.clearTimeout(moodTimer.current); window.clearTimeout(typer.current) }
+  }, [])
 
-  const markCurious = () => {
+  usePreloadPoses()
+
+  /** strike a pose; with `back`, return to listening after that long */
+  const react = (p: Pose, back?: number) => {
+    window.clearTimeout(moodTimer.current)
+    setPose(p)
+    if (back) moodTimer.current = window.setTimeout(() => setPose('listen'), back)
+  }
+
+  // Long waits get a new line from Siraj, so it never looks frozen.
+  useEffect(() => {
+    if (!busy || stage === 'writing') return
+    const next: Partial<Record<Stage, [Stage, number]>> = {
+      reading: ['searching', 1400],
+      searching: ['digging', 6500],
+      digging: ['patient', 9000],
+    }
+    const n = next[stage]
+    if (!n) return
+    const t = window.setTimeout(() => setStage((s) => (s === stage ? n[0] : s)), n[1])
+    return () => window.clearTimeout(t)
+  }, [busy, stage])
+
+  /* ---------- the typewriter ----------
+     Network chunks arrive in lumps. Revealing them at a steady pace,
+     faster when far behind, reads as Siraj typing rather than as a
+     buffer being dumped. */
+  const target = useRef('')
+  const shown = useRef(0)
+  const liveId = useRef<number | null>(null)
+  const typer = useRef(0)
+  const settle = useRef<(() => void) | null>(null)
+  const ended = useRef(false)
+
+  const tick = () => {
+    const t = target.current
+    if (shown.current < t.length) {
+      const behind = t.length - shown.current
+      // a background tab throttles timers to once a second: skip the show
+      shown.current = document.hidden
+        ? t.length
+        : Math.min(t.length, shown.current + Math.max(1, Math.ceil(behind / 14)))
+      const v = t.slice(0, shown.current)
+      const id = liveId.current
+      setMsgs((prev) => prev.map((m) => (m.id === id ? { ...m, text: v } : m)))
+    } else if (ended.current && settle.current) {
+      settle.current()
+      settle.current = null
+      return
+    }
+    typer.current = window.setTimeout(tick, 16)
+  }
+
+  const push = (m: Omit<Msg, 'id'>) => {
+    const id = seq.current++
+    setMsgs((prev) => [...prev, { ...m, id }])
+    return id
+  }
+
+  /** open a live Siraj bubble the typewriter writes into */
+  const startReply = () => {
+    if (liveId.current !== null) return
+    target.current = ''
+    shown.current = 0
+    ended.current = false
+    liveId.current = push({ who: 'siraj', text: '', live: true })
+    setBusy(false)
+    setSay('إليك الجواب:')
+    sfx.chirp(); haptic('tap')
+    react('answer')
+    window.clearTimeout(typer.current)
+    typer.current = window.setTimeout(tick, 16)
+  }
+
+  /** let the typewriter catch up, then seal the bubble */
+  const finishReply = (answer: string, sources?: Msg['sources']) =>
+    new Promise<void>((resolve) => {
+      target.current = answer
+      if (shown.current > answer.length) shown.current = answer.length
+      ended.current = true
+      settle.current = () => {
+        const id = liveId.current
+        setMsgs((prev) => prev.map((m) => (m.id === id ? { ...m, text: answer, sources, live: false } : m)))
+        liveId.current = null
+        resolve()
+      }
+    })
+
+  const answered = () => {
+    sfx.snap()
+    react('celebrate', 1500)
+    setSay(AFTER[Math.floor(Math.random() * AFTER.length)])
     if (!progress.achievements.includes('curious')) dispatch({ type: 'grant', id: 'curious' })
+  }
+
+  const thinking = () => {
+    setStage('reading')
+    setBusy(true)
+    react('think')
+    setSay('لحظة، دعني أتحقّق…')
   }
 
   /* A suggested question answers instantly from bundled text - no
      network, no spend, works offline. Only free-typed questions hit the API. */
   const askCanned = (q: string, a: string) => {
+    if (busy || liveId.current !== null) return
     primeAudio(); sfx.tap(); haptic('tap')
     setUsed((u) => [...u, q])
     push({ who: 'me', text: q })
-    setBusy(true)
-    setTimeout(() => {
-      setBusy(false)
-      push({ who: 'siraj', text: a })
-      sfx.snap()
-      markCurious()
-    }, 620)
+    thinking()
+    window.setTimeout(async () => {
+      startReply()
+      await finishReply(a)
+      answered()
+    }, 700)
   }
 
   const askLive = async () => {
     const q = text.trim()
-    if (!q || busy) return
+    if (!q || busy || liveId.current !== null) return
     primeAudio(); sfx.tap(); haptic('tap')
     setText('')
     push({ who: 'me', text: q })
-    setBusy(true)
-    const res = await askSiraj(q, {
+    thinking()
+
+    const res = await askSirajStream(q, {
       unitTitle,
       lessonTitle: lesson.title,
       taughtConcepts: conceptsFromLesson(lesson.cards),
+    }, {
+      onStatus: (s) => setStage((cur) => (s === 'writing' ? 'writing' : cur === 'reading' ? 'searching' : cur)),
+      onText: (soFar) => {
+        startReply()
+        target.current = soFar
+      },
     })
-    setBusy(false)
+
     if (res.ok && res.answer) {
-      push({ who: 'siraj', text: res.answer, sources: res.sources })
-      sfx.snap()
-      markCurious()
+      startReply()
+      await finishReply(res.answer, res.sources)
+      answered()
     } else {
+      // a reply that began streaming and then broke keeps what it had
+      if (liveId.current !== null) await finishReply(target.current)
+      setBusy(false)
       push({ who: 'err', text: res.message ?? 'تعذّر الحصول على إجابة.' })
       sfx.wrong()
+      react('oops', 2800)
+      setSay('عذرًا، لم أتمكّن هذه المرة.')
     }
   }
+
+  const writing = busy || liveId.current !== null
 
   return (
     <>
       <div className="ask__head">
-        <Siraj mood="think" size={72} />
-        <div className="bubble bubble--side" style={{ flex: 1, fontSize: '1rem' }}>
-          شيءٌ لم يتّضح في <b style={{ color: 'var(--orange)' }}>{lesson.title}</b>؟ اسألني.
+        <SirajPose pose={pose} size={80} />
+        <div className="bubble bubble--side ask__say">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span key={say ?? 'intro'} style={{ display: 'block' }}
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}>
+              {say ?? <>شيءٌ لم يتّضح في <b style={{ color: 'var(--orange)' }}>{lesson.title}</b>؟ اسألني.</>}
+            </motion.span>
+          </AnimatePresence>
         </div>
       </div>
 
       <span className="ask__fade" aria-hidden />
 
-      <div className="ask__thread" ref={thread}>
+      <div className="ask__thread" ref={thread} aria-live="polite">
         {msgs.map((m) => (
           /* `layout` lets earlier messages glide upward as a new one takes
              its space, rather than teleporting by its full height */
-          <motion.div key={m.id} layout className={`msg msg--${m.who}`}
+          <motion.div key={m.id} layout="position" className={`msg-row msg-row--${m.who}`}
             initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ layout: { type: 'spring', stiffness: 420, damping: 38 }, duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}>
-            {m.text}
-            {!!m.sources?.length && (
-              <div className="msg__src">
-                {m.sources.map((s) => (
-                  <a key={s.url} className="msg__srclink" href={s.url} target="_blank" rel="noreferrer noopener">
-                    {s.title}
-                  </a>
-                ))}
-              </div>
-            )}
+            {m.who === 'siraj' && <span className={`ask__face${m.live ? ' ask__face--talk' : ''}`} aria-hidden />}
+            <div className={`msg msg--${m.who}`}>
+              {m.who === 'siraj' ? <Answer text={m.text} sources={m.sources} live={m.live} /> : m.text}
+              {!!m.sources?.length && (
+                <div className="msg__src">
+                  {m.sources.map((s) => (
+                    <a key={s.url} className="msg__srclink" href={s.url} target="_blank" rel="noreferrer noopener">
+                      {sourceLabel(s.title)}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
           </motion.div>
         ))}
         <AnimatePresence>
           {busy && (
-            <motion.div className="thinking" layout
+            <motion.div className="msg-row msg-row--siraj" layout="position"
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0, borderWidth: 0, transition: { duration: 0.16 } }}
+              exit={{ opacity: 0, height: 0, transition: { duration: 0.16 } }}
               style={{ overflow: 'hidden' }}>
-              <span /><span /><span />
+              <span className="ask__face ask__face--think" aria-hidden />
+              <div className="thinking">
+                <span className="thinking__dots"><span /><span /><span /></span>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span key={stage} className="thinking__say"
+                    initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 6 }}
+                    transition={{ duration: 0.2 }}>
+                    {STAGE_TEXT[stage]}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -136,7 +290,7 @@ export function AskSiraj({
                 marginTop: 0, borderWidth: 0,
                 transition: { duration: 0.22, ease: [0.32, 0, 0.67, 0] },
               }}
-              onClick={() => askCanned(s.q, s.a)} disabled={busy}>
+              onClick={() => askCanned(s.q, s.a)} disabled={writing}>
               {s.q}
             </motion.button>
           ))}
@@ -151,9 +305,9 @@ export function AskSiraj({
           placeholder="أو اكتب سؤالك…"
           enterKeyHint="send"
           onKeyDown={(e) => e.key === 'Enter' && askLive()}
-          disabled={busy}
+          disabled={writing}
         />
-        <button className="ask__send" onClick={askLive} disabled={busy || !text.trim()} aria-label="إرسال">
+        <button className="ask__send" onClick={askLive} disabled={writing || !text.trim()} aria-label="إرسال">
           <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12 H5 M11 6 L5 12 L11 18" />
           </svg>
@@ -169,4 +323,30 @@ export function AskSiraj({
       </div>
     </>
   )
+}
+
+/** Answer text with links resolved: a link already listed under sources
+ *  is dropped, any other one becomes a short blue link. */
+function Answer({ text, sources, live }: { text: string; sources?: Msg['sources']; live?: boolean }) {
+  const parts = parseAnswer(text, sources, { streaming: live })
+  return (
+    <span className="msg__body">
+      {parts.map((p, i) =>
+        p.k === 'link' ? (
+          <a key={i} className="msg__link" href={p.url} target="_blank" rel="noreferrer noopener" dir="auto">{p.label}</a>
+        ) : p.k === 'bold' ? (
+          <b key={i}>{p.v}</b>
+        ) : (
+          <Fragment key={i}>{p.v}</Fragment>
+        ),
+      )}
+      {live && <span className="msg__caret" aria-hidden />}
+    </span>
+  )
+}
+
+/** "Sahih al-Bukhari 8 - Belief - Sunnah.com - Sayings and..." -> "Sahih al-Bukhari 8" */
+function sourceLabel(title: string): string {
+  const head = title.split(/\s+[-|\u2013]\s+/)[0].trim()
+  return head.length > 32 ? head.slice(0, 31).trimEnd() + '…' : head
 }
