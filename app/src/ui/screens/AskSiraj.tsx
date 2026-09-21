@@ -1,12 +1,12 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { AnimatePresence, animate, motion } from 'framer-motion'
 import type { Lesson } from '../../core/types'
 import { askSirajStream } from '../../core/ai/askSiraj'
 import { parseAnswer } from '../../core/ai/answerText'
 import { conceptsFromLesson } from '../../core/ai/systemPrompt'
 import { SirajPose, usePreloadPoses, type Pose } from '../components/SirajPose'
 import { Button } from '../components/Button'
-import { useApp } from '../state'
+import { useApp, useCalmMotion } from '../state'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
 
@@ -20,6 +20,8 @@ interface Msg {
   /** the whole reply, known before typing starts, so the bubble takes
    *  its final size at once and the text types into it */
   full?: string
+  /** size of the thinking bubble this reply grows out of */
+  grow?: { w: number; h: number }
 }
 
 /* What Siraj says he is doing while the learner waits. The stages follow
@@ -46,6 +48,7 @@ export function AskSiraj({
   onFinish?: () => void
 }) {
   const { progress, dispatch } = useApp()
+  const calm = useCalmMotion()
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -54,6 +57,7 @@ export function AskSiraj({
   const [pose, setPose] = useState<Pose>('listen')
   const [say, setSay] = useState<string | null>(null)
   const thread = useRef<HTMLDivElement>(null)
+  const thinkBubble = useRef<HTMLDivElement>(null)
   const seq = useRef(0)
   const moodTimer = useRef<number>(0)
 
@@ -128,19 +132,33 @@ export function AskSiraj({
     return id
   }
 
-  /** open a live Siraj bubble the typewriter writes into */
+  /** Open a live Siraj bubble. It is born at the thinking bubble's size,
+   *  in the same spot, springs out to its final size, and only then
+   *  does the typewriter start (GrowBubble calls startTyping). */
   const startReply = (full: string, sources?: Msg['sources']) => {
     if (liveId.current !== null) return
+    const r = thinkBubble.current?.getBoundingClientRect()
     target.current = full
     shown.current = 0
     ended.current = false
-    liveId.current = push({ who: 'siraj', text: '', full, sources, live: true })
+    liveId.current = push({
+      who: 'siraj', text: '', full, sources, live: true,
+      grow: r ? { w: r.width, h: r.height } : { w: 64, h: 46 },
+    })
     setBusy(false)
     setSay('إليك الجواب:')
     sfx.chirp(); haptic('tap')
     react('answer')
+  }
+
+  const startTyping = () => {
     window.clearTimeout(typer.current)
     typer.current = window.setTimeout(tick, 16)
+  }
+
+  const pinToBottom = () => {
+    const el = thread.current
+    if (el) el.scrollTop = el.scrollHeight
   }
 
   /** let the typewriter finish, then seal the bubble */
@@ -242,10 +260,12 @@ export function AskSiraj({
              as it arrives, so the question would slide across the reply.
              Earlier rows move before paint; only the new row fades up. */
           <motion.div key={m.id} className={`msg-row msg-row--${m.who}`}
-            initial={{ opacity: 0, y: m.who === 'siraj' ? 0 : 10 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: m.who === 'siraj' ? 0.15 : 0.25, ease: [0.23, 1, 0.32, 1] }}>
+            // a reply is the thinking bubble itself, grown: no fade
+            initial={m.who === 'siraj' ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}>
             {m.who === 'siraj' && <span className={`ask__face${m.live ? ' ask__face--talk' : ''}`} aria-hidden />}
-            <div className={`msg msg--${m.who}`}>
+            <GrowBubble className={`msg msg--${m.who}`} from={m.live ? m.grow : undefined} calm={calm}
+              onStep={pinToBottom} onGrown={startTyping}>
               {m.who === 'siraj' ? <Answer text={m.text} full={m.full} sources={m.sources} live={m.live} /> : m.text}
               {!!m.sources?.length && (
                 <div className={`msg__src${m.live ? ' is-waiting' : ''}`}>
@@ -256,7 +276,7 @@ export function AskSiraj({
                   ))}
                 </div>
               )}
-            </div>
+            </GrowBubble>
           </motion.div>
         ))}
         {/* no exit animation: the reply takes this row's place in the same
@@ -266,7 +286,7 @@ export function AskSiraj({
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}>
             <span className="ask__face ask__face--think" aria-hidden />
-            <div className="thinking">
+            <div className="thinking" ref={thinkBubble}>
               <span className="thinking__dots"><span /><span /><span /></span>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span key={stage} className="thinking__say"
@@ -325,6 +345,63 @@ export function AskSiraj({
       )}
     </>
   )
+}
+
+/** A bubble that, given `from`, starts at that size and springs out to
+ *  its natural size, then calls onGrown. Real width and height are
+ *  animated, not a scale transform, so the border and corners never
+ *  stretch and nothing is drawn over its neighbours. */
+function GrowBubble({ from, calm, onStep, onGrown, className, children }: {
+  from?: { w: number; h: number }
+  calm: boolean
+  onStep: () => void
+  onGrown: () => void
+  className: string
+  children: ReactNode
+}) {
+  const el = useRef<HTMLDivElement>(null)
+  const done = useRef(false)
+
+  useLayoutEffect(() => {
+    const node = el.current
+    if (!from || !node || done.current) return
+    if (calm) { done.current = true; onGrown(); return }
+    // the finished text is already laid out (invisibly), so this is the
+    // bubble's true final size
+    const w = node.offsetWidth
+    const h = node.offsetHeight
+    node.style.overflow = 'hidden'
+    node.style.width = `${from.w}px`
+    node.style.height = `${from.h}px`
+    // typing starts once the bubble has reached its size, during the
+    // bounce rather than after its last wobble. Keyed to the real size,
+    // not a timer, so a slow frame can never start it in a small bubble.
+    let typing = false
+    const begin = () => { if (!typing) { typing = true; onGrown() } }
+    const run = animate(node, { width: [from.w, w], height: [from.h, h] }, {
+      type: 'spring', bounce: 0.42, duration: 0.6,
+      onUpdate: () => {
+        onStep()
+        if (node.offsetHeight >= h * 0.98 && node.offsetWidth >= w * 0.98) begin()
+      },
+      onComplete: () => {
+        done.current = true
+        reset()
+        onStep()
+        begin()
+      },
+    })
+    function reset() {
+      node!.style.width = ''
+      node!.style.height = ''
+      node!.style.overflow = ''
+    }
+    // an interrupted grow (StrictMode's double effect in dev) leaves the
+    // bubble at its natural size, so the rerun measures it correctly
+    return () => { run.stop(); if (!done.current) reset() }
+  }, [])
+
+  return <div ref={el} className={className}>{children}</div>
 }
 
 /** Answer text with links resolved: a link already listed under sources
