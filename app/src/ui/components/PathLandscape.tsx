@@ -291,6 +291,141 @@ const fog = (f: number) => {
   return 1
 }
 
+/* ---------------- the compositor camera ----------------
+ * The same projection, handed to the browser instead of run by us. The
+ * stair scrolls natively, and every body gets a scroll-linked animation
+ * whose keyframes are the projection sampled along the scroll range. The
+ * compositor thread plays them in step with the finger, so a busy main
+ * thread (a budget phone running a whole OS and other apps) cannot drop
+ * a scrolled frame, and no style is written while scrolling.
+ */
+type TimelineCtor = new (options: { source: Element; axis: 'block' }) => AnimationTimeline
+const ScrollTimelineCtor: TimelineCtor | undefined =
+  typeof window !== 'undefined' ? (window as unknown as { ScrollTimeline?: TimelineCtor }).ScrollTimeline : undefined
+
+/** true where the browser can run the camera off the main thread */
+export const COMPOSITOR_CAMERA = !!ScrollTimelineCtor
+
+const SAMPLES = 28
+
+function nativeCamera(
+  root: HTMLElement, stair: HTMLElement, skyEl: HTMLElement | null | undefined,
+  reduced: () => boolean, onUnit: (unitId: string) => void,
+) {
+  const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+  const sections = Array.from(root.querySelectorAll<HTMLElement>('.path-unit'))
+
+  const bodies = Array.from(root.querySelectorAll<HTMLElement>('[data-persp]'))
+  const high = skyEl?.querySelector<HTMLElement>('.sky__high')
+  const banks = Array.from(skyEl?.querySelectorAll<HTMLElement>('[data-speed]') ?? [])
+  let running: Animation[] = []
+  let height = root.clientHeight
+  let calm = reduced()
+  let shownUnit = ''
+
+  const stop = () => { for (const a of running) a.cancel(); running = [] }
+
+  const build = () => {
+    stop()
+    calm = reduced()
+    height = root.clientHeight
+    const max = root.scrollHeight - height
+    for (const bank of banks) bank.style.height = ''
+    if (calm || max < 1) { unit(); return }
+    const timeline = new ScrollTimelineCtor!({ source: root, axis: 'block' })
+    const play = (el: HTMLElement, frames: Keyframe[]) => {
+      running.push(el.animate(frames, { timeline, fill: 'both' } as KeyframeAnimationOptions))
+    }
+    const anchor = height * ANCHOR
+    const D = height * DEPTH
+    // passed bodies leave below the fold; the ones ahead melt into the fog near the top
+    const vLo = Math.max(-D * 0.8, anchor - height - 400)
+    const vHi = (D * (anchor - FOG[0][0] * height)) / (D - (anchor - FOG[0][0] * height))
+    const at = (dx: number, v: number, fade: number): Keyframe => {
+      const s = D / (v + D)
+      return {
+        transform: `translate3d(${(dx * s).toFixed(1)}px,${(v - v * s).toFixed(1)}px,0) scale(${s.toFixed(4)})`,
+        opacity: +(fog((anchor - v * s) / height) * fade).toFixed(3),
+      }
+    }
+    for (const el of bodies) {
+      const dx = Number(el.dataset.dx ?? 0)
+      const mid = layoutTop(el, stair) + el.offsetHeight / 2
+      // scroll = mid - anchor + v, clipped to what the scroller can reach
+      const from = Math.max(0, mid - anchor + vLo)
+      const to = Math.min(max, mid - anchor + vHi)
+      if (to <= from) continue
+      const frames: Keyframe[] = []
+      for (let i = 0; i <= SAMPLES; i++) {
+        const scroll = from + ((to - from) * i) / SAMPLES
+        const v = scroll - mid + anchor
+        // the last stretch below the fold fades out, so a big island never pops
+        const fade = Math.min(1, (v - vLo) / (D * 0.15))
+        frames.push({ ...at(dx, v, fade), offset: scroll / max })
+      }
+      play(el, [{ ...frames[0], offset: 0 }, ...frames, { ...frames[frames.length - 1], offset: 1 }])
+    }
+    // the cloud banks: a sawtooth, so each tiled bank loops by one tile forever
+    for (const bank of banks) {
+      const speed = Number(bank.dataset.speed)
+      const tile = Math.max(1, bank.clientWidth * Number(bank.dataset.ratio))
+      bank.style.height = `${Math.ceil(height + tile + 2)}px`
+      const frames: Keyframe[] = [{ transform: 'translate3d(0,0,0)', offset: 0 }]
+      for (let k = 1; (k * tile) / speed < max; k++) {
+        const offset = (k * tile) / speed / max
+        frames.push({ transform: `translate3d(0,${-tile}px,0)`, offset }, { transform: 'translate3d(0,0,0)', offset })
+      }
+      frames.push({ transform: `translate3d(0,${-((max * speed) % tile).toFixed(1)}px,0)`, offset: 1 })
+      play(bank, frames)
+    }
+    // 0 at the first step, 1 at the last: the sky cools from dawn to open blue as you climb
+    if (high) play(high, [{ opacity: 1 }, { opacity: 0 }])
+    unit()
+  }
+
+  // The banner names whichever unit is under the probe line. In road
+  // coordinates that line sits a fixed distance below the scroller's top,
+  // so a one-pixel band on an IntersectionObserver finds it with no script
+  // running per scroll event.
+  let watch: IntersectionObserver | null = null
+  const unit = () => {
+    watch?.disconnect()
+    const anchor = height * ANCHOR
+    const D = height * DEPTH
+    const pMid = anchor - height * 0.5
+    const line = Math.round(anchor - (calm ? pMid : (pMid * D) / (D - pMid)))
+    watch = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        const id = (entry.target as HTMLElement).dataset.unit ?? ''
+        if (entry.isIntersecting && id !== shownUnit) { shownUnit = id; onUnit(id) }
+      }
+    }, { root, rootMargin: `${-line}px 0px ${line + 1 - height}px 0px` })
+    for (const section of sections) watch.observe(section)
+  }
+
+  let queued = 0
+  const rebuild = () => {
+    if (queued) return
+    queued = requestAnimationFrame(() => { queued = 0; build() })
+  }
+  const observer = new ResizeObserver(rebuild)
+  observer.observe(root)
+  observer.observe(stair)
+  media.addEventListener('change', rebuild)
+  build()
+  let alive = true
+  document.fonts?.ready.then(() => { if (alive) rebuild() })
+  return () => {
+    alive = false
+    cancelAnimationFrame(queued)
+    observer.disconnect()
+    watch?.disconnect()
+    media.removeEventListener('change', rebuild)
+    stop()
+    for (const bank of banks) bank.style.height = ''
+  }
+}
+
 /** One passive listener, no React updates per frame, and no idle animation loop.
  * Geometry is cached on resize, and a style is only written when its value
  * changed, so a still body costs nothing on a scrolled frame.
@@ -299,11 +434,13 @@ export function useLandscapeParallax(
   scroller: RefObject<HTMLDivElement | null>,
   calm: boolean,
   {
-    sky, onUnit, lite = false,
+    sky, onUnit, lite = false, native = false,
   }: {
     sky?: RefObject<HTMLDivElement | null>
     onUnit?: (unitId: string) => void
     lite?: boolean
+    /** scroll natively and let the compositor run the camera (needs COMPOSITOR_CAMERA) */
+    native?: boolean
   } = {},
 ) {
   const frame = useRef(0)
@@ -314,6 +451,9 @@ export function useLandscapeParallax(
     const stair = root?.querySelector<HTMLElement>('.stair')
     if (!root || !stair) return
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    if (native && COMPOSITOR_CAMERA) {
+      return nativeCamera(root, stair, sky?.current, () => calm || media.matches, u => unitCb.current?.(u))
+    }
     const wide = window.matchMedia('(min-width: 700px)')
     const sections = Array.from(root.querySelectorAll<HTMLElement>('.path-unit'))
     const scenes = sections.map(section => ({
@@ -462,7 +602,7 @@ export function useLandscapeParallax(
       if (high) high.style.opacity = ''
       stair.style.transform = ''
     }
-  }, [scroller, sky, calm, lite])
+  }, [scroller, sky, calm, lite, native])
 }
 
 export const LANDSCAPE_UNITS = [...UNITS].reverse()
