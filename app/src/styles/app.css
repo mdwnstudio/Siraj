@@ -1562,15 +1562,42 @@
    what costs a full-screen pass on every frame is drawn a cheaper way.
    ========================================================= */
 
-/* The compositor camera (PathLandscape.tsx): the stair scrolls natively and
-   is not a layer of its own; each body is promoted by its own animation.
-   overflow:clip keeps a projected body from growing the scroll range. */
-.stairwrap--native .stage{position:static;height:auto;overflow:visible}
-.stairwrap--native .stair{will-change:auto;overflow:clip}
-.stairwrap--native .stair-spacer{display:none}
-/* the clouds hold still under the compositor camera: one screen-sized
-   texture with the sky, instead of three layers each two screens tall */
-.home--native .sky__clouds{will-change:auto;height:100%}
+/* The ground camera (PathLandscape.tsx): the scroller is a plane tilted back
+   in 3D, reaching past the view above and below, and the browser scrolls it
+   natively. The geometry is pure CSS in container units of .home, so it is
+   right on the first frame; TILT, PERSP and the REACH_* constants in
+   PathLandscape.tsx must match these numbers. Bodies are stretched by
+   1/cos(50deg), and so are the gaps between them, so the road reads
+   life-size at the anchor line. */
+.home--ground{container-type:size;--g-stretch:1.556}
+.stairwrap--ground{
+  position:absolute;left:0;right:0;flex:none;
+  top:-130cqh;height:270cqh;
+  transform-origin:50% 204cqh;
+  transform:perspective(100cqh) rotateX(50deg);
+}
+.stairwrap--ground .stage{position:static;height:auto;overflow:visible;-webkit-mask-image:none;mask-image:none}
+/* room above the last step and below the first, so either can reach the anchor line */
+.stairwrap--ground .stair{will-change:auto;padding:calc(130cqh + 112px) 0 70cqh}
+.stairwrap--ground .stair-spacer{display:none}
+.stairwrap--ground .path-unit{
+  gap:calc(40px * var(--g-stretch));
+  padding:calc(190px * var(--g-stretch)) 0 calc(70px * var(--g-stretch));
+}
+.stairwrap--ground .path-unit:first-child{padding-top:calc(84px * var(--g-stretch))}
+.stairwrap--ground .step{transform:translateX(var(--dx,0)) scaleY(var(--g-stretch))}
+.stairwrap--ground .path-unit__caption{transform:scaleY(var(--g-stretch))}
+/* the clouds hold still on phones: one screen-sized texture with the sky */
+.home--ground .sky__clouds{will-change:auto;height:100%}
+/* The fog: a copy of the sky over the far road, faded out by a mask. Every
+   part is still, so each mask is painted once into its texture; only the
+   dawn-to-blue layer changes, and that is an opacity. */
+.sky--fog{z-index:2;background:none}
+.sky--fog::before{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,var(--sky-low-a),var(--sky-low-b) 80%)}
+.sky--fog::before,.sky--fog > *{
+  -webkit-mask-image:linear-gradient(to bottom,#000 10%,rgba(0,0,0,.8) 24%,rgba(0,0,0,.35) 38%,transparent 54%);
+  mask-image:linear-gradient(to bottom,#000 10%,rgba(0,0,0,.8) 24%,rgba(0,0,0,.35) 38%,transparent 54%);
+}
 /* no mask over the moving stair: the camera fades each body instead */
 .lite .stage{-webkit-mask-image:none;mask-image:none}
 /* the islands hold still in their frames, so each one is a single texture */
