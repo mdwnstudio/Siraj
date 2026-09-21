@@ -10,7 +10,7 @@
    handler must live somewhere that can hold a secret. See AGENTS.md §6.
    ============================================================ */
 
-import { ALLOWED_DOMAINS, buildSystemPrompt, type AskContext } from '../app/src/core/ai/systemPrompt'
+import { ALLOWED_DOMAINS, buildSystemPrompt, stripLinks, type AskContext } from '../app/src/core/ai/systemPrompt'
 
 /** The OpenAI model id. The API requires a model name on every request,
  *  even when a project only permits one, so this must be a real id.
@@ -174,8 +174,9 @@ function callOpenAI(
 }
 
 // House rule: no em-dashes anywhere in the product, including model output.
+// Links go too: sources are listed under the answer, never inside it.
 function clean(text: string): string {
-  return text.replace(/\s*\u2014\s*/g, '، ').trim()
+  return stripLinks(text).replace(/\s*\u2014\s*/g, '، ').trim()
 }
 
 /* ---------------- streaming ---------------- */

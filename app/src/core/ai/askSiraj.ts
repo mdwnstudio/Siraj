@@ -1,6 +1,6 @@
 /* Client half of اسأل سراج. Pure fetch - no DOM, ports to native as-is. */
 
-import type { AskContext } from './systemPrompt'
+import { stripLinks, type AskContext } from './systemPrompt'
 
 export type AskState =
   | { status: 'idle' }
@@ -64,7 +64,7 @@ export async function askSirajStream(
     let ev: { t: string; s?: 'searching' | 'writing'; d?: string; answer?: string; sources?: AskResult['sources']; code?: string; message?: string }
     try { ev = JSON.parse(line) } catch { return }
     if (ev.t === 'status' && ev.s) h.onStatus?.(ev.s)
-    else if (ev.t === 'delta' && ev.d) { text += ev.d; h.onText?.(text) }
+    else if (ev.t === 'delta' && ev.d) { text += ev.d; h.onText?.(stripLinks(text)) }
     else if (ev.t === 'done') result = { ok: true, answer: ev.answer, sources: ev.sources ?? [] }
     else if (ev.t === 'error') result = { ok: false, code: ev.code ?? 'upstream', message: ev.message ?? 'حدث خطأ.' }
   }
@@ -93,7 +93,7 @@ export async function askSirajStream(
   }
 
   if (result) return result
-  if (text.trim()) return { ok: true, answer: text.trim(), sources: [] }
+  if (text.trim()) return { ok: true, answer: stripLinks(text).trim(), sources: [] }
   return { ok: false, code: 'network', message: OFFLINE }
 }
 
