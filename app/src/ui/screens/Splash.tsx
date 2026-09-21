@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 
 const B = import.meta.env.BASE_URL
 const CHARACTER = `${B}img/siraj-splash.webp`

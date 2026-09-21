@@ -213,12 +213,13 @@
 .pbar{
   position:relative;height:16px;border-radius:var(--r-pill);
   background:var(--inert);overflow:hidden;flex:1;
+  /* the fill springs its width: keep that relayout inside the bar */
+  contain:layout paint;
 }
 .pbar__fill{
   position:absolute;inset-inline-start:0;top:0;bottom:0;
   border-radius:var(--r-pill);
   background:var(--good);
-  will-change:width;
 }
 .pbar--gold .pbar__fill{background:var(--yellow)}
 .pbar__gloss{
@@ -384,23 +385,26 @@
 }
 .sky__clouds{
   position:absolute;top:0;left:0;right:0;height:200%;
-  background:var(--cloud);
-  -webkit-mask-size:100% auto;mask-size:100% auto;
-  -webkit-mask-repeat:repeat-y;mask-repeat:repeat-y;
+  /* plain tiled images, one per theme (PathLandscape.tsx): no mask pass per frame */
+  background-image:var(--cloud-img);
+  background-size:100% auto;background-repeat:repeat-y;
+  --cloud-img:var(--cloud-day);
   will-change:transform;
 }
 .sky__clouds--far {opacity:.45}
 .sky__clouds--mid {opacity:.7}
-.sky__clouds--near{opacity:.7;filter:drop-shadow(0 10px 0 rgba(120,150,190,.12))}
+.sky__clouds--near{opacity:.7}
 :root[data-theme="dark"] .sky{
   --sky-low-a:#2E120D;--sky-low-b:#1C0806;--sky-high-a:#120F26;--sky-high-b:#20152C;
   --cloud:rgba(255,236,220,.09);--sun:rgba(255,170,90,.16);
 }
+:root[data-theme="dark"] .sky__clouds{--cloud-img:var(--cloud-night)}
 @media(prefers-color-scheme:dark){
   :root:not([data-theme="light"]) .sky{
     --sky-low-a:#2E120D;--sky-low-b:#1C0806;--sky-high-a:#120F26;--sky-high-b:#20152C;
     --cloud:rgba(255,236,220,.09);--sun:rgba(255,170,90,.16);
   }
+  :root:not([data-theme="light"]) .sky__clouds{--cloud-img:var(--cloud-night)}
 }
 
 /* ---- the unit banner, floating over the sky ---- */
@@ -477,6 +481,10 @@
   /* 180% wide: once the camera shrinks an island there is still ground
      at its sides, which then melts into the sky instead of ending in a wall */
   position:absolute;inset:60px -40% -60px;z-index:-1;pointer-events:none;
+}
+/* the soft edges sit one box in from the moving layer (see PathLandscape.tsx) */
+.landscape__view{
+  position:absolute;inset:0;
   overflow:clip;contain:paint;
   -webkit-mask-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.45) 30%,#000 70%,#000 calc(100% - 70px),transparent),
                      linear-gradient(to right,transparent 6%,#000 24%,rgba(0,0,0,.4) 40%,rgba(0,0,0,.4) 60%,#000 76%,transparent 94%);
@@ -495,9 +503,11 @@
   will-change:transform;
 }
 .landscape__far svg,.landscape__architecture svg{display:block;width:100%;height:auto;overflow:visible}
-/* atmospheric perspective: the further back, the more it melts into the sky */
-.landscape__far{opacity:.3;filter:saturate(.7)}
-.landscape__architecture{opacity:.82;filter:saturate(.62) contrast(.84) brightness(1.05)}
+/* atmospheric perspective: the further back, the more it melts into the sky.
+   On the drawing, not on the moving layer, so it is painted into the texture
+   once instead of re-applied by the compositor on every scrolled frame. */
+.landscape__far svg{opacity:.3;filter:saturate(.7)}
+.landscape__architecture svg{opacity:.82;filter:saturate(.62) contrast(.84) brightness(1.05)}
 :root[data-theme="dark"] :is(.landscape,.scene){
   --land-stone:#76533E;--land-shadow:#51382C;--land-light:#A77D50;
   --land-recess:#35251F;--land-accent:#A87540;--land-leaf:#535C3B;
@@ -541,7 +551,7 @@
   position:relative;
   transform:translateX(var(--dx,0));
   transform-origin:50% 50%;
-  will-change:transform,opacity;
+  will-change:transform;
 }
 
 .slab{
@@ -1493,7 +1503,7 @@
   .unitcard{left:0;right:0;margin-inline:auto;width:min(600px,calc(100% - 48px));top:18px}
   .stair{padding-top:132px}
   .path-unit{max-width:580px}
-  .sky__clouds{-webkit-mask-size:520px auto;mask-size:520px auto;-webkit-mask-repeat:repeat;mask-repeat:repeat}
+  .sky__clouds{background-size:520px auto;background-repeat:repeat}
   .sky__sun{width:520px;height:520px;top:-180px}
 
   /* pages that were one phone column spread into the width they have */
@@ -1542,3 +1552,21 @@
   .phero__title{font-size:1.6rem}
   .phero__text{font-size:1rem}
 }
+
+/* =========================================================
+   15. LITE - the same app on a budget GPU
+   ui/perf.ts sets html.lite on weak hardware, or for good once the
+   stair has scrolled janky. Nothing is removed from the design; only
+   what costs a full-screen pass on every frame is drawn a cheaper way.
+   ========================================================= */
+
+/* no mask over the moving stair: the camera fades each body instead */
+.lite .stage{-webkit-mask-image:none;mask-image:none}
+/* the islands hold still in their frames, so each one is a single texture */
+.lite .landscape [data-depth]{will-change:auto;transform:none!important}
+/* blurring everything behind a sheet is the dearest pixel on the page */
+.lite .scrim{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(40,8,4,.52)}
+/* half the particles, the same shape of burst */
+.lite .burst__bit:nth-child(2n){display:none}
+/* an SVG filter re-run on an image that never stops moving */
+.lite .warmup .siraj img{filter:none}

@@ -1,5 +1,5 @@
 import { memo, useEffect } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import type { Mood } from './Siraj'
 
 /* Drawn poses for the chat, one picture per state, so Siraj visibly

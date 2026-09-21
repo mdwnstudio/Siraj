@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { UNITS } from '../../core/content/path'
 import { Crescent, Lantern } from '../icons/SirajIcons'
+import { sampleScrollFrame } from '../perf'
 
 /* An elevated camera: every building shares the same two ground-plane axes.
  * Roofs and courtyard tops are real vector faces, not a skew of a flat picture.
@@ -162,6 +163,10 @@ export const UnitScene = memo(function UnitScene({ unitId, children }: { unitId:
 export const PathLandscape = memo(function PathLandscape({ unitId }: { unitId: string }) {
   const night = unitId === 'u-sawm'
   return <div className={`landscape landscape--${unitId}`} data-persp aria-hidden="true">
+    {/* the soft edges live on this inner box, not on the moving one: when
+        nothing inside is composited (html.lite) the mask is painted once
+        into the island's texture instead of re-applied every frame */}
+    <div className="landscape__view">
     <div className="landscape__far" data-depth="0.4">
       <svg viewBox="0 0 460 380" fill="none" focusable="false">
         <path d="M-110 103 39 31 155 87 6 159ZM320 112 471 40 572 89 421 161Z" fill="var(--land-hill)" />
@@ -176,25 +181,38 @@ export const PathLandscape = memo(function PathLandscape({ unitId }: { unitId: s
         <Landmark unitId={unitId} />
       </svg>
     </div>
+    </div>
   </div>
 })
 
 /* ---------------- the open sky behind every unit ----------------
- * Cloud banks are alpha masks tiled vertically and filled with --cloud, so
- * both themes share one drawing. Each bank scrolls at its own fraction of
- * the path's speed; the smaller the fraction, the further away it reads.
+ * Cloud banks are plain tiled images, one drawing per theme, picked in CSS.
+ * (They were alpha masks over a --cloud fill, which cost a masked render
+ * pass per bank on every scrolled frame.) Each bank scrolls at its own
+ * fraction of the path's speed; the smaller the fraction, the further away
+ * it reads.
  */
 const puff = (x: number, y: number, s: number) =>
   `<g transform='translate(${x} ${y}) scale(${s})'><circle cx='30' cy='26' r='18'/><circle cx='54' cy='17' r='24'/><circle cx='80' cy='27' r='16'/><rect x='10' y='24' width='90' height='20' rx='10'/></g>`
 
-const bank = (w: number, h: number, puffs: [number, number, number][]) =>
-  `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}' width='${w}' height='${h}'>${puffs.map(p => puff(...p)).join('')}</svg>`)}")`
+// the fills match the old --cloud values: white by day, a faint warm haze by night
+const CLOUD_FILL = { light: "fill='#FFFFFF'", dark: "fill='rgb(255,236,220)' fill-opacity='.09'" }
+type Puffs = [number, number, number][]
 
-const CLOUD_BANKS = [
-  { id: 'far', speed: 0.05, w: 360, h: 560, mask: bank(360, 560, [[18, 50, .42], [248, 150, .34], [120, 300, .5], [276, 420, .38], [8, 470, .3]]) },
-  { id: 'mid', speed: 0.16, w: 380, h: 780, mask: bank(380, 780, [[6, 90, .8], [262, 250, .66], [60, 470, .92], [272, 650, .7]]) },
-  { id: 'near', speed: 0.34, w: 400, h: 1040, mask: bank(400, 1040, [[2, 170, 1.3], [250, 540, 1.2], [12, 880, 1.1]]) },
-].map(b => ({ ...b, style: { maskImage: b.mask, WebkitMaskImage: b.mask } }))
+const bank = (w: number, h: number, puffs: Puffs, theme: keyof typeof CLOUD_FILL) =>
+  `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}' width='${w}' height='${h}' ${CLOUD_FILL[theme]}>${puffs.map(p => puff(...p)).join('')}</svg>`)}")`
+
+const CLOUD_BANKS = ([
+  { id: 'far', speed: 0.05, w: 360, h: 560, puffs: [[18, 50, .42], [248, 150, .34], [120, 300, .5], [276, 420, .38], [8, 470, .3]] },
+  { id: 'mid', speed: 0.16, w: 380, h: 780, puffs: [[6, 90, .8], [262, 250, .66], [60, 470, .92], [272, 650, .7]] },
+  { id: 'near', speed: 0.34, w: 400, h: 1040, puffs: [[2, 170, 1.3], [250, 540, 1.2], [12, 880, 1.1]] },
+] as { id: string; speed: number; w: number; h: number; puffs: Puffs }[]).map(b => ({
+  ...b,
+  style: {
+    ['--cloud-day' as string]: bank(b.w, b.h, b.puffs, 'light'),
+    ['--cloud-night' as string]: bank(b.w, b.h, b.puffs, 'dark'),
+  },
+}))
 
 export const PathSky = memo(function PathSky({ skyRef }: { skyRef: RefObject<HTMLDivElement | null> }) {
   return <div className="sky" ref={skyRef} aria-hidden="true">
@@ -242,13 +260,31 @@ export function focusStep(root: HTMLElement | null, el: HTMLElement | null) {
   root.scrollTop = layoutTop(el, stair) + el.offsetHeight / 2 - root.clientHeight * (ANCHOR - 0.04)
 }
 
+/* The fog. Full mode masks the whole stage with this ramp; lite fades each
+ * body by where its centre lands instead, which is composite-only. Stops
+ * are [fraction of the view's height from the top, opacity], and must
+ * match the .stage mask in app.css. */
+const FOG: [number, number][] = [[0.04, 0], [0.2, 0.28], [0.36, 0.7], [0.52, 1]]
+const fog = (f: number) => {
+  if (f <= FOG[0][0]) return 0
+  for (let i = 1; i < FOG.length; i++) {
+    const [b, ob] = FOG[i]
+    if (f <= b) {
+      const [a, oa] = FOG[i - 1]
+      return oa + ((f - a) / (b - a)) * (ob - oa)
+    }
+  }
+  return 1
+}
+
 /** One passive listener, no React updates per frame, and no idle animation loop.
- * Geometry is cached on resize; only visible scenery receives transform writes.
+ * Geometry is cached on resize, and a style is only written when its value
+ * changed, so a still body costs nothing on a scrolled frame.
  */
 export function useLandscapeParallax(
   scroller: RefObject<HTMLDivElement | null>,
   calm: boolean,
-  { sky, onUnit }: { sky?: RefObject<HTMLDivElement | null>; onUnit?: (unitId: string) => void } = {},
+  { sky, onUnit, lite = false }: { sky?: RefObject<HTMLDivElement | null>; onUnit?: (unitId: string) => void; lite?: boolean } = {},
 ) {
   const frame = useRef(0)
   const unitCb = useRef(onUnit)
@@ -263,23 +299,33 @@ export function useLandscapeParallax(
     const scenes = sections.map(section => ({
       section, top: 0, height: 0, unit: section.dataset.unit ?? '',
       layers: Array.from(section.querySelectorAll<HTMLElement>('[data-depth]')).map(element => ({
-        element, depth: Number(element.dataset.depth),
+        element, depth: Number(element.dataset.depth), tf: '',
       })),
     }))
     const bodies = Array.from(root.querySelectorAll<HTMLElement>('[data-persp]')).map(element => ({
       element, top: 0, mid: 0, dx: Number(element.dataset.dx ?? 0),
       step: element.classList.contains('step'),
+      tf: '', vis: '', op: '',
     }))
+    type Body = (typeof bodies)[number]
+    const put = (body: Body, tf: string, vis: string, op: string) => {
+      const st = body.element.style
+      if (tf !== body.tf) { st.transform = tf; body.tf = tf }
+      if (vis !== body.vis) { st.visibility = vis; body.vis = vis }
+      if (op !== body.op) { st.opacity = op; body.op = op }
+    }
     const skyEl = sky?.current
     const high = skyEl?.querySelector<HTMLElement>('.sky__high')
     const banks = Array.from(skyEl?.querySelectorAll<HTMLElement>('[data-speed]') ?? []).map(element => ({
-      element, speed: Number(element.dataset.speed), ratio: Number(element.dataset.ratio), tile: 1,
+      element, speed: Number(element.dataset.speed), ratio: Number(element.dataset.ratio), tile: 1, tf: '',
     }))
     let height = root.clientHeight
     let maxScroll = 1
     let shownUnit = ''
-    const paint = () => {
+    let highOp = ''
+    const paint = (now?: number) => {
       frame.current = 0
+      if (now !== undefined) sampleScrollFrame(now)
       const scroll = root.scrollTop
       const reduced = calm || media.matches
       stair.style.transform = `translate3d(0,${-scroll}px,0)`
@@ -295,15 +341,16 @@ export function useLandscapeParallax(
         }
       }
       // 0 at the first step, 1 at the last: the sky cools from dawn to open blue as you climb
-      if (high) high.style.opacity = (1 - scroll / maxScroll).toFixed(3)
+      const op = (1 - scroll / maxScroll).toFixed(2)
+      if (high && op !== highOp) { high.style.opacity = op; highOp = op }
       for (const bank of banks) {
-        bank.element.style.transform = reduced ? '' : `translate3d(0,${(-((scroll * bank.speed) % bank.tile)).toFixed(1)}px,0)`
+        const tf = reduced ? '' : `translate3d(0,${(-((scroll * bank.speed) % bank.tile)).toFixed(1)}px,0)`
+        if (tf !== bank.tf) { bank.element.style.transform = tf; bank.tf = tf }
       }
       for (const body of bodies) {
-        const { element } = body
         if (reduced) {
-          element.style.transform = body.step ? `translateX(${body.dx}px)` : ''
-          element.style.visibility = ''
+          const y = body.mid - scroll
+          put(body, body.step ? `translateX(${body.dx}px)` : '', '', lite ? fog(y / height).toFixed(2) : '')
           continue
         }
         // Every body is placed every frame. Skipping far ones left them holding
@@ -314,21 +361,30 @@ export function useLandscapeParallax(
         const v = anchor - y
         // passed and gone below the fold (the second test keeps v + D well above zero on short screens)
         const gone = y > height + 400 || v < -D * 0.8
-        element.style.visibility = gone ? 'hidden' : ''
-        if (gone) continue
+        if (gone) { put(body, body.tf, 'hidden', body.op); continue }
         const s = D / (v + D)
-        element.style.transform = `translate3d(${(body.dx * s).toFixed(2)}px,${(v - v * s).toFixed(2)}px,0) scale(${s.toFixed(4)})`
+        // lite has no stage mask, so each body fades by where its centre lands
+        const f = lite ? fog((anchor - v * s) / height) : 1
+        put(body,
+          `translate3d(${(body.dx * s).toFixed(1)}px,${(v - v * s).toFixed(1)}px,0) scale(${s.toFixed(3)})`,
+          f < 0.01 ? 'hidden' : '',
+          lite ? f.toFixed(2) : '')
       }
+      // lite keeps the islands still inside their frames: one texture each, no per-frame layers
+      if (lite) return
       for (const scene of scenes) {
         if (!reduced && (scene.top > scroll + height * 3 || scene.top + scene.height < scroll - 200)) continue
         // eased, not clamped: a hard clamp stops the layer dead mid-scroll
         const distance = 420 * Math.tanh((scroll + height / 2 - scene.top - scene.height / 2) / 420)
-        for (const { element, depth } of scene.layers) {
-          element.style.transform = reduced ? '' : `translate3d(0,${(distance * depth).toFixed(1)}px,0)`
+        for (const layer of scene.layers) {
+          const tf = reduced ? '' : `translate3d(0,${(distance * layer.depth).toFixed(1)}px,0)`
+          if (tf !== layer.tf) { layer.element.style.transform = tf; layer.tf = tf }
         }
       }
     }
     const schedule = () => { if (!frame.current) frame.current = requestAnimationFrame(paint) }
+    // resizes and font swaps are not scroll frames, so they stay out of the jank watch
+    const repaint = () => { if (!frame.current) frame.current = requestAnimationFrame(() => paint()) }
     const measure = () => {
       height = root.clientHeight
       sizeSpacer(root, stair)
@@ -348,13 +404,13 @@ export function useLandscapeParallax(
         bank.tile = Math.max(1, (tileW || bank.element.clientWidth) * bank.ratio)
         bank.element.style.height = `${Math.ceil(height + bank.tile + 2)}px`
       }
-      schedule()
+      repaint()
     }
     const observer = new ResizeObserver(measure)
     observer.observe(root)
     observer.observe(stair)
     root.addEventListener('scroll', schedule, { passive: true })
-    media.addEventListener('change', schedule)
+    media.addEventListener('change', repaint)
     measure()
     paint() // place the stair now, not a frame later, so it never flashes at the top
     // web fonts can reflow the steps after first paint without resizing the stair
@@ -366,13 +422,14 @@ export function useLandscapeParallax(
       frame.current = 0
       observer.disconnect()
       root.removeEventListener('scroll', schedule)
-      media.removeEventListener('change', schedule)
+      media.removeEventListener('change', repaint)
       for (const scene of scenes) for (const { element } of scene.layers) element.style.transform = ''
       for (const { element } of banks) element.style.transform = ''
-      for (const { element } of bodies) { element.style.transform = ''; element.style.visibility = '' }
+      for (const { element } of bodies) { element.style.transform = ''; element.style.visibility = ''; element.style.opacity = '' }
+      if (high) high.style.opacity = ''
       stair.style.transform = ''
     }
-  }, [scroller, sky, calm])
+  }, [scroller, sky, calm, lite])
 }
 
 export const LANDSCAPE_UNITS = [...UNITS].reverse()

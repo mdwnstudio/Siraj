@@ -1,5 +1,5 @@
 import {
-  createContext, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode,
+  createContext, useContext, useEffect, useMemo, useReducer, useRef, useSyncExternalStore, type ReactNode,
 } from 'react'
 import type { Progress, Settings } from '../core/types'
 import { webStore } from '../platform/webStorage'
@@ -98,11 +98,17 @@ export function useProgress(): Progress {
   return useApp().progress
 }
 
+/* one shared media query, read on change rather than on every render */
+const REDUCE = typeof window !== 'undefined' ? window.matchMedia?.('(prefers-reduced-motion: reduce)') : undefined
+const subscribeReduce = (cb: () => void) => {
+  REDUCE?.addEventListener('change', cb)
+  return () => REDUCE?.removeEventListener('change', cb)
+}
+const osReduced = () => !!REDUCE?.matches
+
 /** true when the user asked for less motion, from either the OS or settings */
 export function useCalmMotion(): boolean {
   const { settings } = useProgress()
-  const os =
-    typeof window !== 'undefined' &&
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-  return settings.reduceMotion || !!os
+  const os = useSyncExternalStore(subscribeReduce, osReduced, () => false)
+  return settings.reduceMotion || os
 }

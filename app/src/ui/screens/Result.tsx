@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import type { LessonOutcome, ApplyResult } from '../../core/engine/progress'
 import { achievementById } from '../../core/engine/progress'
 import { Icon, Star, Flame, Sparkle } from '../icons/SirajIcons'

@@ -14,6 +14,11 @@ export default defineConfig(({ command }) => ({
     target: 'es2020',
     cssCodeSplit: false,
     rollupOptions: {
+      // framer-motion marks its modules "use client" for RSC; meaningless in a SPA
+      onwarn(warning, warn) {
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return
+        warn(warning)
+      },
       output: {
         manualChunks(id) {
           if (id.includes('framer-motion') || id.includes('motion-dom') || id.includes('motion-utils')) return 'motion'

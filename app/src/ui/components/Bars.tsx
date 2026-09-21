@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import { Flame, Star, Droplet, Sun, Crescent, Lantern } from '../icons/SirajIcons'
 import { useProgress } from '../state'
 import { currentOil, currentStreak, MAX_OIL } from '../../core/engine/progress'

@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import { useApp } from '../state'
 import { UNIT_OF, PATH } from '../../core/content/path'
 import { getLesson } from '../../core/content/lessons'

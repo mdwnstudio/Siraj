@@ -69,13 +69,24 @@ function tone({ freq, at = 0, dur = 0.16, type = 'sine', gain = 1, to }: ToneOpt
   osc.stop(t0 + dur + 0.02)
 }
 
+/* a decaying burst of noise, generated once per length and replayed:
+   filling thousands of samples on every tap is a stall on a slow phone */
+const noiseCache = new Map<number, AudioBuffer>()
+function noiseBuffer(c: AudioContext, dur: number): AudioBuffer {
+  let buf = noiseCache.get(dur)
+  if (buf) return buf
+  const frames = Math.floor(c.sampleRate * dur)
+  buf = c.createBuffer(1, frames, c.sampleRate)
+  const data = buf.getChannelData(0)
+  for (let i = 0; i < frames; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / frames) ** 2
+  noiseCache.set(dur, buf)
+  return buf
+}
+
 function noise(at = 0, dur = 0.12, gain = 0.35) {
   if (!ctx || !master || !enabled) return
   const t0 = ctx.currentTime + at
-  const frames = Math.floor(ctx.sampleRate * dur)
-  const buf = ctx.createBuffer(1, frames, ctx.sampleRate)
-  const data = buf.getChannelData(0)
-  for (let i = 0; i < frames; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / frames) ** 2
+  const buf = noiseBuffer(ctx, dur)
   const src = ctx.createBufferSource()
   const g = ctx.createGain()
   const hp = ctx.createBiquadFilter()

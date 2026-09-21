@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import type {
   BooleanExercise, ChoiceExercise, Exercise, MatchExercise, OrderExercise, SortExercise,
 } from '../../core/types'
