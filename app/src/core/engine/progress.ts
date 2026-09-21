@@ -159,6 +159,9 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'unit-intro', title: 'البداية', note: 'أتممتَ وحدة البداية', icon: 'Star' },
   { id: 'unit-shahada', title: 'الشهادة', note: 'أتممتَ وحدة الشهادة', icon: 'Star' },
   { id: 'unit-salah', title: 'الصلاة', note: 'أتممتَ وحدة الصلاة', icon: 'Lantern' },
+  { id: 'unit-zakah', title: 'الزكاة', note: 'أتممتَ وحدة الزكاة', icon: 'Droplet' },
+  { id: 'unit-sawm', title: 'الصوم', note: 'أتممتَ وحدة الصوم', icon: 'Crescent' },
+  { id: 'unit-hajj', title: 'الحج', note: 'أتممتَ الأركان الخمسة كلّها', icon: 'Sparkle' },
   { id: 'curious', title: 'سائلٌ فَطِن', note: 'سألتَ سراجًا أوّل سؤال', icon: 'Crescent' },
 ]
 
@@ -231,6 +234,9 @@ export function applyLesson(p: Progress, o: LessonOutcome): ApplyResult {
     ['u-intro', 'unit-intro'],
     ['u-shahada', 'unit-shahada'],
     ['u-salah', 'unit-salah'],
+    ['u-zakah', 'unit-zakah'],
+    ['u-sawm', 'unit-sawm'],
+    ['u-hajj', 'unit-hajj'],
   ] as const) {
     const nodes = PATH.filter((n) => n.unitId === unitId && !n.soon)
     if (nodes.length && nodes.every((n) => next.completed[n.id])) add(achId)

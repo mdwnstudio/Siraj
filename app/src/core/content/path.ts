@@ -3,9 +3,9 @@ import type { Unit } from '../types'
 /* ============================================================
    THE STAIR - الدرج
    Read bottom to top. node[0] is the lowest step; the learner
-   climbs. Units 3-5 are on the stair but not yet written, so the
-   destination is always visible ahead. That visibility is the
-   whole point of the stair metaphor.
+   climbs. The whole road, all five pillars, is visible from the
+   first step. That visibility is the whole point of the stair
+   metaphor. A node marked `soon` shows as a locked "قريبًا" step.
    ============================================================ */
 
 export const UNITS: Unit[] = [
@@ -56,9 +56,9 @@ export const UNITS: Unit[] = [
     icon: 'Droplet',
     tone: 'sand',
     nodes: [
-      { id: 'n-zakah-1', unitId: 'u-zakah', kind: 'lesson', soon: true, label: 'معنى الزكاة' },
-      { id: 'n-zakah-2', unitId: 'u-zakah', kind: 'lesson', soon: true, label: 'النصاب' },
-      { id: 'n-zakah-chest', unitId: 'u-zakah', kind: 'chest', soon: true },
+      { id: 'n-zakah-1', unitId: 'u-zakah', kind: 'lesson', lessonId: 'l-zakah-1' },
+      { id: 'n-zakah-2', unitId: 'u-zakah', kind: 'lesson', lessonId: 'l-zakah-2' },
+      { id: 'n-zakah-chest', unitId: 'u-zakah', kind: 'chest', label: 'صندوق' },
     ],
   },
   {
@@ -69,9 +69,9 @@ export const UNITS: Unit[] = [
     icon: 'Crescent',
     tone: 'deep',
     nodes: [
-      { id: 'n-sawm-1', unitId: 'u-sawm', kind: 'lesson', soon: true, label: 'رمضان' },
-      { id: 'n-sawm-2', unitId: 'u-sawm', kind: 'lesson', soon: true, label: 'السحور والإفطار' },
-      { id: 'n-sawm-chest', unitId: 'u-sawm', kind: 'chest', soon: true },
+      { id: 'n-sawm-1', unitId: 'u-sawm', kind: 'lesson', lessonId: 'l-sawm-1' },
+      { id: 'n-sawm-2', unitId: 'u-sawm', kind: 'lesson', lessonId: 'l-sawm-2' },
+      { id: 'n-sawm-chest', unitId: 'u-sawm', kind: 'chest', label: 'صندوق' },
     ],
   },
   {
@@ -82,9 +82,9 @@ export const UNITS: Unit[] = [
     icon: 'Lantern',
     tone: 'ember',
     nodes: [
-      { id: 'n-hajj-1', unitId: 'u-hajj', kind: 'lesson', soon: true, label: 'مكة والكعبة' },
-      { id: 'n-hajj-2', unitId: 'u-hajj', kind: 'lesson', soon: true, label: 'الإحرام والطواف' },
-      { id: 'n-hajj-trophy', unitId: 'u-hajj', kind: 'trophy', soon: true, label: 'الختام' },
+      { id: 'n-hajj-1', unitId: 'u-hajj', kind: 'lesson', lessonId: 'l-hajj-1' },
+      { id: 'n-hajj-2', unitId: 'u-hajj', kind: 'lesson', lessonId: 'l-hajj-2' },
+      { id: 'n-hajj-trophy', unitId: 'u-hajj', kind: 'trophy', label: 'الختام' },
     ],
   },
 ]
