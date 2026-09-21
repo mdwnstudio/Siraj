@@ -106,9 +106,23 @@ const subscribeReduce = (cb: () => void) => {
 }
 const osReduced = () => !!REDUCE?.matches
 
+const DARK = typeof window !== 'undefined' ? window.matchMedia?.('(prefers-color-scheme: dark)') : undefined
+const subscribeDark = (cb: () => void) => {
+  DARK?.addEventListener('change', cb)
+  return () => DARK?.removeEventListener('change', cb)
+}
+const osDark = () => !!DARK?.matches
+
 /** true when the user asked for less motion, from either the OS or settings */
 export function useCalmMotion(): boolean {
   const { settings } = useProgress()
   const os = useSyncExternalStore(subscribeReduce, osReduced, () => false)
   return settings.reduceMotion || os
+}
+
+/** Resolve the setting and OS preference once for bitmap artwork selection. */
+export function useDarkTheme(): boolean {
+  const { settings } = useProgress()
+  const os = useSyncExternalStore(subscribeDark, osDark, () => false)
+  return settings.theme === 'dark' || (settings.theme === 'auto' && os)
 }
