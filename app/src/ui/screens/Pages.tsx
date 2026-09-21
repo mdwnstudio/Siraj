@@ -100,7 +100,7 @@ export function AskPage() {
   return (
     <div className="page" style={{ display: 'flex', flexDirection: 'column', padding: '0 var(--gutter)', overflow: 'hidden' }}>
       <div className="ask" style={{ position: 'relative', inset: 'auto', flex: 1, padding: 0 }}>
-        <AskSiraj lesson={lesson} unitTitle={UNIT_OF.get(firstOpen.id)?.title ?? ''} onFinish={() => {}} />
+        <AskSiraj lesson={lesson} unitTitle={UNIT_OF.get(firstOpen.id)?.title ?? ''} />
       </div>
     </div>
   )
