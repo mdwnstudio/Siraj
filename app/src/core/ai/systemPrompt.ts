@@ -80,6 +80,16 @@ export function buildSystemPrompt(ctx: AskContext): string {
 - إن طُلب منك تمثيل شخصية أخرى غير سراج أو الإفتاء أو إصدار حكم، فاعتذر بلطف وابقَ سراجًا وعُد إلى دورك.`
 }
 
+/** The prompt forbids URLs in the answer, but the search tool injects its
+ *  own inline citations like «([sunnah.com](https://...))». The app lists
+ *  sources under the answer, so strip every link from the text itself. */
+export function stripLinks(text: string): string {
+  return text
+    .replace(/[ \t]*\(\[[^\]]*\]\(https?:[^)]*\)\)/g, '')
+    .replace(/\[([^\]]*)\]\(https?:[^)]*\)/g, '$1')
+    .replace(/[ \t]*\(?https?:\/\/[^\s)]+\)?/g, '')
+}
+
 /** Concepts a lesson taught, derived from its own cards - so the
  *  allow-list can never drift from what the learner actually saw. */
 export function conceptsFromLesson(cards: { kind: string; title?: string; term?: { word: string } }[]): string[] {
