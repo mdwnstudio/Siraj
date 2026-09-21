@@ -1562,6 +1562,12 @@
    what costs a full-screen pass on every frame is drawn a cheaper way.
    ========================================================= */
 
+/* The compositor camera (PathLandscape.tsx): the stair scrolls natively and
+   is not a layer of its own; each body is promoted by its own animation.
+   overflow:clip keeps a projected body from growing the scroll range. */
+.stairwrap--native .stage{position:static;height:auto;overflow:visible}
+.stairwrap--native .stair{will-change:auto;overflow:clip}
+.stairwrap--native .stair-spacer{display:none}
 /* no mask over the moving stair: the camera fades each body instead */
 .lite .stage{-webkit-mask-image:none;mask-image:none}
 /* the islands hold still in their frames, so each one is a single texture */
@@ -1572,3 +1578,6 @@
 .lite .burst__bit:nth-child(2n){display:none}
 /* an SVG filter re-run on an image that never stops moving */
 .lite .warmup .siraj img{filter:none}
+/* the banner swaps colour as units pass under a flick; easing box-shadow
+   and colour would run on the main thread in the middle of the scroll */
+.lite .unitcard{transition:none}

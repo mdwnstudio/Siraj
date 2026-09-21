@@ -411,11 +411,23 @@ Rules that keep it there:
 
 ### Low-end devices: the lite tier
 
-`ui/perf.ts` puts `html.lite` on weak hardware (4 cores or fewer, 2 GB or less,
-or Data Saver), and permanently on any device where a third of the stair's
-scrolled frames arrive late. Lite keeps every screen, colour and transition;
-it only redraws the costly things a cheaper way (app.css section 15):
+`ui/perf.ts` puts `html.lite` on every phone-width screen, on weak hardware
+(4 cores or fewer, 2 GB or less, or Data Saver), and permanently on any device
+where a third of the stair's scrolled frames arrive late. Lite keeps every
+screen, colour and transition; it only redraws the costly things a cheaper way
+(app.css section 15):
 
+- **the compositor camera** (phones and lite, wherever `ScrollTimeline`
+  exists): the stair scrolls natively and each body gets a scroll-linked
+  animation whose keyframes are the camera's projection sampled along the
+  scroll range (`nativeCamera()` in `PathLandscape.tsx`). The browser's
+  compositor thread plays them in step with the finger, so no script and no
+  style write runs while scrolling, and a busy main thread cannot freeze the
+  road. The cloud banks and the dawn-to-blue sky use the same timeline, and
+  the unit banner is found by an IntersectionObserver. The JS camera stays
+  for wide screens and for browsers without scroll timelines.
+- the scenery islands are pre-baked WebP images (`public/img/path/`), one per
+  unit per theme, instead of live SVG
 - no mask over the whole moving stair: the camera fades each body by where it
   lands instead (`fog()` in `PathLandscape.tsx`, whose stops must match `.stage`)
 - the islands' inner parallax layers hold still, so each island is one texture
@@ -429,6 +441,22 @@ Rules for anything drawn on the stair, in either tier:
 - **Write a style only when its value changed.** The camera caches every
   transform, opacity and visibility it sets.
 - The cloud banks are tiled background images per theme, not masks.
+- **On phones, nothing on the stair may animate a property other than
+  `transform` or `opacity` during a scroll.** Anything else (a colour or
+  box-shadow transition) forces main-thread frames mid-flick.
+
+**Check a stair change on a budget-phone profile before pushing it.**
+`app/scripts/phone-bench.mjs` drives a production build in headless Chrome at
+360x800@2x with touch, CPU slowed 6x, and a main-thread hog standing in for
+the OS and other apps. It records every presented frame during a flick and
+counts the ones where the picture froze. A Vivo Y36 (Snapdragon 680) was the
+reference device: the JS camera froze on 38 of 90 frames under that load, the
+compositor camera on 1 of 88.
+
+```bash
+cd app && npm run build && npx vite preview --port 4173 &
+node scripts/phone-bench.mjs            # add --no-stress for the idle case
+```
 
 If you add a dependency, check the gzip delta. Framer Motion is the heaviest
 thing here and it earns its place; a second animation library would not.
