@@ -20,6 +20,10 @@ function detect(): boolean {
   } catch { /* private mode: fall through to the hints */ }
   const nav = navigator as Nav
   if (nav.connection?.saveData) return true
+  // Phones get the cheaper effects from their first frame. Core counts and
+  // memory buckets are poor GPU proxies: mid-range phones often report eight
+  // cores and ample RAM while still having a very small compositing budget.
+  if (window.matchMedia?.('(max-width: 699px)').matches) return true
   // Chrome reports memory in steps (0.5, 1, 2, 4, 8); 2GB and under is a budget phone
   if (nav.deviceMemory !== undefined && nav.deviceMemory <= 2) return true
   if (nav.hardwareConcurrency && nav.hardwareConcurrency <= 4) return true

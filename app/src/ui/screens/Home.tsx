@@ -6,7 +6,7 @@ import type { PathNode, Progress } from '../../core/types'
 import {
   currentNodeId, isCompleted, isUnlocked, NODE_INDEX_SAFE,
 } from '../../core/engine/pathView'
-import { useApp, useCalmMotion } from '../state'
+import { useApp, useCalmMotion, useDarkTheme } from '../state'
 import { Icon, Star, Sparkle, Lantern, Droplet } from '../icons/SirajIcons'
 import { Siraj } from '../components/Siraj'
 import { focusStep, LANDSCAPE_UNITS, PathLandscape, PathSky, useLandscapeParallax } from '../components/PathLandscape'
@@ -30,6 +30,8 @@ export function Home({
   const { progress, dispatch } = useApp()
   const calm = useCalmMotion()
   const lite = useLite()
+  const phone = useLayout() === 'phone'
+  const dark = useDarkTheme()
   const [picked, setPicked] = useState<PathNode | null>(null)
   const [reward, setReward] = useState<PathNode | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
@@ -89,7 +91,7 @@ export function Home({
       <PathSky skyRef={sky} />
 
       <Stair scroller={scroller} currentRef={currentRef} progress={progress} current={current}
-        celebrate={celebrate} onOpen={openNode} />
+        celebrate={celebrate} onOpen={openNode} flat={phone || lite} dark={dark} />
 
       <div className={`unitcard unitcard--${unit.tone}`}>
         <div className="unitcard__main">
@@ -130,13 +132,15 @@ export function Home({
 /* ---------------- the stair itself ----------------
    Memoised: the unit banner changes as you scroll, and that must not
    re-render thirty steps in the middle of a flick. */
-const Stair = memo(function Stair({ scroller, currentRef, progress, current, celebrate, onOpen }: {
+const Stair = memo(function Stair({ scroller, currentRef, progress, current, celebrate, onOpen, flat, dark }: {
   scroller: RefObject<HTMLDivElement | null>
   currentRef: RefObject<HTMLDivElement | null>
   progress: Progress
   current: string
   celebrate: string | null
   onOpen: (n: PathNode) => void
+  flat: boolean
+  dark: boolean
 }) {
   return (
     <div className="stairwrap scroll" ref={scroller}>
@@ -144,7 +148,7 @@ const Stair = memo(function Stair({ scroller, currentRef, progress, current, cel
       <div className="stair">
         {LANDSCAPE_UNITS.map((landscapeUnit) => (
           <section className="path-unit" key={landscapeUnit.id} data-unit={landscapeUnit.id} aria-label={landscapeUnit.title}>
-            <PathLandscape unitId={landscapeUnit.id} />
+            <PathLandscape unitId={landscapeUnit.id} flat={flat} dark={dark} />
             <div className="path-unit__caption" data-persp aria-hidden="true">
               <span>{toAr(landscapeUnit.index)}</span>{landscapeUnit.title}
             </div>

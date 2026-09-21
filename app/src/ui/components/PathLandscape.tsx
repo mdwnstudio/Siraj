@@ -160,7 +160,21 @@ export const UnitScene = memo(function UnitScene({ unitId, children }: { unitId:
   </div>
 })
 
-export const PathLandscape = memo(function PathLandscape({ unitId }: { unitId: string }) {
+export const PathLandscape = memo(function PathLandscape({
+  unitId, flat = false, dark = false,
+}: {
+  unitId: string
+  flat?: boolean
+  dark?: boolean
+}) {
+  if (flat) {
+    const src = `${import.meta.env.BASE_URL}img/path/${unitId}-${dark ? 'dark' : 'light'}.webp`
+    return (
+      <div className={`landscape landscape--baked landscape--${unitId}`} data-persp aria-hidden="true">
+        <img className="landscape__baked" src={src} alt="" width="1035" height="625" loading="lazy" decoding="async" />
+      </div>
+    )
+  }
   const night = unitId === 'u-sawm'
   return <div className={`landscape landscape--${unitId}`} data-persp aria-hidden="true">
     {/* the soft edges live on this inner box, not on the moving one: when
@@ -284,7 +298,13 @@ const fog = (f: number) => {
 export function useLandscapeParallax(
   scroller: RefObject<HTMLDivElement | null>,
   calm: boolean,
-  { sky, onUnit, lite = false }: { sky?: RefObject<HTMLDivElement | null>; onUnit?: (unitId: string) => void; lite?: boolean } = {},
+  {
+    sky, onUnit, lite = false,
+  }: {
+    sky?: RefObject<HTMLDivElement | null>
+    onUnit?: (unitId: string) => void
+    lite?: boolean
+  } = {},
 ) {
   const frame = useRef(0)
   const unitCb = useRef(onUnit)
@@ -305,14 +325,15 @@ export function useLandscapeParallax(
     const bodies = Array.from(root.querySelectorAll<HTMLElement>('[data-persp]')).map(element => ({
       element, top: 0, mid: 0, dx: Number(element.dataset.dx ?? 0),
       step: element.classList.contains('step'),
-      tf: '', vis: '', op: '',
+      tf: '', vis: '', op: '', wc: '',
     }))
     type Body = (typeof bodies)[number]
-    const put = (body: Body, tf: string, vis: string, op: string) => {
+    const put = (body: Body, tf: string, vis: string, op: string, wc: string) => {
       const st = body.element.style
       if (tf !== body.tf) { st.transform = tf; body.tf = tf }
       if (vis !== body.vis) { st.visibility = vis; body.vis = vis }
       if (op !== body.op) { st.opacity = op; body.op = op }
+      if (wc !== body.wc) { st.willChange = wc; body.wc = wc }
     }
     const skyEl = sky?.current
     const high = skyEl?.querySelector<HTMLElement>('.sky__high')
@@ -350,25 +371,32 @@ export function useLandscapeParallax(
       for (const body of bodies) {
         if (reduced) {
           const y = body.mid - scroll
-          put(body, body.step ? `translateX(${body.dx}px)` : '', '', lite ? fog(y / height).toFixed(2) : '')
+          put(body, body.step ? `translateX(${body.dx}px)` : '', '', lite ? fog(y / height).toFixed(2) : '', 'auto')
           continue
         }
-        // Every body is placed every frame. Skipping far ones left them holding
-        // positions worked out before fonts and images settled the layout, and
-        // they snapped into place only when you reached them. The projection
-        // itself keeps anything far ahead above the top edge.
+        // Compute each body every frame, but only promote and write the ones
+        // close enough to appear. This keeps the road continuous without
+        // reserving a texture for every step on a small GPU.
         const y = body.mid - scroll
         const v = anchor - y
         // passed and gone below the fold (the second test keeps v + D well above zero on short screens)
         const gone = y > height + 400 || v < -D * 0.8
-        if (gone) { put(body, body.tf, 'hidden', body.op); continue }
+        if (gone) { put(body, body.tf, 'hidden', body.op, 'auto'); continue }
         const s = D / (v + D)
+        const screenY = anchor - v * s
+        // Only nearby bodies need their own GPU layer. Keeping the whole road
+        // promoted exhausted tile memory on mid-range Android GPUs.
+        if (screenY < -100 || screenY > height + 300) {
+          put(body, body.tf, 'hidden', body.op, 'auto')
+          continue
+        }
         // lite has no stage mask, so each body fades by where its centre lands
-        const f = lite ? fog((anchor - v * s) / height) : 1
+        const f = lite ? fog(screenY / height) : 1
         put(body,
           `translate3d(${(body.dx * s).toFixed(1)}px,${(v - v * s).toFixed(1)}px,0) scale(${s.toFixed(3)})`,
           f < 0.01 ? 'hidden' : '',
-          lite ? f.toFixed(2) : '')
+          lite ? f.toFixed(2) : '',
+          f < 0.01 ? 'auto' : 'transform, opacity')
       }
       // lite keeps the islands still inside their frames: one texture each, no per-frame layers
       if (lite) return
@@ -425,7 +453,12 @@ export function useLandscapeParallax(
       media.removeEventListener('change', repaint)
       for (const scene of scenes) for (const { element } of scene.layers) element.style.transform = ''
       for (const { element } of banks) element.style.transform = ''
-      for (const { element } of bodies) { element.style.transform = ''; element.style.visibility = ''; element.style.opacity = '' }
+      for (const { element } of bodies) {
+        element.style.transform = ''
+        element.style.visibility = ''
+        element.style.opacity = ''
+        element.style.willChange = ''
+      }
       if (high) high.style.opacity = ''
       stair.style.transform = ''
     }

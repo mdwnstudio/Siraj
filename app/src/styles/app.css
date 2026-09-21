@@ -476,7 +476,7 @@
   --land-kaaba:#49392E;--land-kaaba-side:#63503D;--land-kaaba-top:#7B6650;
 }
 .landscape{
-  transform-origin:50% 50%;will-change:transform,opacity;
+  transform-origin:50% 50%;
   /* extra room above and below so the slow layers can drift without a hard cut */
   /* 180% wide: once the camera shrinks an island there is still ground
      at its sides, which then melts into the sky instead of ending in a wall */
@@ -508,6 +508,9 @@
    once instead of re-applied by the compositor on every scrolled frame. */
 .landscape__far svg{opacity:.3;filter:saturate(.7)}
 .landscape__architecture svg{opacity:.82;filter:saturate(.62) contrast(.84) brightness(1.05)}
+.landscape__baked{
+  display:block;width:100%;height:100%;object-fit:fill;
+}
 :root[data-theme="dark"] :is(.landscape,.scene){
   --land-stone:#76533E;--land-shadow:#51382C;--land-light:#A77D50;
   --land-recess:#35251F;--land-accent:#A87540;--land-leaf:#535C3B;
@@ -551,7 +554,6 @@
   position:relative;
   transform:translateX(var(--dx,0));
   transform-origin:50% 50%;
-  will-change:transform;
 }
 
 .slab{
