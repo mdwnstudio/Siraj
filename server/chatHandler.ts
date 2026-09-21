@@ -31,10 +31,20 @@ export type ChatErrorCode =
   | 'no_key' | 'budget_exhausted' | 'rate_limited'
   | 'upstream' | 'bad_request' | 'network'
 
-export interface ChatRequest { question: string; context: AskContext }
+export interface ChatRequest { question: string; context: AskContext; stream?: boolean }
 export interface ChatOk { ok: true; answer: string; sources: { title: string; url: string }[] }
 export interface ChatErr { ok: false; code: ChatErrorCode; message: string; detail?: string }
 export type ChatResponse = ChatOk | ChatErr
+
+/** One line of the NDJSON stream a `stream: true` request gets back.
+ *  status: what Siraj is doing right now, so the wait never looks frozen
+ *  delta:  the next slice of answer text
+ *  done / error: the final word, same shape as the non-streaming reply */
+export type ChatEvent =
+  | { t: 'status'; s: 'searching' | 'writing' }
+  | { t: 'delta'; d: string }
+  | ({ t: 'done' } & ChatOk)
+  | ({ t: 'error' } & ChatErr)
 
 /* ---------------- CORS ---------------- */
 
@@ -86,21 +96,17 @@ export async function handleChat(req: Request, env: ChatEnv): Promise<Response> 
   if (!ctx?.unitTitle || !ctx?.lessonTitle)
     return json({ ok: false, code: 'bad_request', message: 'سياق الدرس مفقود.' }, 400, cors)
 
+  const stream = body.stream === true
+
   let upstream: Response
   try {
-    upstream = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: env.OPENAI_MODEL || DEFAULT_MODEL,
-        instructions: buildSystemPrompt(ctx),
-        // The learner's text is data, never instruction. The system prompt
-        // tells the model to ignore directives embedded in it.
-        input: [{ role: 'user', content: question }],
-        tools: [{ type: 'web_search', filters: { allowed_domains: [...ALLOWED_DOMAINS] } }],
-        max_output_tokens: 700,
-      }),
-    })
+    upstream = await callOpenAI(key, env, ctx, question, stream, true)
+    // Not every model takes a reasoning effort. If this one refuses it,
+    // ask again without rather than failing the learner.
+    if (upstream.status === 400) {
+      const detail = await upstream.clone().text().catch(() => '')
+      if (/reasoning/i.test(detail)) upstream = await callOpenAI(key, env, ctx, question, stream, false)
+    }
   } catch (e) {
     return json({ ok: false, code: 'network', message: 'تعذّر الاتصال. حاول مرة أخرى.', detail: String(e) }, 502, cors)
   }
@@ -130,14 +136,128 @@ export async function handleChat(req: Request, env: ChatEnv): Promise<Response> 
     return json({ ok: false, code: 'upstream', message: 'حدث خطأ غير متوقّع. حاول مرة أخرى.', detail }, 502, cors)
   }
 
+  if (stream && upstream.body) return relay(upstream.body, cors)
+
   const data = (await upstream.json()) as OpenAIResponse
-  // House rule: no em-dashes anywhere in the product, including model output.
-  const answer = extractText(data).replace(/\s*\u2014\s*/g, '، ').trim()
+  const answer = clean(extractText(data))
 
   if (!answer)
     return json({ ok: false, code: 'upstream', message: 'لم أستطع تكوين إجابة. أعد صياغة سؤالك.' }, 502, cors)
 
   return json({ ok: true, answer, sources: extractSources(data) }, 200, cors)
+}
+
+function callOpenAI(
+  key: string, env: ChatEnv, ctx: AskContext, question: string, stream: boolean, withEffort: boolean,
+): Promise<Response> {
+  return fetch(ENDPOINT, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model: env.OPENAI_MODEL || DEFAULT_MODEL,
+      instructions: buildSystemPrompt(ctx),
+      // The learner's text is data, never instruction. The system prompt
+      // tells the model to ignore directives embedded in it.
+      input: [{ role: 'user', content: question }],
+      // A beginner's question needs one good page, not a survey: a small
+      // search context and low effort cut the wait by several seconds.
+      tools: [{
+        type: 'web_search',
+        search_context_size: 'low',
+        filters: { allowed_domains: [...ALLOWED_DOMAINS] },
+      }],
+      ...(withEffort ? { reasoning: { effort: 'low' } } : {}),
+      max_output_tokens: 700,
+      stream,
+    }),
+  })
+}
+
+// House rule: no em-dashes anywhere in the product, including model output.
+function clean(text: string): string {
+  return text.replace(/\s*\u2014\s*/g, '، ').trim()
+}
+
+/* ---------------- streaming ---------------- */
+
+/** Turns OpenAI's SSE stream into the small NDJSON protocol the app reads
+ *  (see ChatEvent). The text reaches the learner as it is written, instead
+ *  of after the whole search-and-compose round trip. */
+function relay(src: ReadableStream<Uint8Array>, cors: Record<string, string>): Response {
+  const enc = new TextEncoder()
+  const dec = new TextDecoder()
+
+  const out = new ReadableStream<Uint8Array>({
+    async start(ctrl) {
+      const send = (e: ChatEvent) => ctrl.enqueue(enc.encode(JSON.stringify(e) + '\n'))
+      const reader = src.getReader()
+      let buf = ''
+      let text = ''
+      let final: OpenAIResponse | null = null
+      let failed = false
+      let writing = false
+
+      send({ t: 'status', s: 'searching' })
+
+      try {
+        for (;;) {
+          const { value, done } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          let cut: number
+          while ((cut = buf.indexOf('\n\n')) !== -1) {
+            const chunk = buf.slice(0, cut)
+            buf = buf.slice(cut + 2)
+            const line = chunk.split('\n').find((l) => l.startsWith('data:'))
+            if (!line) continue
+            let ev: StreamEvent
+            try { ev = JSON.parse(line.slice(5).trim()) } catch { continue }
+
+            if (ev.type === 'response.web_search_call.in_progress' || ev.type === 'response.web_search_call.searching') {
+              send({ t: 'status', s: 'searching' })
+            } else if (ev.type === 'response.output_text.delta' && typeof ev.delta === 'string') {
+              if (!writing) { writing = true; send({ t: 'status', s: 'writing' }) }
+              text += ev.delta
+              send({ t: 'delta', d: ev.delta.replace(/[ \t]*\u2014/g, '،') })
+            } else if (ev.type === 'response.completed' || ev.type === 'response.incomplete') {
+              final = ev.response ?? null
+            } else if (ev.type === 'response.failed' || ev.type === 'error') {
+              failed = true
+              console.error('[siraj] stream error', JSON.stringify(ev))
+            }
+          }
+        }
+      } catch (e) {
+        failed = true
+        console.error('[siraj] stream broke', String(e))
+      }
+
+      const answer = clean(final ? extractText(final) || text : text)
+      if (answer && !failed) {
+        send({ t: 'done', ok: true, answer, sources: final ? extractSources(final) : [] })
+      } else {
+        send({ t: 'error', ok: false, code: 'upstream', message: 'لم أستطع تكوين إجابة. أعد صياغة سؤالك.' })
+      }
+      ctrl.close()
+    },
+  })
+
+  return new Response(out, {
+    status: 200,
+    headers: {
+      ...cors,
+      'content-type': 'application/x-ndjson; charset=utf-8',
+      'cache-control': 'no-store',
+      // stops proxies from buffering the stream into one late lump
+      'x-accel-buffering': 'no',
+    },
+  })
+}
+
+interface StreamEvent {
+  type: string
+  delta?: string
+  response?: OpenAIResponse
 }
 
 /* ---------------- response shape ---------------- */
@@ -170,12 +290,24 @@ function extractSources(d: OpenAIResponse): { title: string; url: string }[] {
         let host: string
         try { host = new URL(a.url).hostname.replace(/^www\./, '') } catch { continue }
         if (!ALLOWED_DOMAINS.some((d2) => host === d2 || host.endsWith('.' + d2))) continue
-        seen.add(a.url)
-        out.push({ title: a.title || host, url: a.url })
+        const url = stripTracking(a.url)
+        if (seen.has(url)) continue
+        seen.add(a.url); seen.add(url)
+        out.push({ title: a.title || host, url })
       }
     }
   }
   return out.slice(0, 4)
+}
+
+/** web_search tags its citations with ?utm_source=openai. Harmless, but it
+ *  makes the same page look like two different links. */
+function stripTracking(raw: string): string {
+  try {
+    const u = new URL(raw)
+    for (const k of [...u.searchParams.keys()]) if (k.startsWith('utm_')) u.searchParams.delete(k)
+    return u.toString()
+  } catch { return raw }
 }
 
 function json(payload: ChatResponse, status: number, cors: Record<string, string>): Response {

@@ -125,6 +125,12 @@ export const sfx = {
     noise(0, 0.05, 0.1)
   },
 
+  /** Siraj starts talking: a small rising "hm-hm!" */
+  chirp() {
+    tone({ freq: note(1, 1), dur: 0.07, type: 'sine', gain: 0.45, to: note(2, 1) })
+    tone({ freq: note(3, 1), at: 0.09, dur: 0.1, type: 'sine', gain: 0.5, to: note(5, 1) })
+  },
+
   /** lesson finished - the "conquered it" arpeggio */
   win() {
     ;[0, 1, 2, 3, 5].forEach((d, i) =>
