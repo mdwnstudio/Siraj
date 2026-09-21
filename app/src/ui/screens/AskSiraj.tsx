@@ -17,6 +17,9 @@ interface Msg {
   sources?: { title: string; url: string }[]
   /** still being written: hide half-finished markdown, show a caret */
   live?: boolean
+  /** the whole reply, known before typing starts, so the bubble takes
+   *  its final size at once and the text types into it */
+  full?: string
 }
 
 /* What Siraj says he is doing while the learner waits. The stages follow
@@ -38,7 +41,9 @@ export function AskSiraj({
 }: {
   lesson: Lesson
   unitTitle: string
-  onFinish: () => void
+  /** only the end-of-lesson chat has a way onward; the home tab's chat
+   *  is a place to stay, so it gets no تابع / تخطّي button */
+  onFinish?: () => void
 }) {
   const { progress, dispatch } = useApp()
   const [msgs, setMsgs] = useState<Msg[]>([])
@@ -89,9 +94,8 @@ export function AskSiraj({
   }, [busy, stage])
 
   /* ---------- the typewriter ----------
-     Network chunks arrive in lumps. Revealing them at a steady pace,
-     faster when far behind, reads as Siraj typing rather than as a
-     buffer being dumped. */
+     The reply is complete before the bubble opens, so the bubble is
+     sized once and the text types into it at a steady pace. */
   const target = useRef('')
   const shown = useRef(0)
   const liveId = useRef<number | null>(null)
@@ -102,11 +106,11 @@ export function AskSiraj({
   const tick = () => {
     const t = target.current
     if (shown.current < t.length) {
-      const behind = t.length - shown.current
-      // a background tab throttles timers to once a second: skip the show
+      // an even pace that finishes any reply in about two seconds; a
+      // background tab throttles timers to once a second, so skip the show
       shown.current = document.hidden
         ? t.length
-        : Math.min(t.length, shown.current + Math.max(1, Math.ceil(behind / 14)))
+        : Math.min(t.length, shown.current + Math.max(1, Math.round(t.length / 120)))
       const v = t.slice(0, shown.current)
       const id = liveId.current
       setMsgs((prev) => prev.map((m) => (m.id === id ? { ...m, text: v } : m)))
@@ -125,12 +129,12 @@ export function AskSiraj({
   }
 
   /** open a live Siraj bubble the typewriter writes into */
-  const startReply = () => {
+  const startReply = (full: string, sources?: Msg['sources']) => {
     if (liveId.current !== null) return
-    target.current = ''
+    target.current = full
     shown.current = 0
     ended.current = false
-    liveId.current = push({ who: 'siraj', text: '', live: true })
+    liveId.current = push({ who: 'siraj', text: '', full, sources, live: true })
     setBusy(false)
     setSay('إليك الجواب:')
     sfx.chirp(); haptic('tap')
@@ -139,15 +143,13 @@ export function AskSiraj({
     typer.current = window.setTimeout(tick, 16)
   }
 
-  /** let the typewriter catch up, then seal the bubble */
-  const finishReply = (answer: string, sources?: Msg['sources']) =>
+  /** let the typewriter finish, then seal the bubble */
+  const finishReply = () =>
     new Promise<void>((resolve) => {
-      target.current = answer
-      if (shown.current > answer.length) shown.current = answer.length
       ended.current = true
       settle.current = () => {
         const id = liveId.current
-        setMsgs((prev) => prev.map((m) => (m.id === id ? { ...m, text: answer, sources, live: false } : m)))
+        setMsgs((prev) => prev.map((m) => (m.id === id ? { ...m, text: m.full ?? m.text, live: false } : m)))
         liveId.current = null
         resolve()
       }
@@ -176,8 +178,8 @@ export function AskSiraj({
     push({ who: 'me', text: q })
     thinking()
     window.setTimeout(async () => {
-      startReply()
-      await finishReply(a)
+      startReply(a)
+      await finishReply()
       answered()
     }, 700)
   }
@@ -195,20 +197,18 @@ export function AskSiraj({
       lessonTitle: lesson.title,
       taughtConcepts: conceptsFromLesson(lesson.cards),
     }, {
+      // the stream drives what Siraj says he is doing; the text itself
+      // is typed once it is complete (it lands within about a second
+      // of the first word), so the bubble never grows as it types
       onStatus: (s) => setStage((cur) => (s === 'writing' ? 'writing' : cur === 'reading' ? 'searching' : cur)),
-      onText: (soFar) => {
-        startReply()
-        target.current = soFar
-      },
+      onText: () => setStage('writing'),
     })
 
     if (res.ok && res.answer) {
-      startReply()
-      await finishReply(res.answer, res.sources)
+      startReply(res.answer, res.sources)
+      await finishReply()
       answered()
     } else {
-      // a reply that began streaming and then broke keeps what it had
-      if (liveId.current !== null) await finishReply(target.current)
       setBusy(false)
       push({ who: 'err', text: res.message ?? 'تعذّر الحصول على إجابة.' })
       sfx.wrong()
@@ -245,9 +245,9 @@ export function AskSiraj({
             transition={{ layout: { type: 'spring', stiffness: 420, damping: 38 }, duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}>
             {m.who === 'siraj' && <span className={`ask__face${m.live ? ' ask__face--talk' : ''}`} aria-hidden />}
             <div className={`msg msg--${m.who}`}>
-              {m.who === 'siraj' ? <Answer text={m.text} sources={m.sources} live={m.live} /> : m.text}
+              {m.who === 'siraj' ? <Answer text={m.text} full={m.full} sources={m.sources} live={m.live} /> : m.text}
               {!!m.sources?.length && (
-                <div className="msg__src">
+                <div className={`msg__src${m.live ? ' is-waiting' : ''}`}>
                   {m.sources.map((s) => (
                     <a key={s.url} className="msg__srclink" href={s.url} target="_blank" rel="noreferrer noopener">
                       {sourceLabel(s.title)}
@@ -316,22 +316,38 @@ export function AskSiraj({
 
       <p className="ask__note">يجيب سراج نقلًا عن مصادر موثوقة فقط.</p>
 
-      <div className="ask__finish">
-        <Button block tone={msgs.length ? 'primary' : 'quiet'} onClick={onFinish}>
-          {msgs.length ? 'تابع' : 'تخطّي'}
-        </Button>
-      </div>
+      {onFinish && (
+        <div className="ask__finish">
+          <Button block tone={msgs.length ? 'primary' : 'quiet'} onClick={onFinish}>
+            {msgs.length ? 'تابع' : 'تخطّي'}
+          </Button>
+        </div>
+      )}
     </>
   )
 }
 
 /** Answer text with links resolved: a link already listed under sources
  *  is dropped, any other one becomes a short blue link. */
-function Answer({ text, sources, live }: { text: string; sources?: Msg['sources']; live?: boolean }) {
-  const parts = parseAnswer(text, sources, { streaming: live })
+function Answer({ text, full, sources, live }: { text: string; full?: string; sources?: Msg['sources']; live?: boolean }) {
+  if (!live || full === undefined) return <span className="msg__body"><Segments text={text} sources={sources} /></span>
+  /* Two layers in one grid cell: the finished reply, invisible, sets the
+     bubble's size from the first frame; the typed part is drawn over it. */
   return (
-    <span className="msg__body">
-      {parts.map((p, i) =>
+    <span className="msg__body msg__body--typing">
+      <span className="msg__ghost" aria-hidden><Segments text={full} sources={sources} /></span>
+      <span className="msg__typed">
+        <Segments text={text} sources={sources} live />
+        <span className="msg__caret" aria-hidden />
+      </span>
+    </span>
+  )
+}
+
+function Segments({ text, sources, live }: { text: string; sources?: Msg['sources']; live?: boolean }) {
+  return (
+    <>
+      {parseAnswer(text, sources, { streaming: live }).map((p, i) =>
         p.k === 'link' ? (
           <a key={i} className="msg__link" href={p.url} target="_blank" rel="noreferrer noopener" dir="auto">{p.label}</a>
         ) : p.k === 'bold' ? (
@@ -340,8 +356,7 @@ function Answer({ text, sources, live }: { text: string; sources?: Msg['sources'
           <Fragment key={i}>{p.v}</Fragment>
         ),
       )}
-      {live && <span className="msg__caret" aria-hidden />}
-    </span>
+    </>
   )
 }
 

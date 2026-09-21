@@ -1027,6 +1027,12 @@
 .ask__face--think{animation:face-think 1.4s var(--e-in-out) infinite}
 
 .msg__body{white-space:pre-wrap;overflow-wrap:anywhere}
+/* typing: the finished text (hidden) and the typed text share one cell */
+.msg__body--typing{display:grid}
+.msg__ghost,.msg__typed{grid-area:1/1}
+.msg__ghost{visibility:hidden}
+.msg__src{transition:opacity .3s var(--e-out)}
+.msg__src.is-waiting{opacity:0}
 .msg__link{color:var(--info-deep);font-weight:800;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px;unicode-bidi:isolate}
 @keyframes caret-blink{0%,100%{opacity:1}50%{opacity:0}}
 .msg__caret{display:inline-block;width:3px;height:1.05em;margin-inline-start:3px;vertical-align:-.15em;
