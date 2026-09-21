@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType } from 'react'
 import { AnimatePresence, LazyMotion, domAnimation, m as motion } from 'framer-motion'
 import type { Lesson as LessonT } from './core/types'
 import type { ApplyResult, LessonOutcome } from './core/engine/progress'
@@ -15,17 +15,52 @@ import { Home } from './ui/screens/Home'
    tap away arrives in its own chunk, fetched while the device is idle, so
    a budget phone parses less before the first frame and nothing waits
    when it is opened. */
-const loadOnboarding = () => import('./ui/screens/Onboarding')
-const loadLesson = () => import('./ui/screens/Lesson')
-const loadResult = () => import('./ui/screens/Result')
-const loadPages = () => import('./ui/screens/Pages')
-const Onboarding = lazy(() => loadOnboarding().then((m) => ({ default: m.Onboarding })))
-const Lesson = lazy(() => loadLesson().then((m) => ({ default: m.Lesson })))
-const Result = lazy(() => loadResult().then((m) => ({ default: m.Result })))
-const WinsPage = lazy(() => loadPages().then((m) => ({ default: m.WinsPage })))
-const ReviewPage = lazy(() => loadPages().then((m) => ({ default: m.ReviewPage })))
-const AskPage = lazy(() => loadPages().then((m) => ({ default: m.AskPage })))
-const MePage = lazy(() => loadPages().then((m) => ({ default: m.MePage })))
+const onboardingChunk = chunk(() => import('./ui/screens/Onboarding'))
+const lessonChunk = chunk(() => import('./ui/screens/Lesson'))
+const resultChunk = chunk(() => import('./ui/screens/Result'))
+const pagesChunk = chunk(() => import('./ui/screens/Pages'))
+const Onboarding = fromChunk(onboardingChunk, (m) => m.Onboarding)
+const Lesson = fromChunk(lessonChunk, (m) => m.Lesson)
+const Result = fromChunk(resultChunk, (m) => m.Result)
+const WinsPage = fromChunk(pagesChunk, (m) => m.WinsPage)
+const ReviewPage = fromChunk(pagesChunk, (m) => m.ReviewPage)
+const AskPage = fromChunk(pagesChunk, (m) => m.AskPage)
+const MePage = fromChunk(pagesChunk, (m) => m.MePage)
+
+type Chunk<M> = { load: () => Promise<M>; ready: () => M | undefined }
+
+function chunk<M>(importer: () => Promise<M>): Chunk<M> {
+  let mod: M | undefined
+  let pending: Promise<M> | undefined
+  return {
+    load: () => (pending ??= importer().then((m) => (mod = m))),
+    ready: () => mod,
+  }
+}
+
+/* React.lazy suspends on its first render even when the chunk is already
+   downloaded, and React holds a revealed Suspense boundary back for about
+   300ms. The screen's entrance animation then played on an empty frame and
+   the content popped in after it. Once a chunk has arrived its component is
+   rendered directly, and the callers below wait for the chunk before they
+   switch screens, so an entrance always animates real content. */
+function fromChunk<M, P extends object>(c: Chunk<M>, pick: (m: M) => ComponentType<P>) {
+  const Lazy = lazy(() => c.load().then((m) => ({ default: pick(m) })))
+  return function Loaded(props: P) {
+    const m = c.ready()
+    if (m) {
+      const Screen = pick(m)
+      return <Screen {...props} />
+    }
+    return <Lazy {...props} />
+  }
+}
+
+/** run now if the chunk is in, otherwise as soon as it arrives */
+const whenLoaded = (c: Chunk<unknown>, go: () => void) => {
+  if (c.ready()) go()
+  else void c.load().then(go)
+}
 
 const whenIdle = (fn: () => void) => {
   const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }
@@ -68,28 +103,36 @@ function Shell() {
 
   // a first visit goes to onboarding straight after the splash: fetch it now
   useEffect(() => {
-    if (!progress.onboarded) void loadOnboarding()
+    if (!progress.onboarded) void onboardingChunk.load()
   }, [progress.onboarded])
 
   // once the stair is up, quietly bring in everything one tap away
   const inApp = scene.at === 'app'
   useEffect(() => {
-    if (inApp) whenIdle(() => { void loadLesson(); void loadResult(); void loadPages(); preloadSiraj() })
+    if (inApp) whenIdle(() => { void lessonChunk.load(); void resultChunk.load(); void pagesChunk.load(); preloadSiraj() })
   }, [inApp])
 
   const afterSplash = useCallback(() => {
-    setScene(progress.onboarded ? { at: 'app' } : { at: 'onboarding' })
+    if (progress.onboarded) setScene({ at: 'app' })
+    else whenLoaded(onboardingChunk, () => setScene({ at: 'onboarding' }))
   }, [progress.onboarded])
+
+  // the stair is in the first download; every other tab waits for its chunk
+  const goTab = useCallback((t: Tab) => {
+    if (t === 'path') setTab(t)
+    else whenLoaded(pagesChunk, () => setTab(t))
+  }, [])
 
   const startNode = (nodeId: string) => {
     const node = PATH.find((n) => n.id === nodeId)
     if (!node?.lessonId) return
-    setScene({ at: 'lesson', nodeId, lessonId: node.lessonId })
+    const lessonId = node.lessonId
+    whenLoaded(lessonChunk, () => setScene({ at: 'lesson', nodeId, lessonId }))
   }
 
   const lessonDone = (o: LessonOutcome, _lesson: LessonT) => {
     const applied = finishLesson(o)
-    setScene({ at: 'result', outcome: o, applied })
+    whenLoaded(resultChunk, () => setScene({ at: 'result', outcome: o, applied }))
   }
 
   const resultDone = () => {
@@ -117,7 +160,7 @@ function Shell() {
 
         {scene.at === 'app' && (
           <motion.div key="app" className={`app app--${layout}`} {...fade} transition={{ duration: 0.25 }}>
-            {layout !== 'phone' && <SideNav tab={tab} onTab={setTab} />}
+            {layout !== 'phone' && <SideNav tab={tab} onTab={goTab} />}
             <div className="app__main">
               {/* always mounted within a layout: unmounting it on one tab made the
                   whole view jump as the header height collapsed. On desktop the
@@ -145,9 +188,9 @@ function Shell() {
                   </motion.div>
                 </AnimatePresence>
               </main>
-              {layout === 'phone' && <NavBar tab={tab} onTab={setTab} />}
+              {layout === 'phone' && <NavBar tab={tab} onTab={goTab} />}
             </div>
-            {layout === 'desktop' && <Rail tab={tab} onTab={setTab} onStart={startNode} />}
+            {layout === 'desktop' && <Rail tab={tab} onTab={goTab} onStart={startNode} />}
           </motion.div>
         )}
       </AnimatePresence>
