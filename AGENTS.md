@@ -417,24 +417,21 @@ where a third of the stair's scrolled frames arrive late. Lite keeps every
 screen, colour and transition; it only redraws the costly things a cheaper way
 (app.css section 15):
 
-- **the compositor camera** (phones and lite, wherever `ScrollTimeline`
-  exists): the stair scrolls natively and each body gets a scroll-linked
-  animation whose keyframes are the camera's projection sampled along the
-  scroll range (`nativeCamera()` in `PathLandscape.tsx`). The browser's
-  compositor thread plays them in step with the finger, so no script and no
-  style write runs while scrolling, and a busy main thread cannot freeze the
-  road. The dawn-to-blue sky uses the same timeline, and the unit banner is
-  found by an IntersectionObserver. The cloud banks hold still: as moving
-  layers two screens tall they overran a budget GPU's tile memory, and Chrome
-  then evicted pieces of the road and repainted them late (the road
-  "snapped" mid-flick). For the same reason passed bodies grow to 1.5x at
-  most, and the baked islands animate the `<img>` itself. The JS camera stays
-  for wide screens and for browsers without scroll timelines.
+- **the ground camera** (phones and lite): the road's scroller is a plane
+  tilted back in CSS 3D (`.stairwrap--ground` in app.css, `groundCamera()`
+  in `PathLandscape.tsx`) and the browser scrolls it natively, so the
+  perspective comes from the 3D projection itself. Nothing runs per frame:
+  no script, no animation, no style write. Two earlier phone cameras failed
+  on a real Vivo Y36. The JS camera froze whenever the main thread was busy.
+  Scroll-linked animations (ScrollTimeline) report as composited but still
+  wait on the main thread, so over a native scroll every body lagged and then
+  rubber-banded into place. **Do not bring back per-frame or scroll-driven
+  motion for the phone road.** The plane foreshortens (far treads flatten as
+  well as shrink), so bodies and the gaps between them are stretched by
+  1/cos(tilt) to read life-size at the anchor line. The far road fades into
+  a still, masked copy of the sky (`PathSky fog`), and the clouds hold still.
 - the scenery islands are pre-baked WebP images (`public/img/path/`), one per
   unit per theme, instead of live SVG
-- no mask over the whole moving stair: the camera fades each body by where it
-  lands instead (`fog()` in `PathLandscape.tsx`, whose stops must match `.stage`)
-- the islands' inner parallax layers hold still, so each island is one texture
 - no backdrop blur behind sheets, half the burst particles, no SVG glow filter
 
 Rules for anything drawn on the stair, in either tier:
@@ -445,17 +442,17 @@ Rules for anything drawn on the stair, in either tier:
 - **Write a style only when its value changed.** The camera caches every
   transform, opacity and visibility it sets.
 - The cloud banks are tiled background images per theme, not masks.
-- **On phones, nothing on the stair may animate a property other than
-  `transform` or `opacity` during a scroll.** Anything else (a colour or
-  box-shadow transition) forces main-thread frames mid-flick.
+- **On phones, nothing on the stair may move during a scroll except the
+  scroll itself.** A colour or box-shadow transition forces main-thread
+  frames mid-flick, and a scroll-driven animation lags the scroll.
 
 **Check a stair change on a budget-phone profile before pushing it.**
 `app/scripts/phone-bench.mjs` drives a production build in headless Chrome at
 360x800@2x with touch, CPU slowed 6x, and a main-thread hog standing in for
 the OS and other apps. It records every presented frame during a flick and
 counts the ones where the picture froze. A Vivo Y36 (Snapdragon 680) was the
-reference device: the JS camera froze on 38 of 90 frames under that load, the
-compositor camera on 1 of 88.
+reference device: the JS camera froze on 38 of 90 frames under that load, and
+the ground camera on 1 of 89.
 
 ```bash
 cd app && npm run build && npx vite preview --port 4173 &
