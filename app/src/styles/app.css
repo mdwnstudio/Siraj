@@ -1325,8 +1325,8 @@
   background:var(--yellow);
 }
 .warmup__inner{display:grid;place-items:center;gap:20px;text-align:center}
-/* inner rim light (see InnerGlow in Lesson.tsx) plus a barely-there shadow */
-.warmup .siraj img{filter:url(#siraj-inner-glow) drop-shadow(0 6px 10px rgba(120,54,0,.08))}
+/* the rim light is baked into the drawing (scripts/bake-rim.py); this is a barely-there shadow */
+.warmup .siraj img{filter:drop-shadow(0 6px 10px rgba(120,54,0,.08))}
 .warmup__title{font-family:var(--font-display);font-size:1.9rem;font-weight:700;color:var(--maroon)}
 .warmup__ring{
   width:54px;height:54px;border-radius:50%;
@@ -1568,6 +1568,9 @@
 .stairwrap--native .stage{position:static;height:auto;overflow:visible}
 .stairwrap--native .stair{will-change:auto;overflow:clip}
 .stairwrap--native .stair-spacer{display:none}
+/* the clouds hold still under the compositor camera: one screen-sized
+   texture with the sky, instead of three layers each two screens tall */
+.home--native .sky__clouds{will-change:auto;height:100%}
 /* no mask over the moving stair: the camera fades each body instead */
 .lite .stage{-webkit-mask-image:none;mask-image:none}
 /* the islands hold still in their frames, so each one is a single texture */
@@ -1576,7 +1579,7 @@
 .lite .scrim{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(40,8,4,.52)}
 /* half the particles, the same shape of burst */
 .lite .burst__bit:nth-child(2n){display:none}
-/* an SVG filter re-run on an image that never stops moving */
+/* a filter re-run on an image that never stops moving */
 .lite .warmup .siraj img{filter:none}
 /* the banner swaps colour as units pass under a flick; easing box-shadow
    and colour would run on the main thread in the middle of the scroll */
