@@ -238,11 +238,12 @@ export function AskSiraj({
 
       <div className="ask__thread" ref={thread} aria-live="polite">
         {msgs.map((m) => (
-          /* `layout` lets earlier messages glide upward as a new one takes
-             its space, rather than teleporting by its full height */
-          <motion.div key={m.id} layout="position" className={`msg-row msg-row--${m.who}`}
-            initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ layout: { type: 'spring', stiffness: 420, damping: 38 }, duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}>
+          /* No layout animation here: a gliding row passes over the new one
+             as it arrives, so the question would slide across the reply.
+             Earlier rows move before paint; only the new row fades up. */
+          <motion.div key={m.id} className={`msg-row msg-row--${m.who}`}
+            initial={{ opacity: 0, y: m.who === 'siraj' ? 0 : 10 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: m.who === 'siraj' ? 0.15 : 0.25, ease: [0.23, 1, 0.32, 1] }}>
             {m.who === 'siraj' && <span className={`ask__face${m.live ? ' ask__face--talk' : ''}`} aria-hidden />}
             <div className={`msg msg--${m.who}`}>
               {m.who === 'siraj' ? <Answer text={m.text} full={m.full} sources={m.sources} live={m.live} /> : m.text}
@@ -258,26 +259,25 @@ export function AskSiraj({
             </div>
           </motion.div>
         ))}
-        <AnimatePresence>
-          {busy && (
-            <motion.div className="msg-row msg-row--siraj" layout="position"
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, height: 0, transition: { duration: 0.16 } }}
-              style={{ overflow: 'hidden' }}>
-              <span className="ask__face ask__face--think" aria-hidden />
-              <div className="thinking">
-                <span className="thinking__dots"><span /><span /><span /></span>
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span key={stage} className="thinking__say"
-                    initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 6 }}
-                    transition={{ duration: 0.2 }}>
-                    {STAGE_TEXT[stage]}
-                  </motion.span>
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* no exit animation: the reply takes this row's place in the same
+            frame, instead of both sharing the space while it collapses */}
+        {busy && (
+          <motion.div className="msg-row msg-row--siraj"
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}>
+            <span className="ask__face ask__face--think" aria-hidden />
+            <div className="thinking">
+              <span className="thinking__dots"><span /><span /><span /></span>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span key={stage} className="thinking__say"
+                  initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 6 }}
+                  transition={{ duration: 0.2 }}>
+                  {STAGE_TEXT[stage]}
+                </motion.span>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       <div className="ask__pills">
