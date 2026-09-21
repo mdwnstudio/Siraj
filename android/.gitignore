@@ -1,0 +1,11 @@
+# the upload key and its passwords never enter git
+*.keystore
+*.jks
+keystore.properties
+
+.gradle/
+build/
+app/build/
+local.properties
+.idea/
+*.iml
