@@ -172,8 +172,10 @@ export const PathLandscape = memo(function PathLandscape({
     return (
       <div className={`landscape landscape--baked landscape--${unitId}`} aria-hidden="true">
         {/* the camera moves the <img> itself, so Chrome can hand the decoded
-            picture to the GPU as it is instead of painting it into tiles */}
-        <img className="landscape__baked" src={src} alt="" width="1035" height="625" loading="lazy" decoding="async" data-persp />
+            picture to the GPU as it is instead of painting it into tiles.
+            Loaded up front and decoded with its tile: a lazy or async picture
+            is drawn empty mid-scroll on a slow phone and pops in a beat later. */}
+        <img className="landscape__baked" src={src} alt="" width="1035" height="625" decoding="sync" data-persp />
       </div>
     )
   }
@@ -328,48 +330,40 @@ const planeDistance = (p: number, hv: number) => {
   return (p * P) / (Math.cos(TILT_RAD) * P - p * Math.sin(TILT_RAD))
 }
 
-type TimelineCtor = new (options: { source: Element; axis: 'block' }) => AnimationTimeline
-const ScrollTimelineCtor: TimelineCtor | undefined =
-  typeof window !== 'undefined' ? (window as unknown as { ScrollTimeline?: TimelineCtor }).ScrollTimeline : undefined
-
 function groundCamera(root: HTMLElement, stair: HTMLElement, onUnit: (unitId: string) => void) {
   const home = root.parentElement!
   const sections = Array.from(root.querySelectorAll<HTMLElement>('.path-unit'))
-  // the sky and its fog copy both cool from dawn to blue as you climb
+  // The sky and its fog copy both cool from dawn to blue as you climb, in
+  // twenty small steps written from a scroll listener. Neither layer is
+  // composited, so each is one still texture on every scrolled frame, and a
+  // step repaints them once. An opacity animation here (a scroll timeline)
+  // kept both full-screen layers, and the fog's masks, blending on every
+  // frame: more than a budget phone's GPU can fill at 90Hz, so the whole
+  // road stuttered on the real phone while the emulator, drawing on the
+  // host's GPU, stayed smooth.
   const highs = Array.from(home.querySelectorAll<HTMLElement>('.sky__high'))
-  let fade: Animation[] = []
   let watch: IntersectionObserver | null = null
   let shownUnit = ''
+  let shownOp = ''
   let max = 1
   let queued = 0
 
   const paintSky = () => {
     queued = 0
-    const op = (1 - root.scrollTop / max).toFixed(2)
+    const op = (Math.round((1 - root.scrollTop / max) * 20) / 20).toFixed(2)
+    if (op === shownOp) return
+    shownOp = op
     for (const high of highs) high.style.opacity = op
   }
   const onScroll = () => { if (!queued) queued = requestAnimationFrame(paintSky) }
+  root.addEventListener('scroll', onScroll, { passive: true })
 
   const build = () => {
     const hv = home.clientHeight
     // where the life-size line sits in the scroller's own box
     const anchor = hv * REACH_UP + hv * ANCHOR
     max = Math.max(1, root.scrollHeight - root.clientHeight)
-
-    for (const a of fade) a.cancel()
-    fade = []
-    root.removeEventListener('scroll', onScroll)
-    // 0 at the first step, 1 at the last. A scroll timeline where there is
-    // one; if it lags a frame nobody can tell on a colour this slow.
-    if (ScrollTimelineCtor) {
-      const timeline = new ScrollTimelineCtor({ source: root, axis: 'block' })
-      for (const high of highs) {
-        fade.push(high.animate([{ opacity: 1 }, { opacity: 0 }], { timeline, fill: 'both' } as KeyframeAnimationOptions))
-      }
-    } else {
-      root.addEventListener('scroll', onScroll, { passive: true })
-      paintSky()
-    }
+    paintSky()
 
     // The banner names whichever unit is under the middle of the screen. On
     // the plane that is a fixed line in the scroller's box, so a one-pixel
@@ -403,7 +397,6 @@ function groundCamera(root: HTMLElement, stair: HTMLElement, onUnit: (unitId: st
     observer.disconnect()
     watch?.disconnect()
     root.removeEventListener('scroll', onScroll)
-    for (const a of fade) a.cancel()
     for (const high of highs) high.style.opacity = ''
   }
 }

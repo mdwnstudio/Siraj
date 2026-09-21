@@ -1590,8 +1590,10 @@
 /* the clouds hold still on phones: one screen-sized texture with the sky */
 .home--ground .sky__clouds{will-change:auto;height:100%}
 /* The fog: a copy of the sky over the far road, faded out by a mask. Every
-   part is still, so each mask is painted once into its texture; only the
-   dawn-to-blue layer changes, and that is an opacity. */
+   part is still and none is composited, so the masks are painted once into
+   the fog's one texture. The dawn-to-blue layer steps its opacity from a
+   scroll listener, a repaint every twentieth of the climb, never an
+   animation: that would lift it into its own masked layer on every frame. */
 .sky--fog{z-index:2;background:none}
 .sky--fog::before{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,var(--sky-low-a),var(--sky-low-b) 80%)}
 .sky--fog::before,.sky--fog > *{
