@@ -189,9 +189,9 @@ shows a hint instead. If you add a sixth kind, wire it in `grading.ts`,
 `Exercises.tsx`, and the `canCheck` logic in `Lesson.tsx`.
 
 ### Current scope
-Playable: `٠ البداية`, `١ الشهادة`, `٢ الصلاة` (2 lessons each).
-On the stair but marked `soon: true`: `٣ الزكاة`, `٤ الصوم`, `٥ الحج`.
-Writing those three is the single highest-value next task.
+All six units are playable, two lessons each: `٠ البداية`, `١ الشهادة`,
+`٢ الصلاة`, `٣ الزكاة`, `٤ الصوم`, `٥ الحج`. The `soon: true` flag on a
+`PathNode` still works if a future unit goes on the stair before it is written.
 
 ---
 

@@ -51,7 +51,7 @@ export function Rail({ tab, onTab, onStart }: {
             </div>
             <div className="rcard--next__meta">
               {finished
-                ? 'الوحدات القادمة قريبًا'
+                ? 'أتممتَ الأركان الخمسة كلّها'
                 : lesson
                   ? `${toAr(lesson.cards.length)} بطاقات، ثم ${toAr(lesson.exercises.length)} تمارين`
                   : 'افتحها من الطريق'}
