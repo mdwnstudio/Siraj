@@ -4,7 +4,9 @@ import type { Lesson as LessonT } from './core/types'
 import type { ApplyResult, LessonOutcome } from './core/engine/progress'
 import { PATH } from './core/content/path'
 import { AppProvider, useApp, useCalmMotion } from './ui/state'
-import { StatBar, NavBar, type Tab } from './ui/components/Bars'
+import { StatBar, NavBar, SideNav, type Tab } from './ui/components/Bars'
+import { Rail } from './ui/components/Rail'
+import { useLayout } from './ui/useLayout'
 import { Splash } from './ui/screens/Splash'
 import { Onboarding } from './ui/screens/Onboarding'
 import { Home } from './ui/screens/Home'
@@ -36,6 +38,7 @@ const fade = {
 function Shell() {
   const { progress, finishLesson } = useApp()
   const calm = useCalmMotion()
+  const layout = useLayout()
   const [scene, setScene] = useState<Scene>({ at: 'splash' })
   const [tab, setTab] = useState<Tab>('path')
   const [celebrate, setCelebrate] = useState<string | null>(null)
@@ -77,32 +80,36 @@ function Shell() {
         )}
 
         {scene.at === 'app' && (
-          <motion.div key="app" {...fade} transition={{ duration: 0.25 }}
-            style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            {/* always mounted: unmounting it on one tab made the whole
-                view jump as the header height collapsed */}
-            <StatBar />
-            <main className="grow" style={{ position: 'relative' }}>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={tab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-                  style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}
-                >
-                  {tab === 'path' && (
-                    <Home onStart={startNode} celebrate={celebrate} onCelebrated={() => setCelebrate(null)} />
-                  )}
-                  {tab === 'review' && <ReviewPage onStart={startNode} />}
-                  {tab === 'ask' && <AskPage />}
-                  {tab === 'wins' && <WinsPage />}
-                  {tab === 'me' && <MePage />}
-                </motion.div>
-              </AnimatePresence>
-            </main>
-            <NavBar tab={tab} onTab={setTab} />
+          <motion.div key="app" className={`app app--${layout}`} {...fade} transition={{ duration: 0.25 }}>
+            {layout !== 'phone' && <SideNav tab={tab} onTab={setTab} />}
+            <div className="app__main">
+              {/* always mounted within a layout: unmounting it on one tab made the
+                  whole view jump as the header height collapsed. On desktop the
+                  stats live in the rail instead. */}
+              {layout !== 'desktop' && <StatBar wordmark={layout === 'phone'} />}
+              <main className="grow" style={{ position: 'relative' }}>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={tab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                    style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}
+                  >
+                    {tab === 'path' && (
+                      <Home onStart={startNode} celebrate={celebrate} onCelebrated={() => setCelebrate(null)} />
+                    )}
+                    {tab === 'review' && <ReviewPage onStart={startNode} />}
+                    {tab === 'ask' && <AskPage />}
+                    {tab === 'wins' && <WinsPage />}
+                    {tab === 'me' && <MePage />}
+                  </motion.div>
+                </AnimatePresence>
+              </main>
+              {layout === 'phone' && <NavBar tab={tab} onTab={setTab} />}
+            </div>
+            {layout === 'desktop' && <Rail tab={tab} onTab={setTab} onStart={startNode} />}
           </motion.div>
         )}
       </AnimatePresence>

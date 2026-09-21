@@ -12,6 +12,7 @@ import { Siraj } from '../components/Siraj'
 import { focusStep, LANDSCAPE_UNITS, PathLandscape, PathSky, useLandscapeParallax } from '../components/PathLandscape'
 import { Button } from '../components/Button'
 import { Burst } from '../components/Burst'
+import { useLayout } from '../useLayout'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
 
@@ -218,14 +219,17 @@ function StepSheet({ node, onClose, onStart }: { node: PathNode; onClose: () => 
   const unit = UNIT_OF.get(node.id)
   const n = unit?.nodes.findIndex((x) => x.id === node.id) ?? 0
   const total = unit?.nodes.filter((x) => x.kind === 'lesson').length ?? 1
+  // a phone gets a sheet from the bottom edge; a wide screen a card in the middle
+  const phone = useLayout() === 'phone'
+  const motionProps = phone
+    ? { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' }, transition: { type: 'spring' as const, stiffness: 380, damping: 36 } }
+    : { initial: { opacity: 0, scale: 0.92, y: 16 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.96, y: 8 }, transition: { type: 'spring' as const, stiffness: 420, damping: 30 } }
 
   return (
     <>
       <motion.div className="scrim" onClick={onClose}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} />
-      <motion.div className="sheet"
-        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', stiffness: 380, damping: 36 }}>
+      <motion.div className="sheet" {...motionProps}>
         <span className="sheet__grab" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 6 }}>
           <span className="klist__ico" style={{ width: 48, height: 48 }}>

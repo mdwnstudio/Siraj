@@ -8,6 +8,8 @@ const BASE = process.env.SIRAJ_BASE ?? '/Siraj/'
 
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? BASE : '/',
+  // a preview launcher may hand us a free port; otherwise Vite's default
+  server: { port: Number(process.env.PORT) || 5173 },
   build: {
     target: 'es2020',
     cssCodeSplit: false,

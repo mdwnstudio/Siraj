@@ -48,23 +48,11 @@ h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.2;letter-
   background:var(--bg);
   overflow:hidden;
 }
-/* On desktop the shell becomes a device-like column with a warm surround. */
-@media (min-width:900px){
-  #root{
-    background:
-      radial-gradient(120vw 80vh at 50% -10%, var(--yellow-soft), transparent 60%),
-      var(--bg-sunk);
-    align-items:center;
-    padding:24px 0;
-  }
-  .shell{
-    height:min(880px, calc(100dvh - 48px));
-    min-height:0;
-    max-height:min(880px, calc(100dvh - 48px));
-    border-radius:38px;
-    box-shadow:var(--lift-3), 0 0 0 1px var(--paper-edge);
-    overflow:hidden;
-  }
+/* From tablet width up the shell stops being a phone column and takes the
+   whole window: sidebar, content and (on desktop) a rail of cards. The
+   layout itself lives in app.css section 14. */
+@media (min-width:700px){
+  .shell{width:100%}
 }
 
 /* ---------- scroll ---------- */
