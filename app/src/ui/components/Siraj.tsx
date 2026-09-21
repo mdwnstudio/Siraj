@@ -8,6 +8,8 @@ export type Mood = 'idle' | 'wave' | 'cheer' | 'think' | 'sad' | 'peek'
 const B = import.meta.env.BASE_URL
 const MAIN = `${B}img/siraj-main.webp`
 const WAVE = `${B}img/siraj-wave.webp`
+// the wave with its rim light baked in (scripts/bake-rim.py), for the yellow warm-up
+const WAVE_RIM = `${B}img/siraj-wave-rim.webp`
 
 const SRC: Record<Mood, string> = {
   idle: MAIN, think: MAIN, sad: MAIN, peek: MAIN,
@@ -17,7 +19,7 @@ const SRC: Record<Mood, string> = {
 /** Warm the cache for both drawings. The stair only shows the idle one, so
  *  without this the lesson's warmup (wave) could open on an empty frame. */
 export function preloadSiraj() {
-  for (const src of [MAIN, WAVE]) {
+  for (const src of [MAIN, WAVE, WAVE_RIM]) {
     const img = new Image()
     img.decoding = 'async'
     img.src = src
@@ -28,9 +30,11 @@ export function preloadSiraj() {
    squash-and-stretch, tilt and bob are applied in CSS, which is why the
    character feels alive on a 35KB budget. */
 export const Siraj = memo(function Siraj({
-  mood = 'idle', size = 140, flip, className = '',
+  mood = 'idle', size = 140, flip, className = '', rim = false,
 }: {
   mood?: Mood
+  /** the rim-lit drawing, which keeps yellow limbs apart from a yellow background */
+  rim?: boolean
   size?: number
   flip?: boolean
   className?: string
@@ -41,7 +45,7 @@ export const Siraj = memo(function Siraj({
       style={{ width: size, ['--flip' as string]: flip ? -1 : 1 }}
     >
       <img
-        src={SRC[mood]}
+        src={rim && SRC[mood] === WAVE ? WAVE_RIM : SRC[mood]}
         alt=""
         width={size}
         height={Math.round(size * (mood === 'wave' || mood === 'cheer' ? 960 / 803 : 974 / 722))}

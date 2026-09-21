@@ -149,8 +149,7 @@ export function Lesson({
         {phase === 'warmup' && (
           <motion.div className="warmup" exit={{ opacity: 0, scale: 1.05 }} transition={{ duration: 0.35 }}>
             <div className="warmup__inner">
-              <InnerGlow />
-              <Siraj mood="wave" size={150} />
+              <Siraj mood="wave" size={150} rim />
               <div className="warmup__title">{lesson.title}</div>
               <div className="warmup__ring" />
             </div>
@@ -279,29 +278,6 @@ export function Lesson({
         </div>
       )}
     </div>
-  )
-}
-
-/* A cel-shaded rim light: the space outside the silhouette, nudged in from the
-   top left and clipped to the inside of the shape. No blur, so the light is a
-   crisp band. It keeps Siraj's yellow limbs apart from the yellow warm-up screen. */
-function InnerGlow() {
-  return (
-    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden focusable="false">
-      <filter id="siraj-inner-glow" x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
-        <feComponentTransfer in="SourceAlpha" result="outside">
-          <feFuncA type="table" tableValues="1 0" />
-        </feComponentTransfer>
-        <feOffset in="outside" dx="2.5" dy="3.5" result="nudged" />
-        <feComposite in="nudged" in2="SourceAlpha" operator="in" result="edge" />
-        <feFlood floodColor="#FFF8E4" floodOpacity=".92" />
-        <feComposite in2="edge" operator="in" result="glow" />
-        <feMerge>
-          <feMergeNode in="SourceGraphic" />
-          <feMergeNode in="glow" />
-        </feMerge>
-      </filter>
-    </svg>
   )
 }
 

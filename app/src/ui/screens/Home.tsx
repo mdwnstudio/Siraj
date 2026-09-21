@@ -90,7 +90,7 @@ export function Home({
   const unitDone = unit.nodes.filter((n) => isCompleted(progress, n.id)).length
 
   return (
-    <div className="home">
+    <div className={`home${native ? ' home--native' : ''}`}>
       <PathSky skyRef={sky} />
 
       <Stair scroller={scroller} currentRef={currentRef} progress={progress} current={current}

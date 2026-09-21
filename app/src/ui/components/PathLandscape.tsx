@@ -170,8 +170,10 @@ export const PathLandscape = memo(function PathLandscape({
   if (flat) {
     const src = `${import.meta.env.BASE_URL}img/path/${unitId}-${dark ? 'dark' : 'light'}.webp`
     return (
-      <div className={`landscape landscape--baked landscape--${unitId}`} data-persp aria-hidden="true">
-        <img className="landscape__baked" src={src} alt="" width="1035" height="625" loading="lazy" decoding="async" />
+      <div className={`landscape landscape--baked landscape--${unitId}`} aria-hidden="true">
+        {/* the camera moves the <img> itself, so Chrome can hand the decoded
+            picture to the GPU as it is instead of painting it into tiles */}
+        <img className="landscape__baked" src={src} alt="" width="1035" height="625" loading="lazy" decoding="async" data-persp />
       </div>
     )
   }
@@ -307,6 +309,7 @@ const ScrollTimelineCtor: TimelineCtor | undefined =
 export const COMPOSITOR_CAMERA = !!ScrollTimelineCtor
 
 const SAMPLES = 28
+const MAX_SCALE = 1.5
 
 function nativeCamera(
   root: HTMLElement, stair: HTMLElement, skyEl: HTMLElement | null | undefined,
@@ -317,7 +320,6 @@ function nativeCamera(
 
   const bodies = Array.from(root.querySelectorAll<HTMLElement>('[data-persp]'))
   const high = skyEl?.querySelector<HTMLElement>('.sky__high')
-  const banks = Array.from(skyEl?.querySelectorAll<HTMLElement>('[data-speed]') ?? [])
   let running: Animation[] = []
   let height = root.clientHeight
   let calm = reduced()
@@ -330,7 +332,6 @@ function nativeCamera(
     calm = reduced()
     height = root.clientHeight
     const max = root.scrollHeight - height
-    for (const bank of banks) bank.style.height = ''
     if (calm || max < 1) { unit(); return }
     const timeline = new ScrollTimelineCtor!({ source: root, axis: 'block' })
     const play = (el: HTMLElement, frames: Keyframe[]) => {
@@ -338,8 +339,12 @@ function nativeCamera(
     }
     const anchor = height * ANCHOR
     const D = height * DEPTH
-    // passed bodies leave below the fold; the ones ahead melt into the fog near the top
-    const vLo = Math.max(-D * 0.8, anchor - height - 400)
+    // Passed bodies leave below the fold; the ones ahead melt into the fog near
+    // the top. Growth is capped at MAX_SCALE: Chrome rasters an animated layer
+    // at the largest scale its keyframes reach, and letting passed bodies grow
+    // 3x (all of it off screen) overran a budget GPU's tile memory, which
+    // showed as pieces of the road blanking and popping back mid-scroll.
+    const vLo = Math.max(D * (1 / MAX_SCALE - 1), anchor - height - 400)
     const vHi = (D * (anchor - FOG[0][0] * height)) / (D - (anchor - FOG[0][0] * height))
     const at = (dx: number, v: number, fade: number): Keyframe => {
       const s = D / (v + D)
@@ -365,19 +370,10 @@ function nativeCamera(
       }
       play(el, [{ ...frames[0], offset: 0 }, ...frames, { ...frames[frames.length - 1], offset: 1 }])
     }
-    // the cloud banks: a sawtooth, so each tiled bank loops by one tile forever
-    for (const bank of banks) {
-      const speed = Number(bank.dataset.speed)
-      const tile = Math.max(1, bank.clientWidth * Number(bank.dataset.ratio))
-      bank.style.height = `${Math.ceil(height + tile + 2)}px`
-      const frames: Keyframe[] = [{ transform: 'translate3d(0,0,0)', offset: 0 }]
-      for (let k = 1; (k * tile) / speed < max; k++) {
-        const offset = (k * tile) / speed / max
-        frames.push({ transform: `translate3d(0,${-tile}px,0)`, offset }, { transform: 'translate3d(0,0,0)', offset })
-      }
-      frames.push({ transform: `translate3d(0,${-((max * speed) % tile).toFixed(1)}px,0)`, offset: 1 })
-      play(bank, frames)
-    }
+    // The cloud banks hold still here. Each one is a layer taller than two
+    // screens, and three of them moving alongside the road's own layers
+    // overran a budget phone's tile memory: Chrome then evicted pieces of the
+    // road and repainted them late, which read as the road snapping mid-flick.
     // 0 at the first step, 1 at the last: the sky cools from dawn to open blue as you climb
     if (high) play(high, [{ opacity: 1 }, { opacity: 0 }])
     unit()
@@ -422,7 +418,6 @@ function nativeCamera(
     watch?.disconnect()
     media.removeEventListener('change', rebuild)
     stop()
-    for (const bank of banks) bank.style.height = ''
   }
 }
 

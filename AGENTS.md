@@ -423,8 +423,12 @@ screen, colour and transition; it only redraws the costly things a cheaper way
   scroll range (`nativeCamera()` in `PathLandscape.tsx`). The browser's
   compositor thread plays them in step with the finger, so no script and no
   style write runs while scrolling, and a busy main thread cannot freeze the
-  road. The cloud banks and the dawn-to-blue sky use the same timeline, and
-  the unit banner is found by an IntersectionObserver. The JS camera stays
+  road. The dawn-to-blue sky uses the same timeline, and the unit banner is
+  found by an IntersectionObserver. The cloud banks hold still: as moving
+  layers two screens tall they overran a budget GPU's tile memory, and Chrome
+  then evicted pieces of the road and repainted them late (the road
+  "snapped" mid-flick). For the same reason passed bodies grow to 1.5x at
+  most, and the baked islands animate the `<img>` itself. The JS camera stays
   for wide screens and for browsers without scroll timelines.
 - the scenery islands are pre-baked WebP images (`public/img/path/`), one per
   unit per theme, instead of live SVG
@@ -457,6 +461,15 @@ compositor camera on 1 of 88.
 cd app && npm run build && npx vite preview --port 4173 &
 node scripts/phone-bench.mjs            # add --no-stress for the idle case
 ```
+
+That catches main-thread stalls but not GPU memory, because headless Chrome
+uses the Mac's GPU. For that, use the Android emulator: AVD `y36` (720x1612,
+4 cores, Android 15), launched from `/Applications/Y36 Emulator.app`. Its
+Chrome runs with `--force-gpu-mem-available-mb=96` (set in
+`/data/local/tmp/chrome-command-line`) to match a budget phone's tile budget.
+`adb reverse tcp:4173 tcp:4173` lets it open the local preview. In a DevTools
+trace of a fling, `PictureLayerImpl::AppendQuads checkerboard` events and
+frames with `has_missing_content` are the blanks the user sees as snapping.
 
 If you add a dependency, check the gzip delta. Framer Motion is the heaviest
 thing here and it earns its place; a second animation library would not.
