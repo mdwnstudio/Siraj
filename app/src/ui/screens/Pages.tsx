@@ -13,6 +13,7 @@ import { Button } from '../components/Button'
 import { ProgressBar } from '../components/Bars'
 import { Siraj } from '../components/Siraj'
 import { AskSiraj } from './AskSiraj'
+import { POSE_SRC } from '../components/SirajPose'
 import { toAr } from './Home'
 import { webStore } from '../../platform/webStorage'
 import { sfx, primeAudio } from '../../platform/sound'
@@ -25,9 +26,14 @@ export function WinsPage() {
   return (
     <div className="page">
       <h1 className="page__title">الإنجازات</h1>
-      <p style={{ color: 'var(--ink-2)', fontWeight: 650, marginBottom: 18 }}>
-        {toAr(won.length)} من {toAr(ACHIEVEMENTS.length)}
-      </p>
+      <div className="phero phero--gold">
+        <img className="phero__pose" src={POSE_SRC.celebrate} alt="" width={96} height={112} />
+        <div className="phero__main">
+          <div className="phero__title">{won.length === 0 ? 'أوّل إنجاز ينتظرك' : `${toAr(won.length)} من ${toAr(ACHIEVEMENTS.length)} إنجازات`}</div>
+          <p className="phero__text">كل إنجاز علامة على الطريق. أكمل الدروس دون أخطاء، وحافظ على مصباحك مضاءً.</p>
+          <ProgressBar value={won.length / ACHIEVEMENTS.length} tone="gold" />
+        </div>
+      </div>
       <div className="badges">
         {ACHIEVEMENTS.map((a, i) => {
           const has = won.includes(a.id)
@@ -51,6 +57,8 @@ export function WinsPage() {
 export function ReviewPage({ onStart }: { onStart: (nodeId: string) => void }) {
   const { progress } = useApp()
   const done = PATH.filter((n) => n.kind === 'lesson' && progress.completed[n.id] && n.lessonId)
+  // fewest stars first; ties go to the one learned earliest
+  const weakest = done.reduce((a, n) => (progress.completed[n.id].stars < progress.completed[a.id].stars ? n : a), done[0])
 
   return (
     <div className="page">
@@ -64,10 +72,19 @@ export function ReviewPage({ onStart }: { onStart: (nodeId: string) => void }) {
         </div>
       ) : (
         <>
-          <p style={{ color: 'var(--ink-2)', fontWeight: 650, marginBottom: 16 }}>
-            كرّر ما تعلّمته - التكرار هو ما يُثبّت المعلومة.
-          </p>
-          <div className="rows">
+          <div className="phero phero--info">
+            <img className="phero__pose" src={POSE_SRC.think} alt="" width={96} height={112} />
+            <div className="phero__main">
+              <div className="phero__title">التكرار يُثبّت المعلومة</div>
+              <p className="phero__text">
+                أتممتَ {lessonsAr(done.length)}.
+                ابدأ بالأضعف: {getLesson(weakest.lessonId!)!.title}.
+              </p>
+              <Button size="md" tone="primary" onClick={() => onStart(weakest.id)}>راجع الأضعف</Button>
+            </div>
+          </div>
+          <div className="section__label">كل ما تعلّمته</div>
+          <div className="rows review-grid">
             {done.map((n) => {
               const l = getLesson(n.lessonId!)!
               const r = progress.completed[n.id]
@@ -98,7 +115,7 @@ export function AskPage() {
   const firstOpen = PATH.find((n) => n.lessonId && !progress.completed[n.id]) ?? PATH[0]
   const lesson = getLesson(firstOpen.lessonId ?? 'l-intro-1')!
   return (
-    <div className="page" style={{ display: 'flex', flexDirection: 'column', padding: '0 var(--gutter)', overflow: 'hidden' }}>
+    <div className="page page--ask" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div className="ask" style={{ position: 'relative', inset: 'auto', flex: 1, padding: 0 }}>
         <AskSiraj lesson={lesson} unitTitle={UNIT_OF.get(firstOpen.id)?.title ?? ''} />
       </div>
@@ -127,6 +144,8 @@ export function MePage() {
         </div>
       </div>
 
+      <div className="me-grid">
+      <div>
       <div className="section" style={{ marginTop: 18 }}>
         <div className="section__label">رحلتك</div>
         <div className="gridstats">
@@ -151,6 +170,20 @@ export function MePage() {
         </div>
       </div>
 
+      <div className="section">
+        <div className="section__label">عن سراج</div>
+        <div className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <Lantern size={30} style={{ color: 'var(--orange)', flex: '0 0 auto' }} />
+          <p style={{ fontSize: '.86rem', color: 'var(--ink-2)', fontWeight: 650, lineHeight: 1.7 }}>
+            رحلة تفاعلية لتعلّم أساسيات الإسلام. المحتوى منقول عن مصادر موثوقة،
+            ويُراجَع من أهل العلم قبل النشر.
+          </p>
+        </div>
+      </div>
+
+      </div>
+
+      <div className="me-grid__col2">
       <div className="section">
         <div className="section__label">الإعدادات</div>
         <div className="rows">
@@ -179,17 +212,6 @@ export function MePage() {
       </div>
 
       <div className="section">
-        <div className="section__label">عن سراج</div>
-        <div className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-          <Lantern size={30} style={{ color: 'var(--orange)', flex: '0 0 auto' }} />
-          <p style={{ fontSize: '.86rem', color: 'var(--ink-2)', fontWeight: 650, lineHeight: 1.7 }}>
-            رحلة تفاعلية لتعلّم أساسيات الإسلام. المحتوى منقول عن مصادر موثوقة،
-            ويُراجَع من أهل العلم قبل النشر.
-          </p>
-        </div>
-      </div>
-
-      <div className="section">
         {confirm ? (
           <div className="card" style={{ display: 'grid', gap: 10, borderColor: 'var(--bad)' }}>
             <p style={{ fontWeight: 750, color: 'var(--bad-deep)' }}>
@@ -206,9 +228,19 @@ export function MePage() {
           <Button tone="quiet" size="md" block onClick={() => setConfirm(true)}>إعادة ضبط التقدّم</Button>
         )}
       </div>
+      </div>
+      </div>
       <div style={{ height: 10 }} />
     </div>
   )
+}
+
+/** Arabic number agreement: درسًا واحدًا، درسين، ٣ دروس، ١١ درسًا */
+function lessonsAr(n: number): string {
+  if (n === 1) return 'درسًا واحدًا'
+  if (n === 2) return 'درسين'
+  if (n <= 10) return `${toAr(n)} دروس`
+  return `${toAr(n)} درسًا`
 }
 
 function G({ icon, bg, fg, v, k }: { icon: React.ReactNode; bg: string; fg: string; v: number; k: string }) {

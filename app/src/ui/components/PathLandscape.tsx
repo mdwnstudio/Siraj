@@ -258,6 +258,7 @@ export function useLandscapeParallax(
     const stair = root?.querySelector<HTMLElement>('.stair')
     if (!root || !stair) return
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const wide = window.matchMedia('(min-width: 700px)')
     const sections = Array.from(root.querySelectorAll<HTMLElement>('.path-unit'))
     const scenes = sections.map(section => ({
       section, top: 0, height: 0, unit: section.dataset.unit ?? '',
@@ -340,8 +341,11 @@ export function useLandscapeParallax(
         body.top = layoutTop(body.element, stair)
         body.mid = body.top + body.element.offsetHeight / 2
       }
+      // wide screens tile the banks at a fixed size (app.css 14) so clouds
+      // stay cloud-sized instead of stretching across the whole column
+      const tileW = wide.matches ? 520 : 0
       for (const bank of banks) {
-        bank.tile = Math.max(1, bank.element.clientWidth * bank.ratio)
+        bank.tile = Math.max(1, (tileW || bank.element.clientWidth) * bank.ratio)
         bank.element.style.height = `${Math.ceil(height + bank.tile + 2)}px`
       }
       schedule()

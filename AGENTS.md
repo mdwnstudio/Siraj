@@ -61,6 +61,27 @@ coloured slabs below you; the road ahead ghosts upward into the distance,
 shrinking and fading. Moving forward means moving up. The destination is always
 visible.
 
+### Three shapes: phone, tablet, desktop
+
+The same screens, arranged by `useLayout()` (`ui/useLayout.ts`), whose
+breakpoints must match section 14 of `app.css`:
+
+| width | shape |
+|---|---|
+| < 700px | the phone app: stat bar on top, tab bar at the bottom |
+| 700-1099px | an icon-only sidebar (`SideNav`), stat bar stays on top |
+| >= 1100px | full sidebar with labels, the content, and a card rail (`Rail`) |
+
+Modelled on Duolingo's web layout, mirrored for RTL: the sidebar is the first
+flex child, so it sits on the right; the rail sits on the left. The rail holds
+what the phone keeps in its top bar or behind taps (stats, the next lesson,
+level, achievements, a way into Ask Siraj), so a wide screen is never an empty
+field. The home sky fills the whole centre column while the road itself stays
+road-width. Lessons, onboarding and results keep full-bleed backgrounds but
+hold their content to a reading column (`--col-max`), and the lesson's action
+bar and verdict become full-width bars with the button at the far end.
+On desktop, **Enter** does whatever the lesson's one big button would.
+
 **A lesson is two phases, never one.** The brief was explicitly *not* generic
 quizzing: you **learn first**, then the exercises **make it stick**. Every
 exercise draws only on what the cards just taught.
@@ -94,6 +115,7 @@ app/src/
 
   ui/                   <-- React + Framer Motion (web only)
     icons/  components/  screens/  state.tsx
+    useLayout.ts        phone / tablet / desktop, from the viewport width
 
   styles/
     tokens.css          THE source of truth for colour, type, depth, motion

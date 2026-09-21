@@ -114,6 +114,28 @@ export function Lesson({
   const canCheck =
     ex && (ex.kind === 'match' || ex.kind === 'sort' ? false : answer !== null)
 
+  /* Enter does whatever the one big button would, so a keyboard learner can
+     run a whole lesson without the mouse. Not while typing to Siraj. */
+  const primary = useRef<() => void>(() => {})
+  primary.current = () => {
+    if (verdict) advance()
+    else if (phase === 'learn') nextCard()
+    else if (phase === 'practice' && canCheck) check()
+  }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || e.repeat || e.isComposing) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      // a focused tile would also "click" on Enter; the lesson owns this key
+      e.preventDefault()
+      primeAudio()
+      primary.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const progressValue =
     phase === 'learn'
       ? ((cardAt + 1) / lesson.cards.length) * 0.3

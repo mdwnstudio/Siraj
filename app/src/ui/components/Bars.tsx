@@ -38,27 +38,34 @@ export function Counter({ value, duration = 900, className = '', suffix = '' }: 
 
 /* ---------------- the stat bar ---------------- */
 
-export function StatBar({ onOpenOil }: { onOpenOil?: () => void }) {
+export function StatBar({ onOpenOil, wordmark = true }: { onOpenOil?: () => void; wordmark?: boolean }) {
+  return (
+    <header className="statbar">
+      {wordmark && <img className="statbar__wordmark" src={WORDMARK} alt="سراج" />}
+      <StatRow onOpenOil={onOpenOil} />
+    </header>
+  )
+}
+
+/** flame, star and oil: shared by the phone's top bar and the desktop rail */
+export function StatRow({ onOpenOil }: { onOpenOil?: () => void }) {
   const p = useProgress()
   const streak = currentStreak(p)
   const oil = currentOil(p)
   return (
-    <header className="statbar">
-      <img className="statbar__wordmark" src={WORDMARK} alt="سراج" />
-      <div className="statbar__stats">
-        <Stat icon={<Flame size={24} />} value={streak} tone="flame" label="أيام متتالية" />
-        <Stat icon={<Star size={24} />} value={p.xp} tone="star" label="نقاط الخبرة" />
-        <button
-          className="stat stat--oil"
-          onClick={onOpenOil}
-          onPointerDown={() => { primeAudio(); sfx.tap(); haptic('tap') }}
-          aria-label={`قطرات الزيت: ${oil} من ${MAX_OIL}`}
-        >
-          <span className="stat__icon"><Droplet size={24} /></span>
-          <span className="stat__val num">{oil}</span>
-        </button>
-      </div>
-    </header>
+    <div className="statbar__stats">
+      <Stat icon={<Flame size={24} />} value={streak} tone="flame" label="أيام متتالية" />
+      <Stat icon={<Star size={24} />} value={p.xp} tone="star" label="نقاط الخبرة" />
+      <button
+        className="stat stat--oil"
+        onClick={onOpenOil}
+        onPointerDown={() => { primeAudio(); sfx.tap(); haptic('tap') }}
+        aria-label={`قطرات الزيت: ${oil} من ${MAX_OIL}`}
+      >
+        <span className="stat__icon"><Droplet size={24} /></span>
+        <span className="stat__val num">{oil}</span>
+      </button>
+    </div>
   )
 }
 
@@ -151,6 +158,53 @@ export function NavBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
         )}
         <span className="nav__avatar">{(p.name?.trim()?.[0] ?? 'س')}</span>
       </button>
+    </nav>
+  )
+}
+
+/* ---------------- the desktop sidebar ----------------
+   The same five destinations as the bottom bar, stood up the side of the
+   screen with their names, the way Duolingo does it on the web. On tablets
+   it narrows to icons only (CSS hides the labels). */
+
+const SIDE_TONES: Record<Tab, string> = {
+  path: 'var(--orange)',
+  review: 'var(--info)',
+  ask: 'var(--orange-deep)',
+  wins: 'var(--yellow-deep)',
+  me: 'var(--maroon)',
+}
+
+export function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
+  const p = useProgress()
+  const items = [...TABS, { id: 'me' as Tab, label: 'ملفي', Icon: null }]
+  return (
+    <nav className="side" aria-label="التنقّل">
+      <div className="side__brand">
+        <img className="side__wordmark" src={WORDMARK} alt="سراج" />
+      </div>
+      <div className="side__items">
+        {items.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            className={`side__item${tab === id ? ' is-on' : ''}`}
+            style={{ ['--tone' as string]: SIDE_TONES[id] }}
+            onPointerDown={() => { primeAudio(); sfx.tap(); haptic('tap') }}
+            onClick={() => onTab(id)}
+            aria-current={tab === id ? 'page' : undefined}
+            title={label}
+          >
+            {tab === id && (
+              <motion.span layoutId="side-pill" className="side__pill"
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
+            )}
+            <span className="side__ico">
+              {Icon ? <Icon size={30} /> : <span className="nav__avatar">{(p.name?.trim()?.[0] ?? 'س')}</span>}
+            </span>
+            <span className="side__label">{label}</span>
+          </button>
+        ))}
+      </div>
     </nav>
   )
 }

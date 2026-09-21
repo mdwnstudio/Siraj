@@ -102,6 +102,12 @@
   --nav-h:   68px;
   --safe-b:  env(safe-area-inset-bottom, 0px);
   --safe-t:  env(safe-area-inset-top, 0px);
+
+  /* how wide a reading column may grow on a wide screen (see app.css 14) */
+  --col-max: 680px;
+}
+@media (min-width: 700px) {
+  :root { --gutter: 24px; }
 }
 
 /* Dark mode: the lamp at night. Warm blacks, never blue-grey. */

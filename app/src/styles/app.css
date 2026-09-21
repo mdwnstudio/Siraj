@@ -1333,3 +1333,212 @@
 }
 .calm .siraj img,.calm .step__cta,.calm .step__ring,.calm .thinking span,.calm .ask__face,.calm .msg__caret{animation:none!important}
 .calm .burst,.calm .shockwave,.calm .lightsweep{display:none!important}
+
+/* =========================================================
+   14. WIDE SCREENS - the desktop port
+   Three shapes, matching ui/useLayout.ts:
+     < 700px    the phone app, untouched
+     700-1099   an icon rail on the side, stats stay on top
+     >= 1100    a full sidebar, the content, a rail of cards
+   In RTL the first flex child sits on the right, so the sidebar
+   lands on the reading side and the card rail on the far side,
+   Duolingo's web layout mirrored.
+   ========================================================= */
+
+.app{flex:1;min-height:0;display:flex;flex-direction:column}
+.app__main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;position:relative}
+
+/* ---- the sidebar ---- */
+.side{
+  flex:0 0 auto;width:92px;z-index:5;
+  display:flex;flex-direction:column;gap:20px;
+  padding:22px 14px;
+  background:var(--bg);
+  border-inline-end:2px solid var(--paper-edge);
+}
+.side__brand{height:48px;display:flex;align-items:center;justify-content:center}
+.side__wordmark{width:60px;height:auto}
+.side__items{display:flex;flex-direction:column;gap:6px}
+.side__item{
+  position:relative;display:flex;align-items:center;justify-content:center;gap:16px;
+  height:54px;padding:0 12px;border-radius:var(--r);
+  color:var(--ink-2);font-weight:900;font-size:1rem;letter-spacing:.01em;
+  transition:background 160ms var(--e-out),color 160ms var(--e-out);
+}
+.side__item:hover:not(.is-on){background:var(--bg-sunk)}
+.side__item:active .side__ico{transform:scale(.92)}
+.side__pill{
+  position:absolute;inset:0;border-radius:var(--r);
+  background:var(--orange-soft);
+  box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--orange) 45%,transparent);
+}
+.side__ico{position:relative;z-index:1;display:grid;place-items:center;width:34px;color:var(--tone);transition:transform var(--d-tap) var(--e-out)}
+.side__label{position:relative;z-index:1;display:none;white-space:nowrap}
+.side__item.is-on .side__label{color:var(--orange-deep)}
+/* at night the maroon wordmark would vanish into the dark, and the pale
+   pill would glare: the mark turns cream, the pill a low orange glow */
+:root[data-theme="dark"] :is(.side__wordmark,.statbar__wordmark){filter:brightness(0) invert(1) sepia(.25)}
+:root[data-theme="dark"] .side__pill{background:color-mix(in srgb,var(--orange) 16%,transparent)}
+:root[data-theme="dark"] .side__item.is-on .side__label{color:var(--orange-lit)}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) :is(.side__wordmark,.statbar__wordmark){filter:brightness(0) invert(1) sepia(.25)}
+  :root:not([data-theme="light"]) .side__pill{background:color-mix(in srgb,var(--orange) 16%,transparent)}
+  :root:not([data-theme="light"]) .side__item.is-on .side__label{color:var(--orange-lit)}
+}
+
+/* ---- the card rail ---- */
+.rail{
+  flex:0 0 auto;width:376px;z-index:5;
+  display:flex;flex-direction:column;gap:16px;
+  padding:20px 24px 24px;
+  background:var(--bg);
+  border-inline-start:2px solid var(--paper-edge);
+}
+.rail__stats{padding:0 4px}
+.rail__stats .stat{font-size:1.1rem}
+.rcard{
+  background:var(--paper);border:2px solid var(--paper-edge);
+  border-radius:var(--r-lg);padding:16px 18px;
+}
+.rcard__head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+.rcard__title{font-size:1.16rem}
+.rcard__aside{font-size:.8rem;font-weight:800;color:var(--ink-3)}
+.rcard__link{font-size:.82rem;font-weight:900;color:var(--orange);border-radius:6px}
+.rcard__link:hover{color:var(--orange-deep);text-decoration:underline;text-underline-offset:3px}
+.rcard__note{margin-top:8px;font-size:.8rem;font-weight:700;color:var(--ink-3);line-height:1.6}
+.rcard__kicker{font-size:.74rem;font-weight:800;opacity:.85}
+
+.rcard--next{
+  position:relative;display:grid;gap:12px;
+  border:none;color:#fff;background:var(--face);
+  box-shadow:0 var(--depth-lg) 0 var(--edge);
+  margin-bottom:var(--depth-lg);
+}
+.rcard--next.unitcard--gold,.rcard--next.unitcard--sand{color:var(--maroon)}
+.rcard--next::after{
+  content:'';position:absolute;inset:5px 12px auto;height:7px;border-radius:var(--r-pill);
+  background:rgba(255,255,255,.22);pointer-events:none;
+}
+.rcard--next__row{display:flex;align-items:center;gap:12px}
+.rcard--next__title{font-family:var(--font-display);font-size:1.45rem;font-weight:700;line-height:1.2}
+.rcard--next__meta{font-size:.82rem;font-weight:700;opacity:.85;margin-top:3px}
+.rcard--next__bar{display:flex;align-items:center;gap:10px;font-size:.8rem;font-weight:900}
+.rcard--next .pbar{height:12px;background:rgba(69,7,5,.16)}
+.rcard--next .pbar__fill{background:#fff}
+
+.rbadges{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;justify-items:center}
+.rbadge{
+  display:grid;place-items:center;width:48px;height:48px;border-radius:50%;
+  background:var(--inert);color:var(--inert-ink);
+}
+.rbadge.is-won{
+  background:radial-gradient(circle at 34% 28%,var(--yellow-lit),var(--yellow) 62%);
+  color:var(--maroon);box-shadow:0 3px 0 var(--yellow-deep);
+}
+.rcard--ask{display:flex;align-items:center;gap:14px}
+.rcard--ask__pose{width:84px;height:auto;flex:0 0 auto}
+.rail__foot{
+  display:flex;align-items:flex-start;gap:8px;padding:0 4px;
+  font-size:.74rem;font-weight:650;line-height:1.6;color:var(--ink-3);
+}
+.rail__foot svg{flex:0 0 auto;color:var(--orange);margin-top:2px}
+
+@media (min-width:700px){
+  .app{flex-direction:row}
+  .app--tablet .statbar__stats{max-width:520px;margin-inline:auto}
+
+  /* reading columns: full-bleed backgrounds, content held to --col-max */
+  .lesson__top,.cardstage,.ex,.lesson .ask,.lesson__foot,.verdict,
+  .ob__top,.ob__body,.ob__foot,.result__stage,.result__action,.page{
+    padding-inline:max(var(--gutter),calc((100% - var(--col-max)) / 2));
+  }
+  .lesson__top{--col-max:900px;padding-top:24px;padding-bottom:18px}
+  .ob{--col-max:560px}
+  .result{--col-max:540px}
+  .page{--col-max:800px;padding-top:28px;padding-bottom:40px}
+  .page__title{font-size:2.1rem;margin:0 0 18px}
+
+  /* the lesson's action bar spans the window; the button sits at the end
+     like a "next" does on a desktop form, not stretched across it */
+  .lesson__foot{
+    display:flex;justify-content:flex-end;align-items:center;
+    padding-top:18px;padding-bottom:22px;
+    border-top-color:var(--paper-edge);
+  }
+  .lesson__foot .btn--block{width:auto;min-width:200px}
+  .lesson__foot > p{flex:1}
+  .verdict{
+    display:grid;grid-template-columns:1fr auto;column-gap:24px;align-items:center;
+    padding-top:22px;padding-bottom:24px;border-radius:0;
+  }
+  .verdict__head{grid-column:1}
+  .verdict__text{grid-column:1;margin-bottom:0}
+  .verdict > .btn{grid-column:2;grid-row:1 / span 2;width:auto;min-width:200px}
+  .combo{inset-inline-end:max(var(--gutter),calc((100% - var(--col-max)) / 2))}
+  .kcard__body{font-size:1.4rem}
+  .quote .quote__text{font-size:1.7rem}
+  .quote{padding:34px 32px}
+  .ex__prompt{font-size:2rem}
+
+  /* the step preview becomes a card in the middle, not a phone sheet */
+  .sheet{
+    inset:0;margin:auto;height:fit-content;
+    width:min(460px,calc(100% - 48px));
+    border-radius:var(--r-xl);padding:22px 24px 24px;
+    box-shadow:var(--lift-3);
+  }
+  .sheet__grab{display:none}
+
+  /* the home stair: the sky fills the whole column, the road stays road-width */
+  .unitcard{left:0;right:0;margin-inline:auto;width:min(600px,calc(100% - 48px));top:18px}
+  .stair{padding-top:132px}
+  .path-unit{max-width:580px}
+  .sky__clouds{-webkit-mask-size:520px auto;mask-size:520px auto;-webkit-mask-repeat:repeat;mask-repeat:repeat}
+  .sky__sun{width:520px;height:520px;top:-180px}
+
+  /* pages that were one phone column spread into the width they have */
+  .badges{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+  .badge{padding:20px 12px}
+  .badge__ring{width:64px;height:64px}
+  .badge__t{font-size:.92rem}
+  .badge__n{font-size:.76rem}
+  .review-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .review-grid .srow{border-radius:var(--r-lg)!important;border-top:2px solid var(--paper-edge)!important}
+  .page--ask{padding-top:12px;padding-bottom:0}
+}
+
+@media (min-width:1100px){
+  .side{width:260px;padding:26px 16px}
+  .side__brand{justify-content:flex-start;padding-inline:14px}
+  .side__wordmark{width:96px}
+  .side__item{justify-content:flex-start;padding:0 14px}
+  .side__label{display:block}
+}
+
+/* the settings page: two columns once there is room for them */
+.me-grid{display:grid;gap:0}
+@container page (min-width:720px){
+  .me-grid{grid-template-columns:1fr 1fr;column-gap:24px;align-items:start}
+  .me-grid__col2{padding-top:18px}
+}
+.page{container:page / inline-size}
+
+/* a page's summary card: Siraj, one line, one action */
+.phero{
+  display:flex;align-items:center;gap:18px;
+  margin-bottom:20px;padding:18px 20px;
+  border-radius:var(--r-xl);border:2px solid var(--paper-edge);background:var(--paper);
+}
+.phero--gold{background:var(--yellow-soft);border-color:color-mix(in srgb,var(--yellow) 55%,transparent)}
+.phero--info{background:var(--info-soft);border-color:color-mix(in srgb,var(--info) 30%,transparent)}
+.phero__pose{width:84px;height:auto;flex:0 0 auto}
+.phero__main{flex:1;min-width:0;display:grid;gap:8px;justify-items:start}
+.phero__main .pbar{width:100%;flex:none}
+.phero__title{font-family:var(--font-display);font-size:1.3rem;font-weight:700;line-height:1.25}
+.phero__text{font-size:.9rem;font-weight:650;color:var(--ink-2);line-height:1.65}
+@media (min-width:700px){
+  .phero{padding:22px 26px;gap:24px}
+  .phero__pose{width:110px}
+  .phero__title{font-size:1.6rem}
+  .phero__text{font-size:1rem}
+}
