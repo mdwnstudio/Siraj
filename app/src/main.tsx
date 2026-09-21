@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './ui/perf' // sets html.lite before the first paint
 import './styles/global.css'
 import App from './App'
+import { startPwa } from './platform/pwa'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -17,3 +18,5 @@ requestAnimationFrame(() => {
   boot.style.opacity = '0'
   setTimeout(() => boot.remove(), 420)
 })
+
+startPwa()
