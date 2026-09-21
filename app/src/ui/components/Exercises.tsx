@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type {
   BooleanExercise, ChoiceExercise, Exercise, MatchExercise, OrderExercise, SortExercise,
@@ -8,6 +8,23 @@ import { shuffle } from '../../core/engine/grading'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
 import { Sparkle } from '../icons/SirajIcons'
+import { Siraj, type Mood } from './Siraj'
+
+/** how the host feels right now; the lesson owns it (thinking, cheering, sad) */
+export const HostMood = createContext<Mood>('idle')
+
+/* Siraj asks every question himself, from a speech bubble beside him. */
+function Prompt({ children }: { children: ReactNode }) {
+  const mood = useContext(HostMood)
+  return (
+    <div className="host">
+      <div className="host__siraj"><Siraj mood={mood} size={78} /></div>
+      <div className="bubble bubble--side host__bubble">
+        <h2 className="ex__prompt">{children}</h2>
+      </div>
+    </div>
+  )
+}
 
 export interface ExProps {
   ex: Exercise
@@ -40,7 +57,7 @@ function ChoiceEx({ ex, locked, onChange, revealed }: ExProps & { ex: ChoiceExer
 
   return (
     <>
-      <h2 className="ex__prompt">{ex.prompt}</h2>
+      <Prompt>{ex.prompt}</Prompt>
       <div className="choices">
         {ex.options.map((o, i) => {
           const chosen = sel === o.id
@@ -88,7 +105,7 @@ function BooleanEx({ ex, locked, onChange, revealed }: ExProps & { ex: BooleanEx
 
   return (
     <>
-      <h2 className="ex__prompt">{ex.prompt ?? 'صحيح أم خطأ؟'}</h2>
+      <Prompt>{ex.prompt ?? 'صحيح أم خطأ؟'}</Prompt>
       <div className="ex__statement">{ex.statement}</div>
       <div className="bools">
         {cell(true, 'صح', 'bool--yes')}
@@ -123,7 +140,7 @@ function OrderEx({ ex, locked, onChange, revealed }: ExProps & { ex: OrderExerci
 
   return (
     <>
-      <h2 className="ex__prompt">{ex.prompt}</h2>
+      <Prompt>{ex.prompt}</Prompt>
 
       <div className="slots" data-hint="اضغط على الخطوات بالترتيب">
         <AnimatePresence initial={false}>
@@ -224,7 +241,7 @@ function MatchEx({ ex, locked, onAutoSubmit }: ExProps & { ex: MatchExercise }) 
 
   return (
     <>
-      <h2 className="ex__prompt">{ex.prompt}</h2>
+      <Prompt>{ex.prompt}</Prompt>
       <div className="match">
         <div className="match__col">
           {lefts.map((id) => cell(id, 'l', ex.pairs.find((p) => p.id === id)!.left))}
@@ -273,7 +290,7 @@ function SortEx({ ex, locked, onAutoSubmit }: ExProps & { ex: SortExercise }) {
 
   return (
     <>
-      <h2 className="ex__prompt">{ex.prompt}</h2>
+      <Prompt>{ex.prompt}</Prompt>
       <div className="sort">
         <div className="sort__stage">
           <AnimatePresence initial={false}>

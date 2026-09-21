@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, type RefObject } from 'react'
+import { memo, useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { UNITS } from '../../core/content/path'
 import { Crescent, Lantern } from '../icons/SirajIcons'
 
@@ -137,6 +137,28 @@ function Landmark({ unitId }: { unitId: string }) {
   }
 }
 
+/** the stepped ground every unit's buildings stand on */
+function Ground() {
+  return <>
+    <path d="M-80 198 64 129 201 196 313 143 544 255 395 327 255 260 131 320Z" fill="var(--land-ground)" />
+    <path d="M-80 198 131 320v45L-80 243ZM131 320 255 260 395 327 544 255V300L395 372 255 305 131 365Z" fill="var(--land-dune)" />
+    <path d="m-60 204 191 92 124-60 140 67 129-62" stroke="var(--land-light)" strokeWidth="3" />
+    <path d="m-5 182 109 53-47 23m243-60 126 61m-43-82-42 20m48 0-42 20M30 291l33-16" stroke="var(--land-shadow)" strokeWidth="2" opacity=".25" />
+  </>
+}
+
+/** A teaching card's header: the unit's own world in miniature, with an
+ * actor (Siraj or the card's icon) standing on the open ground in the middle. */
+export const UnitScene = memo(function UnitScene({ unitId, children }: { unitId: string; children?: ReactNode }) {
+  return <div className={`scene landscape--${unitId}`}>
+    <svg className="scene__art" viewBox="0 40 460 330" fill="none" focusable="false" aria-hidden="true">
+      <Ground />
+      <Landmark unitId={unitId} />
+    </svg>
+    {children && <div className="scene__actor">{children}</div>}
+  </div>
+})
+
 export const PathLandscape = memo(function PathLandscape({ unitId }: { unitId: string }) {
   const night = unitId === 'u-sawm'
   return <div className={`landscape landscape--${unitId}`} data-persp aria-hidden="true">
@@ -150,18 +172,10 @@ export const PathLandscape = memo(function PathLandscape({ unitId }: { unitId: s
     </div>
     <div className="landscape__architecture" data-depth="0.24">
       <svg viewBox="0 0 460 380" fill="none" focusable="false">
-        <path d="M-80 198 64 129 201 196 313 143 544 255 395 327 255 260 131 320Z" fill="var(--land-ground)" />
-        <path d="M-80 198 131 320v45L-80 243ZM131 320 255 260 395 327 544 255V300L395 372 255 305 131 365Z" fill="var(--land-dune)" />
-        <path d="m-60 204 191 92 124-60 140 67 129-62" stroke="var(--land-light)" strokeWidth="3" />
-        <path d="m-5 182 109 53-47 23m243-60 126 61m-43-82-42 20m48 0-42 20M30 291l33-16" stroke="var(--land-shadow)" strokeWidth="2" opacity=".25" />
+        <Ground />
         <Landmark unitId={unitId} />
       </svg>
     </div>
-    {/* faster than the path itself: the one layer that passes between you and the stair */}
-    <svg className="landscape__near" data-depth="-0.18" viewBox="0 0 460 380" fill="none" focusable="false">
-      <path d="M-30 339Q-2 323 26 335Q44 308 72 325Q100 313 119 337Q147 333 165 350Q61 383-30 361Z" fill="var(--land-cloud)" opacity=".9" />
-      <path d="M325 362Q350 338 373 346Q390 321 420 338Q453 321 483 348Q497 372 470 378H340Q318 376 325 362Z" fill="var(--land-cloud)" opacity=".9" />
-    </svg>
   </div>
 })
 
@@ -203,7 +217,6 @@ export const PathSky = memo(function PathSky({ skyRef }: { skyRef: RefObject<HTM
  */
 const ANCHOR = 0.74 // where on screen things are life-size, as a fraction of height
 const DEPTH = 1.25 // horizon distance, as a multiple of height
-const FAR = 2.2 // beyond this many heights ahead a body is above the screen; stop updating it
 
 /* The stair lives in a sticky stage and is moved by paint() alone. If the
  * browser scrolled it natively, the compositor would move it one frame and
@@ -289,12 +302,19 @@ export function useLandscapeParallax(
         const { element } = body
         if (reduced) {
           element.style.transform = body.step ? `translateX(${body.dx}px)` : ''
+          element.style.visibility = ''
           continue
         }
+        // Every body is placed every frame. Skipping far ones left them holding
+        // positions worked out before fonts and images settled the layout, and
+        // they snapped into place only when you reached them. The projection
+        // itself keeps anything far ahead above the top edge.
         const y = body.mid - scroll
-        if (y > height + 400) continue // passed and gone below the fold
         const v = anchor - y
-        if (v > height * FAR) continue // still beyond the top edge; the fog mask covers the handoff
+        // passed and gone below the fold (the second test keeps v + D well above zero on short screens)
+        const gone = y > height + 400 || v < -D * 0.8
+        element.style.visibility = gone ? 'hidden' : ''
+        if (gone) continue
         const s = D / (v + D)
         element.style.transform = `translate3d(${(body.dx * s).toFixed(2)}px,${(v - v * s).toFixed(2)}px,0) scale(${s.toFixed(4)})`
       }
@@ -333,7 +353,11 @@ export function useLandscapeParallax(
     media.addEventListener('change', schedule)
     measure()
     paint() // place the stair now, not a frame later, so it never flashes at the top
+    // web fonts can reflow the steps after first paint without resizing the stair
+    let alive = true
+    document.fonts?.ready.then(() => { if (alive) measure() })
     return () => {
+      alive = false
       cancelAnimationFrame(frame.current)
       frame.current = 0
       observer.disconnect()
@@ -341,7 +365,7 @@ export function useLandscapeParallax(
       media.removeEventListener('change', schedule)
       for (const scene of scenes) for (const { element } of scene.layers) element.style.transform = ''
       for (const { element } of banks) element.style.transform = ''
-      for (const { element } of bodies) element.style.transform = ''
+      for (const { element } of bodies) { element.style.transform = ''; element.style.visibility = '' }
       stair.style.transform = ''
     }
   }, [scroller, sky, calm])

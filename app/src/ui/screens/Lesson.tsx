@@ -7,12 +7,14 @@ import type { LessonOutcome } from '../../core/engine/progress'
 import { getLesson } from '../../core/content/lessons'
 import { UNIT_OF } from '../../core/content/path'
 import { useApp, useCalmMotion } from '../state'
-import { Icon, Sparkle, Droplet, Star, Crescent, type SirajIconName } from '../icons/SirajIcons'
+import { Icon, Sparkle, Droplet, Star, Crescent } from '../icons/SirajIcons'
 import { Button, IconButton } from '../components/Button'
 import { ProgressBar } from '../components/Bars'
 import { Siraj } from '../components/Siraj'
 import { Burst } from '../components/Burst'
-import { ExerciseView } from '../components/Exercises'
+import { ExerciseView, HostMood } from '../components/Exercises'
+import { UnitScene } from '../components/PathLandscape'
+import type { Mood } from '../components/Siraj'
 import { AskSiraj } from './AskSiraj'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
@@ -44,6 +46,8 @@ export function Lesson({
   const oilLost = useRef(0)
   const started = useRef(Date.now())
 
+  // the scene goes on the second fact card: quotes and lists have their own layout
+  const sceneCard = lesson.cards.map((c, i) => (c.kind === 'fact' ? i : -1)).filter((i) => i >= 0)[1] ?? -1
   const ex = lesson.exercises[exAt]
   const total = lesson.exercises.length
 
@@ -54,7 +58,6 @@ export function Lesson({
 
   /* ---- teaching ---- */
   const nextCard = () => {
-    primeAudio(); sfx.tap(); haptic('tap')
     if (cardAt < lesson.cards.length - 1) setCardAt(cardAt + 1)
     else { sfx.swoosh(); setPhase('practice') }
   }
@@ -86,7 +89,6 @@ export function Lesson({
   }
 
   const advance = () => {
-    primeAudio(); sfx.tap()
     setVerdict(null)
     setAnswer(null)
     if (exAt < total - 1) setExAt(exAt + 1)
@@ -107,6 +109,8 @@ export function Lesson({
     )
   }
 
+  const hostMood: Mood = verdict === 'good' ? 'cheer' : verdict === 'bad' ? 'sad' : answer ? 'think' : 'idle'
+
   const canCheck =
     ex && (ex.kind === 'match' || ex.kind === 'sort' ? false : answer !== null)
 
@@ -123,6 +127,7 @@ export function Lesson({
         {phase === 'warmup' && (
           <motion.div className="warmup" exit={{ opacity: 0, scale: 1.05 }} transition={{ duration: 0.35 }}>
             <div className="warmup__inner">
+              <InnerGlow />
               <Siraj mood="wave" size={150} />
               <div className="warmup__title">{lesson.title}</div>
               <div className="warmup__ring" />
@@ -151,7 +156,7 @@ export function Lesson({
             <motion.div key={`c${cardAt}`} className="cardstage"
               initial={{ opacity: 0, x: 34 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -34 }}
               transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}>
-              <CardView card={lesson.cards[cardAt]} />
+              <CardView card={lesson.cards[cardAt]} unitId={unit?.id ?? 'u-intro'} withScene={cardAt === sceneCard} />
               <div className="dots">
                 {lesson.cards.map((_, i) => (
                   <span key={i} className={`dots__d${i === cardAt ? ' is-on' : i < cardAt ? ' is-past' : ''}`} />
@@ -165,17 +170,18 @@ export function Lesson({
             <motion.div key={`e${exAt}`} className="ex"
               initial={{ opacity: 0, x: 34 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -34 }}
               transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}>
-              {!calm && <ExerciseOrbit seed={exAt} />}
               <span className="ex__kicker">
                 <Star size={13} /> تمرين {toAr(exAt + 1)} من {toAr(total)}
               </span>
-              <ExerciseView
-                ex={ex}
-                locked={verdict !== null}
-                revealed={verdict !== null}
-                onChange={setAnswer}
-                onAutoSubmit={(a) => { setAnswer(a); settle(isCorrect(ex, a)) }}
-              />
+              <HostMood.Provider value={hostMood}>
+                <ExerciseView
+                  ex={ex}
+                  locked={verdict !== null}
+                  revealed={verdict !== null}
+                  onChange={setAnswer}
+                  onAutoSubmit={(a) => { setAnswer(a); settle(isCorrect(ex, a)) }}
+                />
+              </HostMood.Provider>
               <div style={{ height: 140 }} />
             </motion.div>
           )}
@@ -254,32 +260,35 @@ export function Lesson({
   )
 }
 
-const GOOD = ['أحسنت!', 'ممتاز!', 'بالضبط!', 'رائع!', 'أصبتَ!', 'تمامًا!']
-const pick = (a: string[], i: number) => a[i % a.length]
-
-const ORBITS: SirajIconName[][] = [
-  ['Crescent', 'Sparkle', 'Lantern'],
-  ['Sun', 'Droplet', 'Star'],
-  ['Flame', 'Crescent', 'Sparkle'],
-  ['Lantern', 'Star', 'Sun'],
-]
-
-function ExerciseOrbit({ seed }: { seed: number }) {
-  const icons = ORBITS[seed % ORBITS.length]
+/* A cel-shaded rim light: the space outside the silhouette, nudged in from the
+   top left and clipped to the inside of the shape. No blur, so the light is a
+   crisp band. It keeps Siraj's yellow limbs apart from the yellow warm-up screen. */
+function InnerGlow() {
   return (
-    <div className="ex__orbit" aria-hidden>
-      {icons.map((name, i) => (
-        <span key={name} className={`ex__orb ex__orb--${i + 1}`}>
-          <Icon name={name} size={i === 0 ? 50 : i === 1 ? 38 : 28} />
-        </span>
-      ))}
-    </div>
+    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden focusable="false">
+      <filter id="siraj-inner-glow" x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
+        <feComponentTransfer in="SourceAlpha" result="outside">
+          <feFuncA type="table" tableValues="1 0" />
+        </feComponentTransfer>
+        <feOffset in="outside" dx="2.5" dy="3.5" result="nudged" />
+        <feComposite in="nudged" in2="SourceAlpha" operator="in" result="edge" />
+        <feFlood floodColor="#FFF8E4" floodOpacity=".92" />
+        <feComposite in2="edge" operator="in" result="glow" />
+        <feMerge>
+          <feMergeNode in="SourceGraphic" />
+          <feMergeNode in="glow" />
+        </feMerge>
+      </filter>
+    </svg>
   )
 }
 
+const GOOD = ['أحسنت!', 'ممتاز!', 'بالضبط!', 'رائع!', 'أصبتَ!', 'تمامًا!']
+const pick = (a: string[], i: number) => a[i % a.length]
+
 /* ---------------- a teaching card ---------------- */
 
-function CardView({ card }: { card: Card }) {
+function CardView({ card, unitId, withScene }: { card: Card; unitId: string; withScene: boolean }) {
   const [open, setOpen] = useState(false)
   useEffect(() => setOpen(false), [card.id])
 
@@ -325,7 +334,20 @@ function CardView({ card }: { card: Card }) {
   const body = card.term ? splitTerm(card.body, card.term.word) : null
   return (
     <div className="kcard">
-      {card.art && (
+      {/* one card per lesson sets the scene: the unit's world, with the card's art standing in it */}
+      {withScene ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}>
+          <UnitScene unitId={unitId}>
+            {card.art === 'siraj' || card.art === 'siraj-wave' ? (
+              <Siraj mood={card.art === 'siraj-wave' ? 'wave' : 'idle'} size={96} />
+            ) : card.art ? (
+              <span className="scene__medal"><Icon name={card.art.icon} size={34} /></span>
+            ) : null}
+          </UnitScene>
+        </motion.div>
+      ) : card.art && (
         <motion.div style={{ display: 'flex', justifyContent: 'center' }}
           initial={{ opacity: 0, scale: 0.8, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}>
@@ -344,9 +366,9 @@ function CardView({ card }: { card: Card }) {
           <>
             {body[0]}
             <button className="term" onClick={() => { primeAudio(); sfx.select(); setOpen(!open) }}>
-              {card.term!.word}
+              {body[1]}
             </button>
-            {body[1]}
+            {body[2]}
           </>
         ) : (
           card.body
@@ -370,8 +392,18 @@ function CardView({ card }: { card: Card }) {
   )
 }
 
-function splitTerm(body: string, word: string): [string, string] | null {
+/* Arabic letters and harakat, minus Arabic punctuation (، ؛ ؟ ٪…) */
+const WORD_CHAR = /[\u0621-\u065F\u0670-\u06D3\u06D5-\u06ED]/
+
+/** Split around the term, stretched to the whole written word. If the highlight
+ * stopped at «مُسلِم» inside «مُسلِمًا», the ending would sit in another element
+ * and the letters could not join across it. */
+function splitTerm(body: string, word: string): [string, string, string] | null {
   const i = body.indexOf(word)
   if (i < 0) return null
-  return [body.slice(0, i), body.slice(i + word.length)]
+  let a = i
+  let b = i + word.length
+  while (a > 0 && WORD_CHAR.test(body[a - 1])) a--
+  while (b < body.length && WORD_CHAR.test(body[b])) b++
+  return [body.slice(0, a), body.slice(a, b), body.slice(b)]
 }
