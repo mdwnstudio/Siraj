@@ -46,15 +46,15 @@ export function StatBar({ onOpenOil }: { onOpenOil?: () => void }) {
     <header className="statbar">
       <img className="statbar__wordmark" src={WORDMARK} alt="سراج" />
       <div className="statbar__stats">
-        <Stat icon={<Flame size={22} />} value={streak} tone="flame" label="أيام متتالية" />
-        <Stat icon={<Star size={22} />} value={p.xp} tone="star" label="نقاط الخبرة" />
+        <Stat icon={<Flame size={24} />} value={streak} tone="flame" label="أيام متتالية" />
+        <Stat icon={<Star size={24} />} value={p.xp} tone="star" label="نقاط الخبرة" />
         <button
           className="stat stat--oil"
           onClick={onOpenOil}
           onPointerDown={() => { primeAudio(); sfx.tap(); haptic('tap') }}
           aria-label={`قطرات الزيت: ${oil} من ${MAX_OIL}`}
         >
-          <span className="stat__icon"><Droplet size={22} /></span>
+          <span className="stat__icon"><Droplet size={24} /></span>
           <span className="stat__val num">{oil}</span>
         </button>
       </div>
@@ -67,7 +67,8 @@ function Stat({ icon, value, tone, label }: { icon: React.ReactNode; value: numb
   const bumped = value > prev.current
   useEffect(() => { prev.current = value }, [value])
   return (
-    <div className={`stat stat--${tone}`} title={label}>
+    // a streak of zero reads as "not lit yet", not as a broken counter
+    <div className={`stat stat--${tone}${tone === 'flame' && value === 0 ? ' is-idle' : ''}`} title={label} aria-label={`${label}: ${value}`}>
       <motion.span
         className="stat__icon"
         animate={bumped ? { scale: [1, 1.45, 1], rotate: [0, -12, 0] } : {}}

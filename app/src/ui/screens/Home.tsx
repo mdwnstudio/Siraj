@@ -1,35 +1,22 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { PATH, UNIT_OF, unitById } from '../../core/content/path'
+import { UNIT_OF, unitById } from '../../core/content/path'
 import { getLesson } from '../../core/content/lessons'
-import type { PathNode, Unit } from '../../core/types'
+import type { PathNode } from '../../core/types'
 import {
   currentNodeId, isCompleted, isUnlocked, NODE_INDEX_SAFE,
 } from '../../core/engine/pathView'
 import { useApp, useCalmMotion } from '../state'
-import { Icon, Star, Sparkle, Lantern, Droplet, Crescent, Flame } from '../icons/SirajIcons'
+import { Icon, Star, Sparkle, Lantern, Droplet } from '../icons/SirajIcons'
 import { Siraj } from '../components/Siraj'
+import { focusStep, LANDSCAPE_UNITS, PathLandscape, PathSky, useLandscapeParallax } from '../components/PathLandscape'
 import { Button } from '../components/Button'
 import { Burst } from '../components/Burst'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
 
-const SKY: Record<Unit['tone'], string> = {
-  gold: 'var(--yellow-soft)',
-  ember: 'var(--orange-soft)',
-  deep: 'var(--cream)',
-  sand: 'var(--cream)',
-}
-
 /** how far a step sits off the centre line - a gentle wind, not a zigzag */
-const dx = (i: number) => Math.round(Math.sin(i * 0.82) * 48)
-
-const TRAIL_Y = 100
-const trail = (i: number) => {
-  const x = dx(i - 1) - dx(i)
-  const length = Math.sqrt(TRAIL_Y ** 2 + x ** 2)
-  return { length, angle: -Math.asin(x / length) * (180 / Math.PI) }
-}
+const dx = (i: number) => Math.round(Math.sin(i * 0.82) * 34)
 
 export function Home({
   onStart, celebrate, onCelebrated,
@@ -43,17 +30,17 @@ export function Home({
   const [picked, setPicked] = useState<PathNode | null>(null)
   const [reward, setReward] = useState<PathNode | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
+  const sky = useRef<HTMLDivElement>(null)
   const currentRef = useRef<HTMLDivElement>(null)
 
   const current = currentNodeId(progress)
-  const currentIdx = NODE_INDEX_SAFE(current)
-  const unit = UNIT_OF.get(current) ?? unitById('u-intro')!
+  const [shownUnit, setShownUnit] = useState<string | null>(null)
+  const unit = (shownUnit && unitById(shownUnit)) || UNIT_OF.get(current) || unitById('u-intro')!
 
-  // top of the list is the far future; bottom is where you stand
-  const ordered = useMemo(() => [...PATH].reverse(), [])
+  useLandscapeParallax(scroller, calm, { sky, onUnit: setShownUnit })
 
   useLayoutEffect(() => {
-    currentRef.current?.scrollIntoView({ block: 'center' })
+    focusStep(scroller.current, currentRef.current)
   }, [current])
 
   // the newly-lit step gets a beat of glory, then settles
@@ -90,110 +77,112 @@ export function Home({
   const unitDone = unit.nodes.filter((n) => isCompleted(progress, n.id)).length
 
   return (
-    <div className="home" style={{ ['--sky-near' as string]: SKY[unit.tone] }}>
-      <span className="sky" />
-      <div className="skybits" aria-hidden>
-        <span className="skybit skybit--a"><Crescent size={34} /></span>
-        <span className="skybit skybit--b"><Sparkle size={24} /></span>
-        <span className="skybit skybit--c"><Flame size={28} /></span>
+    <div className="home">
+      <PathSky skyRef={sky} />
+
+      <div className="stairwrap scroll" ref={scroller}>
+        <div className="stage">
+        <div className="stair">
+          {LANDSCAPE_UNITS.map((landscapeUnit) => (
+            <section className="path-unit" key={landscapeUnit.id} data-unit={landscapeUnit.id} aria-label={landscapeUnit.title}>
+              <PathLandscape unitId={landscapeUnit.id} />
+              <div className="path-unit__caption" data-persp aria-hidden="true">
+                <span>{toAr(landscapeUnit.index)}</span>{landscapeUnit.title}
+              </div>
+              {[...landscapeUnit.nodes].reverse().map((n) => {
+                const i = NODE_INDEX_SAFE(n.id)
+                const done = isCompleted(progress, n.id)
+                const isCurrent = n.id === current
+                const open = isUnlocked(progress, n.id)
+                const lesson = n.lessonId ? getLesson(n.lessonId) : undefined
+                const lighting = celebrate === n.id
+                const rewardXp = n.kind === 'trophy' ? 60 : 30
+
+                return (
+                  <div
+                    key={n.id}
+                    ref={isCurrent ? currentRef : undefined}
+                    data-persp
+                    data-dx={dx(i)}
+                    className={[
+                      'step',
+                      done && 'step--done',
+                      isCurrent && 'step--current',
+                      open && 'step--open',
+                      !open && 'step--locked',
+                      n.soon && 'step--soon',
+                      n.kind !== 'lesson' && 'step--chest',
+                      lighting && 'step--lighting',
+                    ].filter(Boolean).join(' ')}
+                    style={{
+                      ['--dx' as string]: `${dx(i)}px`,
+                      // higher treads sit in front, so each one's shadow falls on the tread below
+                      zIndex: i + 1,
+                    }}
+                  >
+                    {lighting && <Burst count={18} flavour="gold" spread={130} />}
+
+                    <button
+                      className="slab"
+                      onClick={() => openNode(n)}
+                      disabled={!open || (done && n.kind !== 'lesson')}
+                      aria-label={lesson?.title ?? n.label ?? 'خطوة'}
+                    >
+                      <span className="slab__medal">
+                        {n.kind === 'chest' ? (
+                          <Sparkle size={24} />
+                        ) : n.kind === 'trophy' ? (
+                          <Lantern size={24} />
+                        ) : lesson ? (
+                          <Icon name={lesson.icon} size={24} />
+                        ) : (
+                          <Droplet size={24} />
+                        )}
+                      </span>
+
+                      {n.kind !== 'lesson' && (
+                        <span className="slab__reward">
+                          {done ? 'تم الاستلام' : <>مكافأة <b className="num">+{rewardXp}</b></>}
+                        </span>
+                      )}
+
+                      {done && n.kind === 'lesson' && (
+                        <span className="slab__stars">
+                          {Array.from({ length: progress.completed[n.id]?.stars ?? 1 }, (_, k) => (
+                            <Star key={k} size={11} />
+                          ))}
+                        </span>
+                      )}
+                      {n.soon && <span className="slab__soon">قريبًا</span>}
+                    </button>
+
+                    {isCurrent && (
+                      <>
+                        <span className="step__cta">{n.kind === 'lesson' ? 'ابدأ' : 'افتح المكافأة'}</span>
+                        <span className={`step__siraj${dx(i) < 0 ? ' step__siraj--flip' : ''}`}>
+                          <span className="step__plinth" aria-hidden />
+                          <Siraj mood="idle" size={76} flip={dx(i) < 0} />
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+            </section>
+          ))}
+        </div>
+        </div>
+        <div className="stair-spacer" aria-hidden />
       </div>
 
       <div className={`unitcard unitcard--${unit.tone}`}>
-        <div style={{ flex: 1 }}>
-          <div className="unitcard__kicker">الوحدة {toAr(unit.index + 1)}</div>
+        <div className="unitcard__main">
+          <div className="unitcard__kicker">الوحدة {toAr(unit.index + 1)} · {unit.subtitle}</div>
           <div className="unitcard__title">{unit.title}</div>
-          <div className="unitcard__subtitle">{unit.subtitle}</div>
         </div>
-        <div className="unitcard__progress" aria-label={`${unitDone} من ${unit.nodes.length}`}>
-          <span className="unitcard__ico"><Icon name={unit.icon} size={29} /></span>
+        <div className="unitcard__side" aria-label={`${unitDone} من ${unit.nodes.length}`}>
+          <Icon name={unit.icon} size={24} />
           <span className="num">{unitDone}/{unit.nodes.length}</span>
-        </div>
-      </div>
-
-      <div className="stairwrap scroll" ref={scroller}>
-        <div className="stair">
-          {ordered.map((n) => {
-            const i = NODE_INDEX_SAFE(n.id)
-            const done = isCompleted(progress, n.id)
-            const isCurrent = n.id === current
-            const open = isUnlocked(progress, n.id)
-            const ahead = Math.max(0, i - currentIdx)
-            const lesson = n.lessonId ? getLesson(n.lessonId) : undefined
-            const lighting = celebrate === n.id
-            const path = trail(i)
-            const rewardXp = n.kind === 'trophy' ? 60 : 30
-
-            return (
-              <div
-                key={n.id}
-                ref={isCurrent ? currentRef : undefined}
-                className={[
-                  'step',
-                  done && 'step--done',
-                  isCurrent && 'step--current',
-                  open && 'step--open',
-                  !open && 'step--locked',
-                  n.soon && 'step--soon',
-                  n.kind !== 'lesson' && 'step--chest',
-                  lighting && 'step--lighting',
-                ].filter(Boolean).join(' ')}
-                style={{
-                  ['--dx' as string]: `${dx(i)}px`,
-                  ['--op' as string]: String(Math.max(0.3, 1 - ahead * 0.085)),
-                  ['--sc' as string]: String(Math.max(0.78, 1 - ahead * 0.028)),
-                  ['--trail-h' as string]: `${path.length}px`,
-                  ['--trail-r' as string]: `${path.angle}deg`,
-                }}
-              >
-                {i > 0 && <span className="step__trail" aria-hidden />}
-                {isCurrent && !calm && <span className="step__ring" />}
-                {lighting && <Burst count={18} flavour="gold" spread={130} />}
-
-                <button
-                  className="slab"
-                  onClick={() => openNode(n)}
-                  disabled={!open || (done && n.kind !== 'lesson')}
-                  aria-label={lesson?.title ?? n.label ?? 'خطوة'}
-                >
-                  <span className="slab__glyph">
-                    {n.kind === 'chest' ? (
-                      <Sparkle size={24} />
-                    ) : n.kind === 'trophy' ? (
-                      <Lantern size={24} />
-                    ) : lesson ? (
-                      <Icon name={lesson.icon} size={24} />
-                    ) : (
-                      <Droplet size={24} />
-                    )}
-                  </span>
-
-                  {n.kind !== 'lesson' && (
-                    <span className="slab__reward">
-                      {done ? 'تم الاستلام' : <>مكافأة <b className="num">+{rewardXp}</b></>}
-                    </span>
-                  )}
-
-                  {done && n.kind === 'lesson' && (
-                    <span className="slab__stars">
-                      {Array.from({ length: progress.completed[n.id]?.stars ?? 1 }, (_, k) => (
-                        <Star key={k} size={11} />
-                      ))}
-                    </span>
-                  )}
-                  {n.soon && <span className="slab__soon">قريبًا</span>}
-                </button>
-
-                {isCurrent && (
-                  <>
-                    <span className="step__cta">{n.kind === 'lesson' ? 'ابدأ' : 'افتح المكافأة'}</span>
-                    <span className={`step__siraj${dx(i) > 0 ? ' step__siraj--flip' : ''}`}>
-                      <Siraj mood="idle" size={76} flip={dx(i) > 0} />
-                    </span>
-                  </>
-                )}
-              </div>
-            )
-          })}
         </div>
       </div>
 

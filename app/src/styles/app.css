@@ -177,18 +177,21 @@
    ========================================================= */
 
 .statbar{
-  display:flex;align-items:center;gap:10px;
-  padding:calc(10px + var(--safe-t)) var(--gutter) 10px;
+  display:flex;align-items:center;gap:14px;
+  padding:calc(8px + var(--safe-t)) var(--gutter) 8px;
   background:var(--bg);
   position:relative;z-index:3;
   flex:0 0 auto;
 }
-.statbar__wordmark{width:68px;height:auto;flex:0 0 auto}
-.statbar__stats{display:flex;align-items:center;gap:2px;margin-inline-start:auto}
+.statbar__wordmark{width:60px;height:auto;flex:0 0 auto}
+/* three evenly spaced pairs, each number wearing its icon's colour, so a
+   figure can only belong to the icon beside it */
+.statbar__stats{flex:1;display:flex;align-items:center;justify-content:space-between}
 .stat{
   display:flex;align-items:center;gap:6px;
-  padding:5px 10px;border-radius:var(--r-pill);
-  font-weight:800;font-size:.98rem;
+  min-width:62px;justify-content:center;
+  padding:6px 10px;border-radius:var(--r-pill);
+  font-weight:900;font-size:1.02rem;
   background:none;
 }
 .stat__icon{display:grid;place-items:center;will-change:transform}
@@ -196,12 +199,15 @@
 .stat--star {color:var(--yellow-deep)}
 .stat--oil  {color:var(--info)}
 .stat--oil:active{transform:scale(.94)}
-.stat__val{color:var(--ink);font-weight:800}
-.stat--oil .stat__val{color:var(--info-deep)}
+.stat__val{color:inherit;font-weight:900}
+.stat--star .stat__val{color:color-mix(in srgb,var(--yellow-deep) 80%,var(--maroon))}
+.stat--oil  .stat__val{color:var(--info-deep)}
+.stat.is-idle{color:var(--inert-deep)}
+.stat.is-idle .stat__val{color:var(--ink-3)}
 @media (max-width:360px){
-  .statbar{gap:5px;padding-inline:14px}
-  .statbar__wordmark{width:58px}
-  .stat{padding-inline:7px}
+  .statbar{gap:8px;padding-inline:14px}
+  .statbar__wordmark{width:52px}
+  .stat{min-width:0;padding-inline:6px}
 }
 
 .pbar{
@@ -352,151 +358,285 @@
 
 /* =========================================================
    7. THE STAIR - الدرج
-   Reads bottom to top: finished steps are solid slabs below you,
-   the road ahead ghosts upward into the distance.
+   Reads bottom to top: you climb out of the landscape into open sky.
+   Depth is speed. The sun never moves, far clouds barely move,
+   the unit's scenery lags behind the path, and the near cloud
+   banks outrun it.
    ========================================================= */
 
-.home{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;isolation:isolate}
+.home{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;isolation:isolate}
 
+/* ---- the sky ---- */
 .sky{
-  position:absolute;inset:0;z-index:0;pointer-events:none;
-  background:
-    radial-gradient(110% 55% at 50% 100%, var(--sky-near, var(--yellow-soft)) 0%, transparent 62%),
-    linear-gradient(to top, var(--sky-near, var(--yellow-soft)) 0%, var(--bg) 42%);
-  transition:background 700ms var(--e-in-out);
+  --sky-low-a:#FFE4C2;--sky-low-b:#FFF7EA;
+  --sky-high-a:#AFD6F1;--sky-high-b:#E9F4FA;
+  --cloud:#FFFFFF;--sun:rgba(255,206,120,.6);
+  position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+  background:linear-gradient(to bottom,var(--sky-low-a),var(--sky-low-b) 80%);
+}
+.sky__high{
+  position:absolute;inset:0;opacity:0;
+  background:linear-gradient(to bottom,var(--sky-high-a),var(--sky-high-b) 80%);
+}
+.sky__sun{
+  position:absolute;top:-110px;inset-inline-start:-90px;width:340px;height:340px;border-radius:50%;
+  background:radial-gradient(circle,var(--sun),transparent 66%);
+}
+.sky__clouds{
+  position:absolute;top:0;left:0;right:0;height:200%;
+  background:var(--cloud);
+  -webkit-mask-size:100% auto;mask-size:100% auto;
+  -webkit-mask-repeat:repeat-y;mask-repeat:repeat-y;
+  will-change:transform;
+}
+.sky__clouds--far {opacity:.45}
+.sky__clouds--mid {opacity:.7}
+.sky__clouds--near{opacity:.95;filter:drop-shadow(0 10px 0 rgba(120,150,190,.12))}
+:root[data-theme="dark"] .sky{
+  --sky-low-a:#2E120D;--sky-low-b:#1C0806;--sky-high-a:#120F26;--sky-high-b:#20152C;
+  --cloud:rgba(255,236,220,.09);--sun:rgba(255,170,90,.16);
+}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .sky{
+    --sky-low-a:#2E120D;--sky-low-b:#1C0806;--sky-high-a:#120F26;--sky-high-b:#20152C;
+    --cloud:rgba(255,236,220,.09);--sun:rgba(255,170,90,.16);
+  }
 }
 
-.skybits{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;color:var(--orange)}
-.skybit{position:absolute;opacity:.09;will-change:transform}
-.skybit--a{top:19%;inset-inline-start:9%;animation:sky-drift-a 8s var(--e-in-out) infinite alternate}
-.skybit--b{top:43%;inset-inline-end:8%;color:var(--yellow-deep);animation:sky-drift-b 6.5s var(--e-in-out) infinite alternate}
-.skybit--c{bottom:13%;inset-inline-start:14%;animation:sky-drift-a 7.2s var(--e-in-out) -2s infinite alternate}
-@keyframes sky-drift-a{from{transform:translate3d(0,0,0) rotate(-8deg)}to{transform:translate3d(10px,-13px,0) rotate(12deg)}}
-@keyframes sky-drift-b{from{transform:translate3d(0,0,0) rotate(10deg)}to{transform:translate3d(-12px,9px,0) rotate(-12deg)}}
-
+/* ---- the unit banner, floating over the sky ---- */
 .unitcard{
-  position:relative;z-index:2;flex:0 0 auto;
-  margin:4px var(--gutter) 8px;
-  padding:13px 16px 15px;
+  position:absolute;top:6px;left:var(--gutter);right:var(--gutter);z-index:4;
+  display:flex;align-items:stretch;
   border-radius:var(--r-lg);
   background:var(--face,var(--orange));
   color:#fff;
-  box-shadow:0 var(--depth-lg) 0 var(--edge,var(--orange-deep));
-  display:flex;align-items:center;gap:12px;
+  box-shadow:0 var(--depth-lg) 0 var(--edge,var(--orange-deep)),0 16px 22px -12px rgba(69,7,5,.4);
+  transition:background 300ms var(--e-out),box-shadow 300ms var(--e-out),color 300ms var(--e-out);
 }
 .unitcard::after{
-  content:'';position:absolute;inset:5px 8px auto;height:8px;border-radius:var(--r-pill);
+  content:'';position:absolute;inset:5px 10px auto;height:7px;border-radius:var(--r-pill);
   background:rgba(255,255,255,.22);pointer-events:none;
 }
 .unitcard--gold {--face:var(--yellow);--edge:var(--yellow-deep);color:var(--maroon)}
 .unitcard--ember{--face:var(--orange);--edge:var(--orange-deep)}
 .unitcard--deep {--face:var(--maroon);--edge:#2B0403}
 .unitcard--sand {--face:var(--cream-deep);--edge:#C9B48C;color:var(--maroon)}
-.unitcard__kicker{font-size:.72rem;font-weight:800;letter-spacing:.07em;opacity:.78}
-.unitcard__title{font-family:var(--font-display);font-size:1.32rem;font-weight:700;line-height:1.15}
-.unitcard__subtitle{font-size:.77rem;font-weight:650;opacity:.78;margin-top:3px}
-.unitcard__progress{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-pill);background:rgba(255,255,255,.2);font-size:.75rem;font-weight:900}
-.unitcard__ico{opacity:.92}
+.unitcard__main{flex:1;min-width:0;padding:13px 16px 14px}
+.unitcard__kicker{font-size:.74rem;font-weight:800;letter-spacing:.03em;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.unitcard__title{font-family:var(--font-display);font-size:1.28rem;font-weight:700;line-height:1.2;margin-top:2px}
+.unitcard__side{
+  flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  padding:0 16px;border-inline-start:2.5px solid var(--edge);
+  font-size:.74rem;font-weight:900;
+}
 
 .stairwrap{position:relative;flex:1;min-height:0;z-index:1}
+/* pinned to the scroller's viewport; the camera moves the stair inside it */
+.stage{
+  position:sticky;top:0;height:100%;overflow:hidden;
+  /* fog pinned to the view, not to the objects: the road ahead sinks into the sky */
+  -webkit-mask-image:linear-gradient(to bottom,transparent 4%,rgba(0,0,0,.28) 20%,rgba(0,0,0,.7) 36%,#000 52%);
+  mask-image:linear-gradient(to bottom,transparent 4%,rgba(0,0,0,.28) 20%,rgba(0,0,0,.7) 36%,#000 52%);
+}
+.stair{will-change:transform}
 .stair{
   position:relative;display:flex;flex-direction:column;align-items:center;
-  gap:52px;
-  padding:126px 0 42px;
+  padding:112px 0 24px;
   min-height:100%;
 }
 
+/* The scenery belongs to each unit, so exploring ahead reveals its world. */
+.path-unit{
+  position:relative;isolation:isolate;display:flex;flex-direction:column;
+  align-items:center;gap:40px;padding:190px 0 70px;width:100%;
+}
+.path-unit:first-child{padding-top:84px}
+.path-unit:first-child .path-unit__caption{top:22px}
+.path-unit:last-child{padding-bottom:64px}
+.path-unit__caption{
+  position:absolute;top:92px;left:0;right:0;width:max-content;margin-inline:auto;
+  display:flex;align-items:center;gap:7px;white-space:nowrap;
+  padding:5px 13px 5px 7px;border-radius:var(--r-pill);
+  background:color-mix(in srgb,var(--paper) 78%,transparent);
+  box-shadow:0 3px 0 color-mix(in srgb,var(--paper-edge) 70%,transparent);
+  color:var(--ink-2);font-size:.78rem;font-weight:800;
+}
+.path-unit__caption span{
+  display:grid;place-items:center;width:22px;height:22px;border-radius:50%;
+  background:var(--bg-sunk);color:var(--ink-3);font-size:.68rem;
+}
+
+.landscape{
+  transform-origin:50% 50%;will-change:transform,opacity;
+  --land-stone:#EAC797;--land-shadow:#CEA374;--land-light:#FFF0CE;
+  --land-recess:#B38459;--land-accent:#DE9355;--land-leaf:#9BA570;
+  --land-glow:#F4C665;--land-hill:#EEDAB5;--land-dune:#F3E2C4;
+  --land-ground:#EFDBB6;--land-cloud:#FFFFFF;--land-water:#ACCCC1;
+  --land-kaaba:#49392E;--land-kaaba-side:#63503D;--land-kaaba-top:#7B6650;
+  /* extra room above and below so the slow layers can drift without a hard cut */
+  /* 180% wide: once the camera shrinks an island there is still ground
+     at its sides, which then melts into the sky instead of ending in a wall */
+  position:absolute;inset:60px -40% -60px;z-index:-1;pointer-events:none;
+  overflow:clip;contain:paint;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.45) 30%,#000 70%,#000 calc(100% - 70px),transparent),
+                     linear-gradient(to right,transparent 6%,#000 24%,#000 76%,transparent 94%);
+  -webkit-mask-composite:source-in;
+  mask-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.45) 30%,#000 70%,#000 calc(100% - 70px),transparent),
+             linear-gradient(to right,transparent 6%,#000 24%,#000 76%,transparent 94%);
+  mask-composite:intersect;
+}
+.landscape--u-shahada{--land-stone:#E4B18C;--land-shadow:#C68E70;--land-accent:#D18155;--land-hill:#EED0B5;--land-dune:#F2DCC8;--land-ground:#EDD2B7}
+.landscape--u-salah{--land-stone:#E8C698;--land-shadow:#CCA375;--land-accent:#D8AF66;--land-hill:#EAD9BA;--land-dune:#F2E4CD}
+.landscape--u-zakah{--land-stone:#DFCB9A;--land-shadow:#B5A374;--land-leaf:#88A274;--land-hill:#D5DFC0;--land-dune:#E5E8CE;--land-ground:#DFDFC0}
+.landscape--u-sawm{--land-stone:#BAA8BC;--land-shadow:#9985A0;--land-recess:#76657E;--land-light:#F5DFCA;--land-accent:#C4936C;--land-hill:#D4C8DB;--land-dune:#E1D4DF;--land-ground:#D7C7D1;--land-cloud:#F5EAF1;--land-leaf:#949084;--land-glow:#FFE0A0}
+.landscape--u-hajj{--land-hill:#DDC6B0;--land-dune:#EDDBC8;--land-ground:#E7D1B7;--land-stone:#D9BD97;--land-shadow:#B89C7A}
+.landscape__far,.landscape__architecture,.landscape__near{
+  position:absolute;width:55.56%;height:auto;aspect-ratio:460/380;bottom:40px;left:22.22%;
+  will-change:transform;
+}
+.landscape__far svg,.landscape__architecture svg{display:block;width:100%;height:auto;overflow:visible}
+/* atmospheric perspective: the further back, the more it melts into the sky */
+.landscape__far{opacity:.3;filter:saturate(.7)}
+.landscape__architecture{opacity:.82;filter:saturate(.82)}
+.landscape__near{bottom:18px;overflow:visible}
+:root[data-theme="dark"] 
+.landscape{
+  transform-origin:50% 50%;will-change:transform,opacity;
+  --land-stone:#76533E;--land-shadow:#51382C;--land-light:#A77D50;
+  --land-recess:#35251F;--land-accent:#A87540;--land-leaf:#535C3B;
+  --land-glow:#D9A754;--land-hill:#3C2A24;--land-dune:#453026;
+  --land-ground:#50382B;--land-cloud:#4A3530;--land-water:#52665A;
+  --land-kaaba:#29201D;--land-kaaba-side:#3D3027;--land-kaaba-top:#56432F;
+}
+:root[data-theme="dark"] .landscape--u-sawm{
+  --land-stone:#665268;--land-shadow:#46364D;
+  --land-recess:#302635;--land-hill:#3A2C40;--land-dune:#423248;--land-ground:#4A394B;
+}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) 
+.landscape{
+  transform-origin:50% 50%;will-change:transform,opacity;
+    --land-stone:#76533E;--land-shadow:#51382C;--land-light:#A77D50;
+    --land-recess:#35251F;--land-accent:#A87540;--land-leaf:#535C3B;
+    --land-glow:#D9A754;--land-hill:#3C2A24;--land-dune:#453026;
+    --land-ground:#50382B;--land-cloud:#4A3530;--land-water:#52665A;
+    --land-kaaba:#29201D;--land-kaaba-side:#3D3027;--land-kaaba-top:#56432F;
+  }
+  :root:not([data-theme="light"]) .landscape--u-sawm{
+    --land-stone:#665268;--land-shadow:#46364D;
+    --land-recess:#302635;--land-hill:#3A2C40;--land-dune:#423248;--land-ground:#4A394B;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .landscape [data-depth],.sky__clouds{transform:none!important}
+}
+.calm .landscape [data-depth],.calm .sky__clouds{transform:none!important}
+
+/* ---- a tread ----
+   Flat colour only: a pale top face, a tall riser in the main colour, and a
+   raised disc. The camera (useLandscapeParallax) owns each step's transform,
+   so its size and position come from how far up the road it is. */
 .step{
   position:relative;
-  transform:translateX(var(--dx,0)) scale(var(--sc,1));
-  opacity:var(--op,1);
-  transition:transform 420ms var(--e-out),opacity 420ms var(--e-out);
+  transform:translateX(var(--dx,0));
+  transform-origin:50% 50%;
   will-change:transform,opacity;
 }
 
-.step__trail{
-  position:absolute;top:50%;left:50%;z-index:0;
-  width:5px;height:var(--trail-h,96px);border-radius:var(--r-pill);
-  transform-origin:50% 0;transform:rotate(var(--trail-r,0deg));
-  background:repeating-linear-gradient(to bottom,var(--orange) 0 7px,transparent 7px 15px);
-  opacity:.22;pointer-events:none;
-}
-.step--locked .step__trail{background:repeating-linear-gradient(to bottom,var(--inert-deep) 0 7px,transparent 7px 15px);opacity:.3}
-
 .slab{
-  --face:var(--inert);--edge:var(--inert-deep);--fg:var(--inert-ink);
+  --face:var(--inert-mid);--top:var(--inert);--rim:var(--inert-deep);--fg:var(--inert-deep);
+  --rise:24px;--face-h:34px;
   position:relative;
   z-index:2;display:flex;align-items:center;justify-content:center;gap:10px;
-  width:166px;height:48px;
-  border-radius:var(--r-pill);
+  width:204px;height:calc(var(--face-h) + var(--rise));padding-bottom:var(--rise);
+  /* one block: round where the light catches the top, nearly square where it meets the ground */
+  border-radius:14px 14px 7px 7px;
   background:var(--face);
   color:var(--fg);
-  box-shadow:0 9px 0 var(--edge), 0 15px 20px -8px rgba(69,7,5,.22);
-  transition:transform var(--d-tap) var(--e-out),box-shadow var(--d-tap) var(--e-out),
-             background 320ms var(--e-out);
+  clip-path:inset(-40px 0 0 0 round 0 0 7px 7px);
+  transition:transform var(--d-tap) var(--e-out),clip-path var(--d-tap) var(--e-out);
 }
-.slab__glyph{display:grid;place-items:center;position:relative;z-index:1}
-/* a soft top-light so the slab reads as a lit surface, not a flat pill */
+/* the top face */
 .slab::before{
-  content:'';position:absolute;inset:3px 10px auto;height:9px;border-radius:var(--r-pill);
-  background:rgba(255,255,255,.26);pointer-events:none;
+  content:'';position:absolute;left:0;right:0;top:0;height:var(--face-h);
+  border-radius:14px 14px 10px 10px;
+  background:var(--top);
+  pointer-events:none;
 }
-.step--open .slab:active{transform:translateY(9px);box-shadow:0 0 0 var(--edge)}
+.slab > *{position:relative;z-index:1}
+.slab__medal{
+  position:absolute!important;left:50%;top:-20px;z-index:1;
+  display:grid;place-items:center;
+  width:50px;height:50px;margin-left:-25px;border-radius:50%;
+  background:var(--top);
+  box-shadow:0 7px 0 var(--rim);
+}
+/* pressed: the whole block sinks into the ground, its riser getting shorter */
+.step--open .slab:active{
+  transform:translateY(calc(var(--rise) - 8px));
+  clip-path:inset(-40px 0 calc(var(--rise) - 8px) 0 round 0 0 7px 7px);
+}
 
-.step--done .slab   {--face:var(--yellow);--edge:var(--yellow-deep);--fg:var(--maroon)}
-.step--current .slab{--face:var(--orange);--edge:var(--orange-deep);--fg:#fff}
-.step--chest .slab  {--face:var(--cream-deep);--edge:#C2A87C;--fg:var(--maroon);width:194px;border-radius:20px}
-.step--done.step--chest .slab{--face:var(--yellow-lit);--edge:var(--yellow-deep)}
-.step--done.step--chest .slab:disabled{opacity:.78;cursor:default;filter:saturate(.72)}
+.step--done .slab   {--face:var(--yellow);--top:color-mix(in srgb,var(--yellow-lit) 70%,#fff);--rim:var(--yellow-deep);--fg:var(--maroon)}
+/* finished treads carry the worn, lighter stripes of a path already walked */
+.step--done:not(.step--chest) .slab::before{
+  background:repeating-linear-gradient(100deg,var(--top) 0 14px,color-mix(in srgb,var(--top) 55%,#fff) 14px 40px,var(--top) 40px 54px);
+}
+.step--current .slab{--face:var(--orange);--top:color-mix(in srgb,var(--orange-lit) 78%,#fff);--rim:var(--orange-deep);--fg:#fff}
+.step--chest .slab  {--face:#D9C39C;--top:var(--cream-deep);--rim:#C2A87C;--fg:var(--maroon);width:220px;justify-content:flex-start;padding-inline:18px}
+.step--chest .slab__medal{left:auto;inset-inline-end:14px;margin-left:0}
+.step--done.step--chest .slab{--face:var(--yellow);--top:var(--yellow-lit);--rim:var(--yellow-deep)}
+.step--done.step--chest .slab:disabled{opacity:.8;cursor:default}
 .step--locked{cursor:default}
-.step--soon .slab{opacity:.62;box-shadow:0 6px 0 var(--edge)}
-.slab__reward{font-size:.76rem;font-weight:900;white-space:nowrap}
+.slab__reward{position:relative;z-index:1;font-size:.8rem;font-weight:900;white-space:nowrap}
 .slab__reward b{color:var(--orange-deep);margin-inline-start:3px}
 
 .slab__stars{
-  position:absolute;top:-9px;inset-inline-end:8px;
+  position:absolute;top:-22px;inset-inline-start:14px;z-index:2;
   display:flex;gap:2px;color:var(--yellow);
-  filter:drop-shadow(0 1px 0 var(--yellow-deep));
 }
 .slab__soon{
-  position:absolute;left:50%;bottom:-20px;transform:translateX(-50%);
+  /* printed on the riser, so it can't collide with the tread below */
+  position:absolute;left:0;right:0;bottom:0;height:var(--rise);
+  display:grid;place-items:center;
   font-size:.68rem;font-weight:800;color:var(--ink-3);white-space:nowrap;
 }
-
-/* the one you're standing on */
-.step__ring{
-  position:absolute;inset:-7px;border-radius:var(--r-pill);
-  border:4px solid var(--orange);pointer-events:none;
-  animation:step-pulse 2.1s var(--e-out) infinite;
-}
-@keyframes step-pulse{
-  0%  {transform:scale(.97);opacity:.6}
-  70% {opacity:0}
-  100%{transform:scale(1.22);opacity:0}
-}
+.step--current{z-index:50!important}
 
 .step__cta{
-  position:absolute;bottom:calc(100% + 16px);left:50%;
+  position:absolute;bottom:calc(100% + 26px);left:50%;z-index:5;
   transform:translateX(-50%);
   background:var(--paper);color:var(--orange);
-  font-weight:900;font-size:.82rem;letter-spacing:.06em;
-  padding:8px 18px;border-radius:var(--r-pill);
+  font-weight:900;font-size:.84rem;letter-spacing:.06em;
+  padding:8px 18px;border-radius:12px;
   box-shadow:0 4px 0 var(--paper-edge),var(--lift-2);
   white-space:nowrap;pointer-events:none;
   animation:cta-bob 1.9s var(--e-in-out) infinite;
 }
 .step__cta::after{
   content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;
-  border:6px solid transparent;border-top-color:var(--paper);
+  border:6px solid transparent;border-bottom:0;border-top-color:var(--paper);
 }
 @keyframes cta-bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-5px)}}
 
-/* Siraj standing beside the current step */
+/* Siraj standing on his own little plinth beside the current step */
 .step__siraj{
-  position:absolute;top:-28px;inset-inline-end:-84px;
+  position:absolute;top:-30px;inset-inline-end:-92px;z-index:4;
   pointer-events:none;
 }
-.step__siraj--flip{inset-inline-end:auto;inset-inline-start:-84px}
+.step__siraj--flip{inset-inline-end:auto;inset-inline-start:-92px}
+.step__plinth{
+  position:absolute;left:50%;bottom:-8px;z-index:-1;
+  width:66px;height:20px;margin-left:-33px;border-radius:50%;
+  background:radial-gradient(90% 100% at 50% 20%,var(--paper),var(--bg-sunk));
+  box-shadow:0 10px 0 var(--paper-edge),0 20px 16px -6px rgba(69,7,5,.3);
+}
+@media(max-width:380px){
+  .step__siraj{width:64px;inset-inline-end:-76px}
+  .step__siraj .siraj{max-width:100%}
+  .step__siraj--flip{inset-inline-end:auto;inset-inline-start:-76px}
+  .step__plinth{width:56px;margin-left:-28px}
+}
 
 /* a step lighting up after you finish the one below it */
 @keyframes step-light{
@@ -506,7 +646,7 @@
   100%{transform:scale(1)}
 }
 .step--lighting .slab{animation:step-light .8s var(--e-elastic) both}
-.step--lighting{z-index:6}
+.step--lighting{z-index:60!important}
 
 .reward-pop{
   position:absolute;inset:0;z-index:30;margin:auto;
