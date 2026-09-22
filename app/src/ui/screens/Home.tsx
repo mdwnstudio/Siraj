@@ -9,7 +9,7 @@ import {
 import { useApp, useCalmMotion, useDarkTheme } from '../state'
 import { Icon, Star, Sparkle, Lantern, Droplet } from '../icons/SirajIcons'
 import { Siraj } from '../components/Siraj'
-import { focusStep, LANDSCAPE_UNITS, PathLandscape, PathSky, useLandscapeParallax } from '../components/PathLandscape'
+import { COMPOSITOR_CAMERA, focusStep, LANDSCAPE_UNITS, PathLandscape, PathSky, useLandscapeParallax } from '../components/PathLandscape'
 import { Button } from '../components/Button'
 import { Burst } from '../components/Burst'
 import { useLayout } from '../useLayout'
@@ -42,10 +42,10 @@ export function Home({
   const [shownUnit, setShownUnit] = useState<string | null>(null)
   const unit = (shownUnit && unitById(shownUnit)) || UNIT_OF.get(current) || unitById('u-intro')!
 
-  // phones lay the road on a tilted plane that the browser scrolls natively
+  // phones scroll the road natively and let the compositor run the camera
   const flat = phone || lite
-  const ground = flat
-  useLandscapeParallax(scroller, calm, { sky, onUnit: setShownUnit, lite, ground })
+  const native = flat && COMPOSITOR_CAMERA
+  useLandscapeParallax(scroller, calm, { sky, onUnit: setShownUnit, lite, native })
 
   useLayoutEffect(() => {
     focusStep(scroller.current, currentRef.current)
@@ -90,14 +90,11 @@ export function Home({
   const unitDone = unit.nodes.filter((n) => isCompleted(progress, n.id)).length
 
   return (
-    <div className={`home${ground ? ' home--ground' : ''}`}>
+    <div className={`home${native ? ' home--native' : ''}`}>
       <PathSky skyRef={sky} />
 
       <Stair scroller={scroller} currentRef={currentRef} progress={progress} current={current}
-        celebrate={celebrate} onOpen={openNode} flat={flat} ground={ground} dark={dark} />
-
-      {/* the far road melts into this: a still, masked copy of the sky */}
-      {ground && <PathSky fog />}
+        celebrate={celebrate} onOpen={openNode} flat={flat} native={native} dark={dark} />
 
       <div className={`unitcard unitcard--${unit.tone}`}>
         <div className="unitcard__main">
@@ -138,7 +135,7 @@ export function Home({
 /* ---------------- the stair itself ----------------
    Memoised: the unit banner changes as you scroll, and that must not
    re-render thirty steps in the middle of a flick. */
-const Stair = memo(function Stair({ scroller, currentRef, progress, current, celebrate, onOpen, flat, ground, dark }: {
+const Stair = memo(function Stair({ scroller, currentRef, progress, current, celebrate, onOpen, flat, native, dark }: {
   scroller: RefObject<HTMLDivElement | null>
   currentRef: RefObject<HTMLDivElement | null>
   progress: Progress
@@ -146,11 +143,11 @@ const Stair = memo(function Stair({ scroller, currentRef, progress, current, cel
   celebrate: string | null
   onOpen: (n: PathNode) => void
   flat: boolean
-  ground: boolean
+  native: boolean
   dark: boolean
 }) {
   return (
-    <div className={`stairwrap scroll${ground ? ' stairwrap--ground' : ''}`} ref={scroller}>
+    <div className={`stairwrap scroll${native ? ' stairwrap--native' : ''}`} ref={scroller}>
       <div className="stage">
       <div className="stair">
         {LANDSCAPE_UNITS.map((landscapeUnit) => (
