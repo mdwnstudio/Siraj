@@ -232,8 +232,8 @@ const CLOUD_BANKS = ([
   },
 }))
 
-export const PathSky = memo(function PathSky({ skyRef, fog = false }: { skyRef?: RefObject<HTMLDivElement | null>; fog?: boolean }) {
-  return <div className={fog ? 'sky sky--fog' : 'sky'} ref={skyRef} aria-hidden="true">
+export const PathSky = memo(function PathSky({ skyRef }: { skyRef: RefObject<HTMLDivElement | null> }) {
+  return <div className="sky" ref={skyRef} aria-hidden="true">
     <div className="sky__high" />
     <div className="sky__sun" />
     {CLOUD_BANKS.map(b => (
@@ -275,11 +275,7 @@ export function focusStep(root: HTMLElement | null, el: HTMLElement | null) {
   const stair = root?.querySelector<HTMLElement>('.stair')
   if (!root || !stair || !el) return
   sizeSpacer(root, stair)
-  // the ground camera's scroller reaches past the view above and below
-  const line = root.classList.contains('stairwrap--ground')
-    ? groundLine(root.parentElement!.clientHeight)
-    : root.clientHeight * (ANCHOR - 0.04)
-  root.scrollTop = layoutTop(el, stair) + el.offsetHeight / 2 - line
+  root.scrollTop = layoutTop(el, stair) + el.offsetHeight / 2 - root.clientHeight * (ANCHOR - 0.04)
 }
 
 /* The fog. Full mode masks the whole stage with this ramp; lite fades each
@@ -299,105 +295,152 @@ const fog = (f: number) => {
   return 1
 }
 
-/* ---------------- the ground camera (phones) ----------------
- * The road is laid on a real ground plane: the scroller itself is tilted
- * back in CSS 3D, and the browser scrolls it natively. Things ahead recede
- * toward a horizon and things passed grow as they slide out, with no
- * script, no animation and no style write per frame, so a busy main thread
- * cannot stall or desync any of it.
- *
- * Both earlier phone cameras failed on a real budget phone. The JS camera
- * froze the road whenever the main thread was busy. Scroll-linked
- * animations (ScrollTimeline) looked composited but still waited on the
- * main thread, so over a native scroll every body lagged and then
- * rubber-banded into place.
- *
- * The plane foreshortens: distant treads flatten as well as shrink. Each
- * body is stretched by 1/cos(tilt) so it reads life-size at the anchor
- * line, where you stand.
+/* ---------------- the compositor camera ----------------
+ * The same projection, handed to the browser instead of run by us. The
+ * stair scrolls natively, and every body gets a scroll-linked animation
+ * whose keyframes are the projection sampled along the scroll range. The
+ * compositor thread plays them in step with the finger, so a busy main
+ * thread (a budget phone running a whole OS and other apps) cannot drop
+ * a scrolled frame, and no style is written while scrolling.
  */
-// these must match .stairwrap--ground in app.css
-const TILT_RAD = (50 * Math.PI) / 180 // how far the road leans back
-const PERSP = 1.0 // viewer distance, as a multiple of the view's height
-const REACH_UP = 1.3 // extra plane above the view: the road runs on into the fog
+type TimelineCtor = new (options: { source: Element; axis: 'block' }) => AnimationTimeline
+const ScrollTimelineCtor: TimelineCtor | undefined =
+  typeof window !== 'undefined' ? (window as unknown as { ScrollTimeline?: TimelineCtor }).ScrollTimeline : undefined
 
-/** where the ground scroller puts a step to focus it, in its own box */
-const groundLine = (hv: number) => hv * REACH_UP + hv * (ANCHOR - 0.04)
+/** true where the browser can run the camera off the main thread */
+export const COMPOSITOR_CAMERA = !!ScrollTimelineCtor
 
-/** how far up the tilted plane a point appears p px above the anchor line */
-const planeDistance = (p: number, hv: number) => {
-  const P = PERSP * hv
-  return (p * P) / (Math.cos(TILT_RAD) * P - p * Math.sin(TILT_RAD))
-}
+const SAMPLES = 28
+const MAX_SCALE = 1.5
 
-function groundCamera(root: HTMLElement, stair: HTMLElement, onUnit: (unitId: string) => void) {
-  const home = root.parentElement!
+function nativeCamera(
+  root: HTMLElement, stair: HTMLElement, skyEl: HTMLElement | null | undefined,
+  reduced: () => boolean, onUnit: (unitId: string) => void,
+) {
+  const media = window.matchMedia('(prefers-reduced-motion: reduce)')
   const sections = Array.from(root.querySelectorAll<HTMLElement>('.path-unit'))
-  // The sky and its fog copy both cool from dawn to blue as you climb, in
-  // twenty small steps written from a scroll listener. Neither layer is
-  // composited, so each is one still texture on every scrolled frame, and a
-  // step repaints them once. An opacity animation here (a scroll timeline)
-  // kept both full-screen layers, and the fog's masks, blending on every
-  // frame: more than a budget phone's GPU can fill at 90Hz, so the whole
-  // road stuttered on the real phone while the emulator, drawing on the
-  // host's GPU, stayed smooth.
-  const highs = Array.from(home.querySelectorAll<HTMLElement>('.sky__high'))
-  let watch: IntersectionObserver | null = null
-  let shownUnit = ''
-  let shownOp = ''
-  let max = 1
-  let queued = 0
 
+  const bodies = Array.from(root.querySelectorAll<HTMLElement>('[data-persp]'))
+  const high = skyEl?.querySelector<HTMLElement>('.sky__high')
+  let running: Animation[] = []
+  let height = root.clientHeight
+  let calm = reduced()
+  let shownUnit = ''
+
+  const stop = () => { for (const a of running) a.cancel(); running = [] }
+
+  // 0 at the first step, 1 at the last: the sky cools from dawn to open blue
+  // as you climb, in twenty small steps written from a scroll listener. As
+  // an opacity animation it lifted the blue layer and the sun above it into
+  // two full-screen layers blended on every frame, more than a budget
+  // phone's GPU can fill at 90Hz. Still, the sky is one texture, and a step
+  // repaints it once.
+  let skyMax = 1
+  let skyOp = ''
+  let skyQueued = 0
   const paintSky = () => {
-    queued = 0
-    const op = (Math.round((1 - root.scrollTop / max) * 20) / 20).toFixed(2)
-    if (op === shownOp) return
-    shownOp = op
-    for (const high of highs) high.style.opacity = op
+    skyQueued = 0
+    if (!high) return
+    const op = (Math.round((1 - root.scrollTop / skyMax) * 20) / 20).toFixed(2)
+    if (op !== skyOp) { high.style.opacity = op; skyOp = op }
   }
-  const onScroll = () => { if (!queued) queued = requestAnimationFrame(paintSky) }
+  const onScroll = () => { if (!skyQueued) skyQueued = requestAnimationFrame(paintSky) }
   root.addEventListener('scroll', onScroll, { passive: true })
 
   const build = () => {
-    const hv = home.clientHeight
-    // where the life-size line sits in the scroller's own box
-    const anchor = hv * REACH_UP + hv * ANCHOR
-    max = Math.max(1, root.scrollHeight - root.clientHeight)
+    stop()
+    calm = reduced()
+    height = root.clientHeight
+    const max = root.scrollHeight - height
+    skyMax = Math.max(1, max)
     paintSky()
+    if (calm || max < 1) { unit(); return }
+    const timeline = new ScrollTimelineCtor!({ source: root, axis: 'block' })
+    const play = (el: HTMLElement, frames: Keyframe[]) => {
+      running.push(el.animate(frames, { timeline, fill: 'both' } as KeyframeAnimationOptions))
+    }
+    const anchor = height * ANCHOR
+    const D = height * DEPTH
+    // Passed bodies leave below the fold; the ones ahead melt into the fog near
+    // the top. Growth is capped at MAX_SCALE: Chrome rasters an animated layer
+    // at the largest scale its keyframes reach, and letting passed bodies grow
+    // 3x (all of it off screen) overran a budget GPU's tile memory, which
+    // showed as pieces of the road blanking and popping back mid-scroll.
+    const vLo = Math.max(D * (1 / MAX_SCALE - 1), anchor - height - 400)
+    const vHi = (D * (anchor - FOG[0][0] * height)) / (D - (anchor - FOG[0][0] * height))
+    const at = (dx: number, v: number, fade: number): Keyframe => {
+      const s = D / (v + D)
+      return {
+        transform: `translate3d(${(dx * s).toFixed(1)}px,${(v - v * s).toFixed(1)}px,0) scale(${s.toFixed(4)})`,
+        opacity: +(fog((anchor - v * s) / height) * fade).toFixed(3),
+      }
+    }
+    for (const el of bodies) {
+      const dx = Number(el.dataset.dx ?? 0)
+      const mid = layoutTop(el, stair) + el.offsetHeight / 2
+      // scroll = mid - anchor + v, clipped to what the scroller can reach
+      const from = Math.max(0, mid - anchor + vLo)
+      const to = Math.min(max, mid - anchor + vHi)
+      if (to <= from) continue
+      const frames: Keyframe[] = []
+      for (let i = 0; i <= SAMPLES; i++) {
+        const scroll = from + ((to - from) * i) / SAMPLES
+        const v = scroll - mid + anchor
+        // the last stretch below the fold fades out, so a big island never pops
+        const fade = Math.min(1, (v - vLo) / (D * 0.15))
+        frames.push({ ...at(dx, v, fade), offset: scroll / max })
+      }
+      play(el, [{ ...frames[0], offset: 0 }, ...frames, { ...frames[frames.length - 1], offset: 1 }])
+    }
+    // The cloud banks hold still here. Each one is a layer taller than two
+    // screens, and three of them moving alongside the road's own layers
+    // overran a budget phone's tile memory: Chrome then evicted pieces of the
+    // road and repainted them late, which read as the road snapping mid-flick.
+    unit()
+  }
 
-    // The banner names whichever unit is under the middle of the screen. On
-    // the plane that is a fixed line in the scroller's box, so a one-pixel
-    // band on an IntersectionObserver finds it with no script per scroll.
+  // The banner names whichever unit is under the probe line. In road
+  // coordinates that line sits a fixed distance below the scroller's top,
+  // so a one-pixel band on an IntersectionObserver finds it with no script
+  // running per scroll event.
+  let watch: IntersectionObserver | null = null
+  const unit = () => {
     watch?.disconnect()
-    const line = Math.round(anchor - planeDistance(hv * (ANCHOR - 0.5), hv))
+    const anchor = height * ANCHOR
+    const D = height * DEPTH
+    const pMid = anchor - height * 0.5
+    const line = Math.round(anchor - (calm ? pMid : (pMid * D) / (D - pMid)))
     watch = new IntersectionObserver(entries => {
       for (const entry of entries) {
         const id = (entry.target as HTMLElement).dataset.unit ?? ''
         if (entry.isIntersecting && id !== shownUnit) { shownUnit = id; onUnit(id) }
       }
-    }, { root, rootMargin: `${-line}px 0px ${line + 1 - root.clientHeight}px 0px` })
+    }, { root, rootMargin: `${-line}px 0px ${line + 1 - height}px 0px` })
     for (const section of sections) watch.observe(section)
   }
 
-  let pending = 0
+  let queued = 0
   const rebuild = () => {
-    if (pending) return
-    pending = requestAnimationFrame(() => { pending = 0; build() })
+    if (queued) return
+    queued = requestAnimationFrame(() => { queued = 0; build() })
   }
   const observer = new ResizeObserver(rebuild)
-  observer.observe(home)
+  observer.observe(root)
   observer.observe(stair)
+  media.addEventListener('change', rebuild)
   build()
   let alive = true
   document.fonts?.ready.then(() => { if (alive) rebuild() })
   return () => {
     alive = false
-    cancelAnimationFrame(pending)
     cancelAnimationFrame(queued)
     observer.disconnect()
     watch?.disconnect()
+    media.removeEventListener('change', rebuild)
+    cancelAnimationFrame(skyQueued)
     root.removeEventListener('scroll', onScroll)
-    for (const high of highs) high.style.opacity = ''
+    if (high) high.style.opacity = ''
+    stop()
   }
 }
 
@@ -409,13 +452,13 @@ export function useLandscapeParallax(
   scroller: RefObject<HTMLDivElement | null>,
   calm: boolean,
   {
-    sky, onUnit, lite = false, ground = false,
+    sky, onUnit, lite = false, native = false,
   }: {
     sky?: RefObject<HTMLDivElement | null>
     onUnit?: (unitId: string) => void
     lite?: boolean
-    /** lay the road on a tilted plane and let the browser scroll it (phones) */
-    ground?: boolean
+    /** scroll natively and let the compositor run the camera (needs COMPOSITOR_CAMERA) */
+    native?: boolean
   } = {},
 ) {
   const frame = useRef(0)
@@ -426,7 +469,9 @@ export function useLandscapeParallax(
     const stair = root?.querySelector<HTMLElement>('.stair')
     if (!root || !stair) return
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
-    if (ground) return groundCamera(root, stair, u => unitCb.current?.(u))
+    if (native && COMPOSITOR_CAMERA) {
+      return nativeCamera(root, stair, sky?.current, () => calm || media.matches, u => unitCb.current?.(u))
+    }
     const wide = window.matchMedia('(min-width: 700px)')
     const sections = Array.from(root.querySelectorAll<HTMLElement>('.path-unit'))
     const scenes = sections.map(section => ({
@@ -575,7 +620,7 @@ export function useLandscapeParallax(
       if (high) high.style.opacity = ''
       stair.style.transform = ''
     }
-  }, [scroller, sky, calm, lite, ground])
+  }, [scroller, sky, calm, lite, native])
 }
 
 export const LANDSCAPE_UNITS = [...UNITS].reverse()

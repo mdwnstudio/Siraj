@@ -38,7 +38,7 @@ if (stress) {
     setInterval(() => { const t = performance.now(); while (performance.now() - t < 30) { /* hog */ } }, 40)
   })
 }
-const camera = await page.evaluate(() => document.querySelector('.stairwrap--ground') ? 'ground' : 'js')
+const camera = await page.evaluate(() => document.querySelector('.stairwrap--native') ? 'compositor' : 'js')
 
 const frames = []
 cdp.on('Page.screencastFrame', f => {
