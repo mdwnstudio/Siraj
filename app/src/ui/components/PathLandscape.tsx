@@ -270,12 +270,63 @@ const sizeSpacer = (root: HTMLElement, stair: HTMLElement) => {
   if (spacer) spacer.style.height = `${Math.max(0, stair.offsetHeight - root.clientHeight)}px`
 }
 
+/** where the scroller must stand for a step to sit just below the life-size line */
+function focusTop(root: HTMLElement, el: HTMLElement): number | null {
+  const stair = root.querySelector<HTMLElement>('.stair')
+  if (!stair) return null
+  sizeSpacer(root, stair)
+  const top = layoutTop(el, stair) + el.offsetHeight / 2 - root.clientHeight * (ANCHOR - 0.04)
+  return Math.max(0, Math.min(root.scrollHeight - root.clientHeight, top))
+}
+
 /** Scroll so a step stands just below the life-size line, where Siraj waits beside it. */
 export function focusStep(root: HTMLElement | null, el: HTMLElement | null) {
-  const stair = root?.querySelector<HTMLElement>('.stair')
-  if (!root || !stair || !el) return
-  sizeSpacer(root, stair)
-  root.scrollTop = layoutTop(el, stair) + el.offsetHeight / 2 - root.clientHeight * (ANCHOR - 0.04)
+  if (!root || !el) return
+  const top = focusTop(root, el)
+  if (top !== null) root.scrollTop = top
+}
+
+/* a slow lift-off, a long glide, and a very soft landing: a camera crane,
+   not a page scroll (the solved x of cubic-bezier(.6,0,.18,1)) */
+const crane = (t: number) => {
+  const bez = (a: number, b: number, s: number) => 3 * a * s * (1 - s) ** 2 + 3 * b * s * s * (1 - s) + s ** 3
+  let lo = 0, hi = 1, s = t
+  for (let i = 0; i < 18; i++) {
+    s = (lo + hi) / 2
+    if (bez(0.6, 0.18, s) < t) lo = s
+    else hi = s
+  }
+  return bez(0, 1, s)
+}
+
+/** How long the crane takes to reach a step, so a longer climb takes longer. */
+export function glideTime(root: HTMLElement | null, el: HTMLElement | null): number {
+  if (!root || !el) return 0
+  const top = focusTop(root, el)
+  if (top === null) return 0
+  return Math.round(Math.min(2800, Math.max(1700, 1200 + Math.abs(top - root.scrollTop))))
+}
+
+/** Carry the camera up the road to a step. The scroll position is the only
+ *  thing written per frame: both cameras already follow it, the compositor
+ *  one without any script at all. Returns a cancel function. */
+export function glideTo(root: HTMLElement | null, el: HTMLElement | null, duration: number, done: () => void) {
+  const top = root && el ? focusTop(root, el) : null
+  if (!root || top === null || duration <= 0) {
+    if (root && top !== null) root.scrollTop = top
+    done()
+    return () => {}
+  }
+  const from = root.scrollTop
+  let start = 0
+  let raf = requestAnimationFrame(function step(now) {
+    if (!start) start = now
+    const t = Math.min(1, (now - start) / duration)
+    root.scrollTop = from + (top - from) * crane(t)
+    if (t < 1) raf = requestAnimationFrame(step)
+    else done()
+  })
+  return () => cancelAnimationFrame(raf)
 }
 
 /* The fog. Full mode masks the whole stage with this ramp; lite fades each

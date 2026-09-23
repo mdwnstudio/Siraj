@@ -178,4 +178,23 @@ export const sfx = {
   swoosh() {
     noise(0, 0.22, 0.1)
   },
+
+  /** the camera lifting off toward the next unit: one long rising breath */
+  ascend(dur = 1.8) {
+    tone({ freq: note(0, -1), dur, type: 'sine', gain: 0.4, to: note(0, 1) })
+    tone({ freq: note(2, 0), at: dur * 0.2, dur: dur * 0.8, type: 'triangle', gain: 0.12, to: note(2, 2) })
+    noise(0, 0.5, 0.06)
+  },
+
+  /** a new unit opens: the gate swings wide. The biggest sound in the app. */
+  fanfare() {
+    ;[0, 2, 4, 5, 7, 9].forEach((d, i) =>
+      tone({ freq: note(d, 0), at: i * 0.06, dur: 0.36, type: 'sine', gain: 0.7 }),
+    )
+    ;[0, 2, 4].forEach((d) =>
+      tone({ freq: note(d, 2), at: 0.4, dur: 1.3, type: 'sine', gain: 0.5 }),
+    )
+    tone({ freq: note(0, 0), at: 0.4, dur: 1.4, type: 'triangle', gain: 0.35 })
+    noise(0.36, 0.7, 0.16)
+  },
 }
