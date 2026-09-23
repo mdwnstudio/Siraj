@@ -11,3 +11,6 @@ dist/
 .wrangler/
 *.log
 *.tsbuildinfo
+
+# review sheets built by app/scripts/review-sheet.mjs
+app/siraj-review.html

@@ -189,9 +189,11 @@ shows a hint instead. If you add a sixth kind, wire it in `grading.ts`,
 `Exercises.tsx`, and the `canCheck` logic in `Lesson.tsx`.
 
 ### Current scope
-All six units are playable, two lessons each: `٠ البداية`, `١ الشهادة`,
-`٢ الصلاة`, `٣ الزكاة`, `٤ الصوم`, `٥ الحج`. The `soon: true` flag on a
-`PathNode` still works if a future unit goes on the stair before it is written.
+All six units are playable: `٠ البداية` (3 lessons, the third is أركان الإيمان),
+`١ الشهادتان`, `٢ إقام الصلاة` (الوضوء comes first on the stair, then the
+prayers), `٣ الزكاة`, `٤ الصوم`, `٥ الحج` (2 lessons each). The `soon: true`
+flag on a `PathNode` still works if a future unit goes on the stair before it
+is written.
 
 ---
 
@@ -322,6 +324,18 @@ each other: if you change one, change both.
 **Before this ships publicly, the content must be reviewed by a qualified person.**
 There is a note to this effect at the top of `lessons.ts` and in the app's
 own "عن سراج" section. Do not remove either.
+
+**The review loop.** `node app/scripts/review-sheet.mjs <out.html>` builds one
+self-contained HTML page of every card, exercise and Ask Siraj answer, styled
+like the game, where the reviewer edits any text in place and leaves notes.
+The edits travel inside the file (`<script id="siraj-edits">`, each with
+`from`, `to` and a readable location). A copy made with the browser's "Save
+page as" also works: its edits are in the page body, and the sheet harvests
+them on load. Apply returned edits by path, check each `from` against the
+current text, and read every note: notes carry the structural requests
+(delete, move, add a card, change the answer key).
+
+The first review pass was applied on 2026-09-23: 27 text edits and 46 notes.
 
 When adding content: prefer what is agreed over what is disputed, avoid madhhab
 disputes in beginner material, and never state a ruling the cited source does not
@@ -506,15 +520,15 @@ Light theme by default. Dark mode exists and is selectable in Settings, but
 
 Roughly in priority order.
 
-1. **Write units ٣ الزكاة, ٤ الصوم, ٥ الحج.** The stair already shows them.
+1. **A second content review pass** on the lessons rewritten after the first
+   one (see section 7), then the full sign-off before public release.
 2. **Wire the deployment env vars** (`OPENAI_API_KEY` on the Worker and
    `CHAT_ENDPOINT` in GitHub Actions) and verify the live Ask Siraj path end to
    end. The default model is `gpt-5.6-luna`; only the canned pills are proven
    today.
-3. **Arabic content review by a qualified person.** Blocking for public release.
-4. Real localisation. The language picker shows eight languages; all currently
+3. Real localisation. The language picker shows eight languages; all currently
    open Arabic. `progress.language` is already stored.
-5. More Siraj poses.
-6. Chests and trophies award XP but have no opening animation of their own yet.
-7. No tests. `core/engine/grading.ts` and `progress.ts` are pure functions and
+4. More Siraj poses.
+5. Chests and trophies award XP but have no opening animation of their own yet.
+6. No tests. `core/engine/grading.ts` and `progress.ts` are pure functions and
    are the obvious first thing to cover.

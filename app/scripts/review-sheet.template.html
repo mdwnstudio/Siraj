@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مراجعة محتوى سراج</title>
+<style>
+/*FONTS*/
+:root{
+  --orange:#FE6209;--orange-soft:#FFE6D2;--orange-deep:#D24700;
+  --yellow:#FEBD01;--yellow-soft:#FFF3CD;--yellow-deep:#DE9A00;
+  --maroon:#450705;--cream:#F9E8CC;--cream-deep:#E8D4B2;--cream-lit:#FFF6E6;
+  --bg:#FFFBF3;--bg-sunk:#FBF2E2;--paper:#FFFFFF;--paper-edge:#EFE2CB;
+  --good:#5DAE2F;--good-deep:#45901F;--good-soft:#EAF7DC;
+  --bad:#E23E3E;--bad-deep:#BF2626;--bad-soft:#FDE8E8;
+  --info:#2F9BD6;--info-deep:#1E7AAE;--info-soft:#E2F2FB;
+  --ink:#450705;--ink-2:#7D5347;--ink-3:#A78878;
+  --edit:#FFF1B8;--edit-edge:#F2C200;
+  --font-ui:'Ping',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-display:'Norsal','Ping',system-ui,sans-serif;
+  --r-sm:10px;--r:16px;--r-lg:22px;--r-pill:999px;
+  --lift-1:0 2px 6px rgba(69,7,5,.06);--lift-2:0 6px 18px rgba(69,7,5,.10);
+  --col:700px;--gutter:16px;
+  --quote-ink:#450705;--warn-ink:var(--warn-ink);--focus-bg:#FFFFFF;--bar-bg:rgba(255,251,243,.94);--scrim:rgba(69,7,5,.35);
+  color-scheme:light;
+}
+/* the lamp at night: warm blacks, never blue-grey (same palette as the app) */
+:root[data-theme="dark"]{
+  --bg:#1C0806;--bg-sunk:#140504;--paper:#2A0F0C;--paper-edge:#3E1A15;
+  --cream:#3E1A15;--cream-deep:#5A2C25;--cream-lit:#4A221C;
+  --ink:#FFF3E0;--ink-2:#D7B4A4;--ink-3:#A87F70;
+  --orange-soft:#4A1E0C;--orange-deep:#FF9A5C;
+  --yellow-soft:#3A2A08;--yellow-deep:#F0B429;
+  --good-soft:#1E3311;--good-deep:#9AD873;
+  --bad-soft:#3B1414;--bad-deep:#F59A9A;
+  --info-soft:#10283A;--info-deep:#8CCDF2;
+  --edit:#4A3A08;--edit-edge:#C99A00;
+  --quote-ink:#FFE9C7;--warn-ink:#F3CD6B;--focus-bg:#140504;--bar-bg:rgba(28,8,6,.94);--scrim:rgba(0,0,0,.55);
+  --lift-1:0 2px 6px rgba(0,0,0,.4);--lift-2:0 6px 18px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:150px;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:16px;line-height:1.6;min-height:100vh}
+button,label{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.num{direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
+
+/* ---------- the toolbar ---------- */
+.bar{position:sticky;top:0;z-index:20;background:var(--bar-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:2px solid var(--paper-edge)}
+.bar__in{max-width:980px;margin:0 auto;padding:10px var(--gutter);display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:800;font-size:1.25rem;color:var(--orange-deep);margin-inline-end:auto}
+.brand img{width:34px;height:34px;object-fit:contain}
+.tbtn{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:12px;font-weight:800;font-size:.88rem;background:var(--paper);border:2px solid var(--paper-edge);box-shadow:0 3px 0 var(--paper-edge);white-space:nowrap}
+.tbtn:active{transform:translateY(3px);box-shadow:none}
+.tbtn--primary{background:var(--orange);border-color:var(--orange);color:#fff;box-shadow:0 3px 0 var(--orange-deep)}
+.tbtn[disabled]{opacity:.4;pointer-events:none}
+.count{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:var(--r-pill);background:var(--orange-soft);color:var(--orange-deep);font-size:.78rem}
+.count[hidden]{display:none}
+.tbtn--primary .count{background:rgba(255,255,255,.25);color:#fff}
+.bar__row2{max-width:980px;margin:0 auto;padding:0 var(--gutter) 10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.seg{display:inline-flex;background:var(--bg-sunk);border:2px solid var(--paper-edge);border-radius:12px;padding:2px}
+.seg button{padding:5px 11px;border-radius:9px;font-weight:800;font-size:.82rem;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--paper);color:var(--orange-deep);box-shadow:var(--lift-1)}
+.nav{display:inline-flex;align-items:center;gap:4px;font-size:.82rem;font-weight:800;color:var(--ink-2)}
+.nav button{width:30px;height:30px;border-radius:9px;background:var(--paper);border:2px solid var(--paper-edge);font-weight:900}
+.nav button[disabled]{opacity:.35;pointer-events:none}
+.progress{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:800;color:var(--ink-2);margin-inline-start:auto}
+.progress__track{width:110px;height:9px;border-radius:var(--r-pill);background:var(--paper-edge);overflow:hidden}
+.progress__fill{height:100%;background:var(--good);border-radius:inherit;transition:width .3s}
+.status{font-size:.8rem;font-weight:800;padding:4px 10px;border-radius:var(--r-pill);background:var(--bg-sunk);color:var(--ink-2);white-space:nowrap}
+.status--ok{background:var(--good-soft);color:var(--good-deep)}
+.status--warn{background:var(--yellow-soft);color:var(--warn-ink)}
+.status--bad{background:var(--bad-soft);color:var(--bad-deep)}
+
+/* ---------- page ---------- */
+.page{max-width:var(--col);margin:0 auto;padding:22px var(--gutter) 120px}
+.intro{background:var(--paper);border:2px solid var(--paper-edge);border-radius:var(--r-lg);padding:18px 18px 16px;margin-bottom:18px;box-shadow:var(--lift-1)}
+.intro h1{font-family:var(--font-display);font-size:1.6rem;line-height:1.3;margin-bottom:8px}
+.intro ol{padding-inline-start:20px;display:grid;gap:4px;font-weight:600;color:var(--ink-2);font-size:.95rem}
+.intro b{color:var(--ink)}
+.intro .meta{margin-top:10px;font-size:.78rem;color:var(--ink-3);font-weight:700}
+.legend{display:inline-block;padding:0 6px;border-radius:6px;background:var(--edit);box-shadow:inset 0 -2px 0 var(--edit-edge);color:var(--ink)}
+.legend--ok{background:var(--good-soft);box-shadow:inset 0 -2px 0 var(--good);color:var(--good-deep)}
+.banner{display:none;margin-bottom:18px;padding:13px 15px;border-radius:var(--r);font-weight:700;font-size:.92rem;line-height:1.6;gap:10px;align-items:center;flex-wrap:wrap}
+.banner.is-on{display:flex}
+.banner--link{background:var(--info-soft);color:var(--info-deep)}
+.banner--warn{background:var(--yellow-soft);color:var(--warn-ink)}
+.banner .tbtn{margin-inline-start:auto}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
+.toc a{text-decoration:none;color:var(--ink);font-weight:800;font-size:.86rem;padding:7px 12px;border-radius:var(--r-pill);background:var(--paper);border:2px solid var(--paper-edge)}
+.toc a .count{margin-inline-start:4px}
+
+.unit{margin:34px 0 16px;border-radius:var(--r-lg);padding:18px;color:#fff;display:flex;align-items:center;gap:14px;box-shadow:0 6px 0 rgba(0,0,0,.14)}
+.unit--gold{background:linear-gradient(140deg,#FFC21A,#FE8A09)}
+.unit--ember{background:linear-gradient(140deg,#FF8236,#D24700)}
+.unit--deep{background:linear-gradient(140deg,#7A3B6E,#45174A)}
+.unit--sand{background:linear-gradient(140deg,#C9A45C,#9A7632)}
+.unit__ico{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.22);flex:0 0 auto}
+.unit__kick{font-size:.76rem;font-weight:900;opacity:.9;letter-spacing:.05em}
+.unit__title{font-family:var(--font-display);font-size:1.7rem;font-weight:800;line-height:1.25}
+.unit__sub{font-weight:700;opacity:.92}
+.unit .ed:hover{background:rgba(255,255,255,.18)}
+.unit .ed.is-changed{background:rgba(255,241,184,.95);color:#450705}
+
+.lesson{margin:22px 0 10px;scroll-margin-top:150px}
+.lesson__head{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--r-lg);background:var(--paper);border:2px solid var(--paper-edge);box-shadow:var(--lift-1)}
+.lesson__ico{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--orange-soft);color:var(--orange);flex:0 0 auto}
+.lesson__title{font-family:var(--font-display);font-size:1.4rem;font-weight:800;line-height:1.3}
+.lesson__sub{font-size:.88rem;font-weight:700;color:var(--ink-2)}
+.lesson__meta{margin-inline-start:auto;font-size:.76rem;font-weight:800;color:var(--ink-3);text-align:center;white-space:nowrap}
+.phase{display:flex;align-items:center;gap:10px;margin:26px 2px 12px;font-weight:900;font-size:1.05rem}
+.phase::after{content:"";flex:1;height:2px;background:var(--paper-edge);border-radius:2px}
+.phase small{font-weight:700;color:var(--ink-3);font-size:.8rem}
+
+/* ---------- a reviewable block ---------- */
+.blk{position:relative;background:var(--paper);border:2px solid var(--paper-edge);border-radius:var(--r-lg);padding:16px 16px 12px;margin-bottom:14px;box-shadow:var(--lift-1);scroll-margin-top:150px;transition:border-color .2s,box-shadow .2s}
+.blk.has-change{border-color:var(--edit-edge)}
+.blk.is-reviewed{border-color:#BFE3A6}
+.blk.is-reviewed.has-change{border-color:var(--edit-edge)}
+.blk.is-flash{box-shadow:0 0 0 4px rgba(254,98,9,.35)}
+.blk__top{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.kicker{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:900;letter-spacing:.06em;color:var(--orange);background:var(--orange-soft);padding:5px 12px;border-radius:var(--r-pill)}
+.kicker--ex{color:var(--info-deep);background:var(--info-soft)}
+.kicker--ask{color:var(--warn-ink);background:var(--yellow-soft)}
+.chg-pill{display:none;font-size:.72rem;font-weight:900;color:var(--warn-ink);background:var(--edit);padding:4px 10px;border-radius:var(--r-pill)}
+.blk.has-change .chg-pill{display:inline-flex}
+.rv{margin-inline-start:auto;display:inline-flex;align-items:center;gap:7px;font-size:.8rem;font-weight:800;color:var(--ink-2);cursor:pointer;padding:5px 10px 5px 12px;border-radius:var(--r-pill);border:2px solid var(--paper-edge);user-select:none;background:var(--paper)}
+.rv input{appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:6px;border:2px solid var(--ink-3);display:grid;place-items:center;margin:0;cursor:pointer}
+.rv input:checked{background:var(--good);border-color:var(--good)}
+.rv input:checked::after{content:"";width:5px;height:9px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.blk.is-reviewed .rv{background:var(--good-soft);border-color:#BFE3A6;color:var(--good-deep)}
+
+/* ---------- editable text ---------- */
+.fld{display:block}
+.ed{border-radius:6px;padding:0 3px;margin:0 -3px;cursor:text;outline:none;transition:background .15s,box-shadow .15s;white-space:pre-wrap;overflow-wrap:anywhere;-webkit-user-modify:read-write-plaintext-only}
+.ed:hover{background:rgba(254,189,1,.16);box-shadow:inset 0 -2px 0 rgba(222,154,0,.45)}
+.ed:focus{background:var(--focus-bg);box-shadow:0 0 0 2.5px var(--orange);color:var(--ink)}
+.ed.is-changed{background:var(--edit);box-shadow:inset 0 -2px 0 var(--edit-edge)}
+.ed.is-changed:focus{box-shadow:0 0 0 2.5px var(--orange)}
+.ed:empty::before{content:"(فارغ)";color:var(--ink-3);font-weight:600}
+.orig{display:none;margin-top:6px;padding:7px 10px;border-radius:10px;background:var(--bg-sunk);border:1.5px dashed var(--paper-edge);font-size:.84rem;font-weight:600;line-height:1.7;color:var(--ink-2);text-align:start;font-family:var(--font-ui)}
+.fld.is-changed .orig{display:block}
+body.hide-orig .fld.is-changed .orig{display:none}
+.orig__lbl{font-weight:900;color:var(--ink-3);margin-inline-end:4px}
+.orig del{color:var(--bad-deep);background:var(--bad-soft);text-decoration:line-through;text-decoration-thickness:1.5px;border-radius:4px;padding:0 2px}
+.orig ins,.log ins{color:var(--good-deep);background:var(--good-soft);text-decoration:none;border-radius:4px;padding:0 2px}
+.log del{color:var(--bad-deep);background:var(--bad-soft);border-radius:4px;padding:0 2px}
+.undo{display:inline-flex;align-items:center;gap:4px;margin-inline-start:8px;font-size:.78rem;font-weight:900;color:var(--orange-deep);padding:2px 8px;border-radius:var(--r-pill);background:var(--orange-soft);vertical-align:middle}
+
+/* ---------- teaching cards ---------- */
+.k-title{font-size:1.45rem;font-weight:900;line-height:1.3;margin-bottom:8px}
+.k-body{font-size:1.15rem;font-weight:600;line-height:1.9}
+.k-art{display:flex;justify-content:center;margin:2px 0 12px}
+.k-art img{width:104px;height:104px;object-fit:contain}
+.medal{display:grid;place-items:center;width:62px;height:62px;border-radius:50%;color:var(--orange);background:var(--paper);box-shadow:0 6px 0 var(--paper-edge),inset 0 0 0 2px var(--paper-edge)}
+.medal svg{width:30px;height:30px}
+.termbox{margin-top:12px;background:var(--orange-soft);border-radius:var(--r);padding:11px 14px;font-size:.95rem;font-weight:600;line-height:1.65}
+.termbox__lbl{display:block;font-size:.72rem;font-weight:900;color:var(--orange-deep);margin-bottom:4px}
+.termbox__word{font-weight:900;color:var(--orange-deep);border-bottom:2.5px dashed var(--orange)}
+.quote{position:relative;background:linear-gradient(160deg,var(--cream-lit),var(--cream));border-radius:var(--r-lg);padding:24px 20px 18px;box-shadow:inset 0 0 0 2px var(--cream-deep);text-align:center}
+.quote__kind{position:absolute;top:10px;inset-inline-start:12px;font-size:.7rem;font-weight:900;color:var(--yellow-deep)}
+.quote__text{font-family:var(--font-display);font-size:1.3rem;font-weight:700;line-height:2.05;color:var(--quote-ink)}
+.quote__src{margin-top:12px;font-size:.84rem;font-weight:800;color:var(--orange-deep)}
+.quote__note{margin-top:10px;font-size:.9rem;color:var(--ink-2);font-weight:600}
+.klist__title{font-size:1.3rem;font-weight:900;margin-bottom:10px}
+.klist{display:flex;flex-direction:column;gap:9px}
+.klist__row{display:flex;align-items:center;gap:13px;background:var(--paper);border:2px solid var(--paper-edge);border-radius:var(--r);padding:11px 13px}
+.klist__ico{display:grid;place-items:center;flex:0 0 auto;width:38px;height:38px;border-radius:12px;background:var(--orange-soft);color:var(--orange)}
+.klist__txt{flex:1;min-width:0}
+.klist__label{font-weight:800}
+.klist__note{font-size:.86rem;color:var(--ink-2);font-weight:600;line-height:1.5}
+
+/* ---------- exercises (look like the game, do nothing) ---------- */
+.ex__prompt{font-size:1.3rem;font-weight:900;line-height:1.45;margin-bottom:14px}
+.ex__statement{background:var(--paper);border:2.5px solid var(--paper-edge);border-radius:var(--r-lg);padding:16px;font-size:1.15rem;font-weight:700;line-height:1.7;margin-bottom:14px}
+.hint{font-size:.8rem;font-weight:700;color:var(--ink-3);margin:-6px 0 12px}
+.tile{position:relative;background:var(--paper);border:2.5px solid var(--paper-edge);border-radius:var(--r);box-shadow:0 4px 0 var(--paper-edge);padding:12px 14px;font-weight:700;text-align:start}
+.tile.is-right{border-color:var(--good);background:var(--good-soft);color:var(--good-deep);box-shadow:0 4px 0 var(--good)}
+.tile.is-right .ed:focus{color:var(--ink)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:.7rem;font-weight:900;padding:2px 8px;border-radius:var(--r-pill);background:var(--good);color:#fff;margin-bottom:5px}
+.choices{display:flex;flex-direction:column;gap:11px}
+.bools{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bool{display:grid;place-items:center;padding:20px 10px;font-size:1.15rem;font-weight:900;color:var(--ink-3);user-select:none}
+.bool.is-right{color:var(--good-deep)}
+.seq{display:flex;flex-direction:column;gap:9px}
+.chip{display:flex;align-items:center;gap:10px;padding:10px 13px;border-radius:var(--r);background:var(--orange-soft);border:2.5px solid var(--orange);box-shadow:0 4px 0 var(--orange);font-weight:800;color:var(--orange-deep)}
+.chip__n{display:grid;place-items:center;flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--orange);color:#fff;font-size:.78rem;font-weight:900;user-select:none}
+.chip .fld{flex:1;min-width:0}
+.pairs{display:flex;flex-direction:column;gap:10px}
+.pair{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch}
+.pair__link{display:grid;place-items:center;color:var(--ink-3);font-weight:900;user-select:none}
+.buckets{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bucket{border-radius:var(--r-lg);background:var(--bg-sunk);border:2.5px dashed var(--paper-edge);padding:12px;display:flex;flex-direction:column;gap:8px}
+.bucket__lbl{font-weight:900;text-align:center;color:var(--ink);padding-bottom:4px}
+.bucket .tile{padding:9px 11px;font-size:.95rem}
+.verdict{margin-top:14px;border-radius:var(--r);background:var(--good-soft);padding:12px 14px}
+.verdict__lbl{display:block;font-family:var(--font-display);font-weight:800;color:var(--good-deep);font-size:1.05rem;margin-bottom:3px}
+.verdict .ed{color:var(--good-deep);font-weight:650}
+.addexp{font-size:.8rem;font-weight:800;color:var(--ink-3);margin-top:10px}
+
+/* ---------- ask siraj ---------- */
+.q{display:flex;justify-content:flex-end;margin-bottom:10px}
+.q__pill{max-width:86%;background:var(--orange);color:#fff;border-radius:18px 18px 18px 6px;padding:10px 14px;font-weight:800}
+.q__pill .ed:hover{background:rgba(255,255,255,.2)}
+.q__pill .ed.is-changed{color:var(--ink)}
+:root[data-theme="dark"] .unit{box-shadow:0 6px 0 rgba(0,0,0,.4)}
+:root[data-theme="dark"] .medal{background:var(--bg-sunk)}
+:root[data-theme="dark"] .tbtn--primary{color:#fff}
+.q__pill .orig{color:var(--ink-2)}
+.a{display:flex;align-items:flex-end;gap:10px}
+.a img{width:46px;height:46px;object-fit:contain;flex:0 0 auto}
+.a__bubble{flex:1;min-width:0;background:var(--bg-sunk);border:2px solid var(--paper-edge);border-radius:18px 18px 6px 18px;padding:11px 14px;font-weight:600;line-height:1.85}
+
+/* ---------- notes ---------- */
+.note{margin-top:12px}
+.note__add{font-size:.8rem;font-weight:800;color:var(--ink-3);padding:3px 2px}
+.note__add:hover{color:var(--orange-deep)}
+.note__box{display:none;background:var(--info-soft);border-radius:12px;padding:9px 12px}
+.note.is-open .note__box{display:block}
+.note.is-open .note__add{display:none}
+.note__lbl{display:block;font-size:.72rem;font-weight:900;color:var(--info-deep);margin-bottom:3px}
+.note__ed{min-height:1.6em;font-size:.92rem;font-weight:600;color:var(--ink);outline:none;white-space:pre-wrap;overflow-wrap:anywhere;cursor:text;-webkit-user-modify:read-write-plaintext-only}
+.note__ed:empty::before{content:attr(data-ph);color:var(--ink-3)}
+
+/* ---------- filters ---------- */
+body.f-changed .blk:not(.has-change),
+body.f-open .blk.is-reviewed{display:none}
+body.f-changed .lesson:not(.has-change),body.f-changed .unit:not(.has-change),
+body.f-open .lesson.all-reviewed,body.f-open .unit.all-reviewed{display:none}
+body.f-changed .phase,body.f-open .phase{display:none}
+.empty{display:none;text-align:center;padding:40px 10px;color:var(--ink-3);font-weight:800}
+
+/* ---------- changes log ---------- */
+.drawer{position:fixed;inset:0;z-index:40;display:none}
+.drawer.is-on{display:block}
+.drawer__scrim{position:absolute;inset:0;background:var(--scrim)}
+.drawer__panel{position:absolute;top:0;bottom:0;left:0;width:min(100%,460px);background:var(--bg);box-shadow:var(--lift-2);display:flex;flex-direction:column}
+.drawer__head{display:flex;align-items:center;gap:10px;padding:14px var(--gutter);border-bottom:2px solid var(--paper-edge)}
+.drawer__head h2{font-size:1.15rem;font-weight:900;margin-inline-end:auto}
+.drawer__body{flex:1;overflow-y:auto;padding:12px var(--gutter) 40px}
+.log{display:flex;flex-direction:column;gap:10px}
+.log__item{background:var(--paper);border:2px solid var(--paper-edge);border-radius:var(--r);padding:10px 12px;font-size:.9rem;line-height:1.7}
+.log__where{font-size:.74rem;font-weight:900;color:var(--ink-3);margin-bottom:3px}
+.log__diff{font-weight:600}
+.log__acts{display:flex;gap:6px;margin-top:6px}
+.log__acts button{font-size:.78rem;font-weight:900;padding:3px 10px;border-radius:var(--r-pill);background:var(--bg-sunk);color:var(--ink-2)}
+.log__note{background:var(--info-soft)}
+.log__empty{color:var(--ink-3);font-weight:800;text-align:center;padding:30px 0}
+.log h3{font-size:.85rem;font-weight:900;color:var(--ink-2);margin:8px 2px 0}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,20px);opacity:0;z-index:50;background:var(--maroon);color:#fff;font-weight:800;font-size:.9rem;padding:10px 16px;border-radius:var(--r-pill);transition:opacity .2s,transform .2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+.toast.is-on{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:700px){
+  .brand span{display:none}
+  .bar__in{padding-top:8px;padding-bottom:6px}
+  .bar__row2{gap:6px 8px;padding-bottom:8px}
+  .nav span{display:none}
+  .progress{margin-inline-start:0;flex:1 1 100%}
+  .progress__track{flex:1}
+  html{scroll-padding-top:170px}
+  .blk,.lesson{scroll-margin-top:170px}
+}
+@media (max-width:560px){
+  .bar__in{gap:6px}
+  .brand span{display:none}
+  .tbtn{padding:7px 10px;font-size:.82rem}
+  .tbtn .lbl-long{display:none}
+  .progress{margin-inline-start:0;width:100%}
+  .progress__track{flex:1}
+  .k-body{font-size:1.05rem}
+  .buckets{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+@media print{.bar,.note__add,.rv,.undo,.banner{display:none!important}.blk{break-inside:avoid}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar__in">
+    <div class="brand"><img id="brand-img" alt=""><span>مراجعة محتوى سراج</span></div>
+    <span class="status" id="status">لا تعديلات بعد</span>
+    <button class="tbtn tbtn--primary" id="btn-save" type="button" title="Ctrl+S">حفظ في الملف</button>
+    <button class="tbtn" id="btn-download" type="button"><span class="lbl-long">تنزيل</span> نسخة</button>
+    <button class="tbtn" id="btn-theme" type="button" aria-pressed="false" title="الوضع الليلي"><span id="theme-ico">☾</span><span class="lbl-long" id="theme-lbl">ليلي</span></button>
+    <button class="tbtn" id="btn-log" type="button">سجل التعديلات <span class="count num" id="log-count">0</span></button>
+  </div>
+  <div class="bar__row2">
+    <div class="seg" role="group" aria-label="عرض">
+      <button type="button" data-filter="all" aria-pressed="true">الكل</button>
+      <button type="button" data-filter="changed" aria-pressed="false">المعدَّل فقط</button>
+      <button type="button" data-filter="open" aria-pressed="false">لم يُراجَع</button>
+    </div>
+    <div class="seg" role="group" aria-label="الأصل">
+      <button type="button" id="btn-orig" aria-pressed="true">إظهار الأصل</button>
+    </div>
+    <div class="nav" aria-label="التنقّل بين التعديلات">
+      <button type="button" id="nav-prev" title="التعديل السابق">&rsaquo;</button>
+      <span>التعديلات</span>
+      <button type="button" id="nav-next" title="التعديل التالي">&lsaquo;</button>
+    </div>
+    <div class="progress"><span>راجعتَ <span class="num" id="rv-count">0/0</span></span><div class="progress__track"><div class="progress__fill" id="rv-fill" style="width:0"></div></div></div>
+  </div>
+</header>
+
+<main class="page">
+  <section class="intro">
+    <h1>مراجعة محتوى سراج</h1>
+    <ol>
+      <li><b>اضغط على أي نص لتعديله</b> مباشرةً، كما تعدّل في مستند. الأزرار في التمارين للعرض فقط ولا تعمل.</li>
+      <li>الخانة <span class="legend legend--ok">الخضراء</span> هي الإجابة الصحيحة. لتغيير الإجابة الصحيحة نفسها، اكتب ذلك في «ملاحظة».</li>
+      <li>كل نصٍّ عدّلته يصير <span class="legend">أصفر</span>، ويظهر تحته النص الأصلي، ويمكنك استرجاعه بضغطة.</li>
+      <li>اضغط «راجعتُه» على كل بطاقة أو سؤال تنتهي منه، ليظهر تقدّمك في الأعلى.</li>
+      <li>عند الانتهاء: اضغط <b>«حفظ في الملف»</b> أو «تنزيل نسخة» في الأعلى، ثم أرسل الملف. زرّ الحفظ هذا أضمن من «حفظ الصفحة باسم» في المتصفح.</li>
+    </ol>
+    <div class="meta" id="meta"></div>
+  </section>
+
+  <div class="banner banner--link" id="banner-link">
+    <span>للحفظ التلقائي: اضغط «ربط الملف» واختر <b>هذا الملف نفسه</b> ليُستبدَل. بعدها يُحفظ كل تعديل فيه مباشرةً.</span>
+    <button class="tbtn tbtn--primary" type="button" id="btn-link">ربط الملف</button>
+  </div>
+  <div class="banner banner--warn" id="banner-fallback">
+    <span>متصفحك لا يسمح بالكتابة في الملف مباشرةً. تعديلاتك محفوظة تلقائيًا في هذا المتصفح، وعند الانتهاء اضغط «تنزيل نسخة» وأرسل الملف الذي نزل.</span>
+  </div>
+  <div class="banner banner--warn" id="banner-draft">
+    <span id="draft-msg"></span>
+  </div>
+
+  <nav class="toc" id="toc" aria-label="الوحدات"></nav>
+  <div id="app"></div>
+  <div class="empty" id="empty">لا شيء هنا بهذا الفلتر.</div>
+</main>
+
+<div class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer__scrim" data-close></div>
+  <aside class="drawer__panel" role="dialog" aria-label="سجل التعديلات">
+    <div class="drawer__head"><h2>سجل التعديلات</h2><button class="tbtn" type="button" data-close>إغلاق</button></div>
+    <div class="drawer__body"><div class="log" id="log"></div></div>
+  </aside>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script id="siraj-data" type="application/json">"__DATA__"</script>
+<script id="siraj-edits" type="application/json">{"version":1,"savedAt":0,"fields":{},"notes":{},"reviewed":{}}</script>
+<script>
+(function () {
+  'use strict'
+  /* A copy made with the browser's "Save page as" holds the edited page itself but an empty
+     edits block. Harvest what was typed into it, then clear the page so it renders fresh. */
+  var HARVEST = { fields: {}, notes: {} }
+  ;(function () {
+    var app = document.getElementById('app')
+    if (!app || !app.firstElementChild) return
+    Array.prototype.forEach.call(app.querySelectorAll('[data-f]'), function (el) { HARVEST.fields[el.getAttribute('data-f')] = el.textContent })
+    Array.prototype.forEach.call(app.querySelectorAll('[data-n]'), function (el) { var v = (el.innerText || el.textContent).trim(); if (v) HARVEST.notes[el.getAttribute('data-n')] = v })
+    app.innerHTML = ''
+    var toc = document.getElementById('toc'); if (toc) toc.innerHTML = ''
+    var log = document.getElementById('log'); if (log) log.innerHTML = ''
+  })()
+
+  /* the file exactly as it was opened, before anything renders: saving swaps only the edits block */
+  var PRISTINE = '<!doctype html>\n' + document.documentElement.outerHTML
+
+  var DATA = JSON.parse(document.getElementById('siraj-data').textContent)
+  var fileEdits = safeParse(document.getElementById('siraj-edits').textContent) || {}
+  var ICONS = DATA.icons, IMG = DATA.img, META = DATA.meta
+  var DRAFT_KEY = 'siraj-review-draft:' + (META.commit || 'x')
+
+  var ORIG = {}     // field path -> original text
+  var WHERE = {}    // field path -> human location
+  var BLOCK_OF = {} // field path -> block id
+  var BLOCKS = []   // block ids in page order
+  var BLOCK_WHERE = {}
+  var EL = {}       // field path -> editable element
+
+  var state = { fields: {}, notes: {}, reviewed: {}, savedAt: 0 }
+  var dirty = false, fileHandle = null, saving = false, saveTimer = 0, downloaded = false
+
+  function safeParse(s) { try { return JSON.parse(s) } catch (e) { return null } }
+  function $(id) { return document.getElementById(id) }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] }) }
+  function ar(n) { return String(n).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d] }) }
+  function norm(s) { return String(s).replace(/ /g, ' ').replace(/[\r\n]+/g, ' ').replace(/ {2,}/g, ' ').trim() }
+  function icon(name) { return ICONS[name] || '' }
+
+  /* ============ rendering ============ */
+
+  var curBlock = null, curWhere = ''
+  function field(path, text, label) {
+    ORIG[path] = text == null ? '' : String(text)
+    WHERE[path] = curWhere + ' › ' + label
+    BLOCK_OF[path] = curBlock
+    return '<span class="fld" data-fld="' + esc(path) + '"><span class="ed" data-f="' + esc(path) + '" spellcheck="false">' + esc(text) + '</span><span class="orig"></span></span>'
+  }
+  function openBlock(id, kicker, kClass, where) {
+    curBlock = id; curWhere = where; BLOCKS.push(id); BLOCK_WHERE[id] = where
+    return '<section class="blk" id="' + esc(id) + '" data-b="' + esc(id) + '">' +
+      '<div class="blk__top"><span class="kicker ' + (kClass || '') + '">' + kicker + '</span><span class="chg-pill">معدَّل</span>' +
+      '<label class="rv"><input type="checkbox" data-rv="' + esc(id) + '"> راجعتُه</label></div>'
+  }
+  function closeBlock() {
+    var id = curBlock
+    return '<div class="note" data-note-wrap="' + esc(id) + '"><button type="button" class="note__add" data-note-open="' + esc(id) + '">+ إضافة ملاحظة</button>' +
+      '<div class="note__box"><span class="note__lbl">ملاحظة المراجع</span><div class="note__ed" data-n="' + esc(id) + '" data-ph="اكتب ملاحظتك هنا: خطأ، مصدر، اقتراح..."></div></div></div></section>'
+  }
+
+  var KIND = { choice: 'اختر الصحيح', boolean: 'صح أم خطأ', order: 'رتّب الخطوات', match: 'طابِق', sort: 'صنّف' }
+  var CARD = { fact: 'معلومة', quote: 'نصّ', list: 'قائمة' }
+
+  function renderCard(L, c, i, n) {
+    var b = L.id + ':card:' + c.id
+    var kick = 'بطاقة ' + ar(i + 1) + ' من ' + ar(n) + ' · ' + (c.kind === 'quote' ? (c.of === 'ayah' ? 'آية' : 'حديث') : CARD[c.kind])
+    var h = openBlock(b, kick, '', L._where + ' › بطاقة ' + ar(i + 1))
+    if (c.kind === 'fact') {
+      if (c.art) {
+        h += '<div class="k-art">' + (typeof c.art === 'string'
+          ? '<img alt="" src="' + (c.art === 'siraj-wave' ? IMG.wave : IMG.main) + '">'
+          : '<span class="medal">' + icon(c.art.icon) + '</span>') + '</div>'
+      }
+      if (c.title != null) h += '<div class="k-title">' + field(b + ':title', c.title, 'العنوان') + '</div>'
+      h += '<div class="k-body">' + field(b + ':body', c.body, 'النص') + '</div>'
+      if (c.term) {
+        h += '<div class="termbox"><span class="termbox__lbl">كلمة يضغطها المتعلّم ليرى معناها</span>' +
+          '<span class="termbox__word">' + field(b + ':term.word', c.term.word, 'الكلمة') + '</span>' +
+          '<div style="margin-top:6px">' + field(b + ':term.meaning', c.term.meaning, 'معنى الكلمة') + '</div></div>'
+      }
+    } else if (c.kind === 'quote') {
+      h += '<div class="quote"><span class="quote__kind">' + (c.of === 'ayah' ? 'آية' : 'حديث') + '</span>' +
+        '<div class="quote__text">' + field(b + ':text', c.text, 'النص') + '</div>' +
+        '<div class="quote__src">' + field(b + ':source', c.source, 'المصدر') + '</div>' +
+        (c.note != null ? '<div class="quote__note">' + field(b + ':note', c.note, 'التعليق') + '</div>' : '') + '</div>'
+    } else if (c.kind === 'list') {
+      h += '<div class="klist__title">' + field(b + ':title', c.title, 'العنوان') + '</div><div class="klist">'
+      c.items.forEach(function (it, k) {
+        h += '<div class="klist__row">' + (it.icon ? '<span class="klist__ico">' + icon(it.icon) + '</span>' : '') +
+          '<div class="klist__txt"><div class="klist__label">' + field(b + ':item:' + k + ':label', it.label, 'البند ' + ar(k + 1)) + '</div>' +
+          (it.note != null ? '<div class="klist__note">' + field(b + ':item:' + k + ':note', it.note, 'شرح البند ' + ar(k + 1)) + '</div>' : '') +
+          '</div></div>'
+      })
+      h += '</div>'
+    }
+    return h + closeBlock()
+  }
+
+  function renderExercise(L, e, i, n) {
+    var b = L.id + ':ex:' + e.id
+    var h = openBlock(b, 'تمرين ' + ar(i + 1) + ' من ' + ar(n) + ' · ' + KIND[e.kind], 'kicker--ex', L._where + ' › تمرين ' + ar(i + 1))
+    if (e.kind === 'choice') {
+      h += '<div class="ex__prompt">' + field(b + ':prompt', e.prompt, 'السؤال') + '</div><div class="choices">'
+      e.options.forEach(function (o) {
+        var ok = o.id === e.answerId
+        h += '<div class="tile' + (ok ? ' is-right' : '') + '">' + (ok ? '<span class="tag">✓ الإجابة الصحيحة</span>' : '') +
+          field(b + ':opt:' + o.id, o.label, ok ? 'الخيار الصحيح' : 'خيار') + '</div>'
+      })
+      h += '</div>'
+    } else if (e.kind === 'boolean') {
+      if (e.prompt != null) h += '<div class="ex__prompt">' + field(b + ':prompt', e.prompt, 'السؤال') + '</div>'
+      h += '<div class="ex__statement">' + field(b + ':statement', e.statement, 'العبارة') + '</div>' +
+        '<div class="bools"><div class="tile bool' + (e.answer ? ' is-right' : '') + '">' + (e.answer ? '<span class="tag">✓ الصحيحة</span>' : '') + 'صح</div>' +
+        '<div class="tile bool' + (!e.answer ? ' is-right' : '') + '">' + (!e.answer ? '<span class="tag">✓ الصحيحة</span>' : '') + 'خطأ</div></div>'
+    } else if (e.kind === 'order') {
+      h += '<div class="ex__prompt">' + field(b + ':prompt', e.prompt, 'السؤال') + '</div>' +
+        '<p class="hint">الترتيب الصحيح. تظهر للمتعلّم مخلوطةً ويرتّبها بنفسه.</p><div class="seq">'
+      e.answer.forEach(function (id, k) {
+        var it = e.items.filter(function (x) { return x.id === id })[0]
+        h += '<div class="chip"><span class="chip__n num">' + (k + 1) + '</span>' + field(b + ':item:' + id, it.label, 'الخطوة ' + ar(k + 1)) + '</div>'
+      })
+      h += '</div>'
+    } else if (e.kind === 'match') {
+      h += '<div class="ex__prompt">' + field(b + ':prompt', e.prompt, 'السؤال') + '</div>' +
+        '<p class="hint">الأزواج الصحيحة. تظهر للمتعلّم في عمودين مخلوطين.</p><div class="pairs">'
+      e.pairs.forEach(function (p, k) {
+        h += '<div class="pair"><div class="tile is-right">' + field(b + ':pair:' + p.id + ':left', p.left, 'الزوج ' + ar(k + 1) + ' (يمين)') + '</div>' +
+          '<span class="pair__link">⟷</span><div class="tile is-right">' + field(b + ':pair:' + p.id + ':right', p.right, 'الزوج ' + ar(k + 1) + ' (يسار)') + '</div></div>'
+      })
+      h += '</div>'
+    } else if (e.kind === 'sort') {
+      h += '<div class="ex__prompt">' + field(b + ':prompt', e.prompt, 'السؤال') + '</div>' +
+        '<p class="hint">كل عبارة في سلّتها الصحيحة. تظهر للمتعلّم واحدةً واحدة.</p><div class="buckets">'
+      e.buckets.forEach(function (bk) {
+        h += '<div class="bucket"><div class="bucket__lbl">' + field(b + ':bucket:' + bk.id, bk.label, 'اسم السلّة') + '</div>'
+        e.items.forEach(function (it) {
+          if (it.bucket === bk.id) h += '<div class="tile">' + field(b + ':item:' + it.id, it.label, 'عبارة') + '</div>'
+        })
+        h += '</div>'
+      })
+      h += '</div>'
+    }
+    if (e.explain != null) h += '<div class="verdict"><span class="verdict__lbl">الشرح بعد الإجابة</span>' + field(b + ':explain', e.explain, 'الشرح') + '</div>'
+    else h += '<p class="addexp">لا يوجد شرح بعد الإجابة. لإضافته اكتبه في «ملاحظة».</p>'
+    return h + closeBlock()
+  }
+
+  function renderAsk(L, a, i, n) {
+    var b = L.id + ':ask:' + i
+    var h = openBlock(b, 'اسأل سراج ' + ar(i + 1) + ' من ' + ar(n), 'kicker--ask', L._where + ' › اسأل سراج ' + ar(i + 1))
+    h += '<div class="q"><div class="q__pill">' + field(b + ':q', a.q, 'السؤال') + '</div></div>' +
+      '<div class="a"><img alt="" src="' + IMG.main + '"><div class="a__bubble">' + field(b + ':a', a.a, 'الجواب') + '</div></div>'
+    return h + closeBlock()
+  }
+
+  function render() {
+    var h = '', toc = ''
+    DATA.units.forEach(function (u) {
+      var ub = 'U:' + u.id
+      curBlock = null; curWhere = 'الوحدة ' + ar(u.index + 1)
+      toc += '<a href="#unit-' + esc(u.id) + '" data-toc="' + esc(u.id) + '">' + esc(u.title) + '<span class="count num" hidden></span></a>'
+      h += '<div class="unit unit--' + esc(u.tone) + '" id="unit-' + esc(u.id) + '" data-unit="' + esc(u.id) + '"><span class="unit__ico">' + icon(u.icon) + '</span><div>' +
+        '<div class="unit__kick">الوحدة ' + ar(u.index + 1) + '</div>' +
+        '<div class="unit__title">' + field(ub + ':title', u.title, 'اسم الوحدة') + '</div>' +
+        '<div class="unit__sub">' + field(ub + ':subtitle', u.subtitle, 'وصف الوحدة') + '</div></div></div>'
+      u.lessons.forEach(function (L, li) {
+        L._where = u.title + ' › ' + L.title
+        curBlock = null; curWhere = L._where
+        var lb = L.id
+        h += '<article class="lesson" id="' + esc(L.id) + '" data-lesson="' + esc(L.id) + '" data-unit-of="' + esc(u.id) + '">' +
+          '<div class="lesson__head"><span class="lesson__ico">' + icon(L.icon) + '</span><div>' +
+          '<div class="lesson__title">' + field(lb + ':title', L.title, 'عنوان الدرس') + '</div>' +
+          (L.subtitle != null ? '<div class="lesson__sub">' + field(lb + ':subtitle', L.subtitle, 'وصف الدرس') + '</div>' : '') +
+          '</div><div class="lesson__meta">الدرس ' + ar(li + 1) + '<br><span class="num">+' + L.xp + '</span> نقطة</div></div>'
+        h += '<div class="phase">تعلّم <small>' + ar(L.cards.length) + ' بطاقات، تظهر للمتعلّم واحدةً بعد واحدة</small></div>'
+        L.cards.forEach(function (c, i) { h += renderCard(L, c, i, L.cards.length) })
+        h += '<div class="phase">رسّخ <small>' + ar(L.exercises.length) + ' تمارين</small></div>'
+        L.exercises.forEach(function (e, i) { h += renderExercise(L, e, i, L.exercises.length) })
+        h += '<div class="phase">اسأل سراج <small>أسئلة مقترحة بأجوبة جاهزة</small></div>'
+        L.ask.forEach(function (a, i) { h += renderAsk(L, a, i, L.ask.length) })
+        h += '</article>'
+      })
+    })
+    $('app').innerHTML = h
+    $('toc').innerHTML = toc
+    Array.prototype.forEach.call(document.querySelectorAll('[data-f]'), function (el) { EL[el.getAttribute('data-f')] = el })
+  }
+
+  /* ============ editing ============ */
+
+  var PLAINTEXT = (function () {
+    var d = document.createElement('div')
+    try { d.contentEditable = 'plaintext-only' } catch (e) { return false }
+    return d.contentEditable === 'plaintext-only'
+  })()
+  function makeEditable(el) { el.contentEditable = PLAINTEXT ? 'plaintext-only' : 'true' }
+
+  function diffHtml(a, b, mode) {
+    /* word-level LCS: mode 'old' marks removals in a, 'both' shows removals and additions */
+    var A = a.split(/(\s+)/), B = b.split(/(\s+)/), n = A.length, m = B.length
+    if (n * m > 250000) return mode === 'old' ? '<del>' + esc(a) + '</del>' : '<del>' + esc(a) + '</del> <ins>' + esc(b) + '</ins>'
+    var dp = []
+    for (var i = 0; i <= n; i++) { dp.push(new Array(m + 1).fill(0)) }
+    for (i = n - 1; i >= 0; i--) for (var j = m - 1; j >= 0; j--) dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1])
+    var out = '', del = '', ins = ''
+    function flush() {
+      if (del) out += /\S/.test(del) ? '<del>' + esc(del) + '</del>' : esc(del)
+      if (ins && mode === 'both') out += /\S/.test(ins) ? '<ins>' + esc(ins) + '</ins>' : esc(ins)
+      del = ''; ins = ''
+    }
+    i = 0; j = 0
+    while (i < n && j < m) {
+      if (A[i] === B[j]) { flush(); out += esc(A[i]); i++; j++ }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) { del += A[i++] }
+      else { ins += B[j++] }
+    }
+    while (i < n) del += A[i++]
+    while (j < m) ins += B[j++]
+    flush()
+    return out
+  }
+
+  function paintField(path) {
+    var el = EL[path]; if (!el) return
+    var wrap = el.parentNode, orig = wrap.querySelector('.orig')
+    var changed = Object.prototype.hasOwnProperty.call(state.fields, path)
+    el.classList.toggle('is-changed', changed)
+    wrap.classList.toggle('is-changed', changed)
+    if (changed) {
+      orig.innerHTML = '<span class="orig__lbl">الأصل:</span>' + diffHtml(ORIG[path], state.fields[path].to, 'old') +
+        '<button type="button" class="undo" data-undo="' + esc(path) + '">↺ استرجاع</button>'
+    } else orig.innerHTML = ''
+  }
+
+  function onInput(el) {
+    var path = el.getAttribute('data-f'), text = norm(el.textContent)
+    if (text === norm(ORIG[path])) delete state.fields[path]
+    else state.fields[path] = { from: ORIG[path], to: text, where: WHERE[path] }
+    paintField(path)
+    touch(BLOCK_OF[path])
+  }
+
+  function restore(path) {
+    delete state.fields[path]
+    if (EL[path]) EL[path].textContent = ORIG[path]
+    paintField(path)
+    touch(BLOCK_OF[path])
+    toast('استُرجع النص الأصلي')
+  }
+
+  function touch(block) {
+    dirty = true
+    state.savedAt = Date.now()
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(state)) } catch (e) {}
+    refreshMarks()
+    scheduleSave()
+  }
+
+  function blockChanged(b) {
+    if (state.notes[b]) return true
+    for (var p in state.fields) if (BLOCK_OF[p] === b || (BLOCK_OF[p] == null && b == null)) return true
+    return false
+  }
+
+  function refreshMarks() {
+    var changedBlocks = {}, changedLessons = {}, changedUnits = {}
+    for (var p in state.fields) {
+      if (BLOCK_OF[p]) changedBlocks[BLOCK_OF[p]] = true
+      var lid = p.indexOf('U:') === 0 ? null : p.split(':')[0]
+      if (lid) changedLessons[lid] = true
+      if (p.indexOf('U:') === 0) changedUnits[p.split(':')[1]] = true
+    }
+    for (var b in state.notes) if (state.notes[b]) { changedBlocks[b] = true; changedLessons[b.split(':')[0]] = true }
+
+    var reviewed = 0
+    Array.prototype.forEach.call(document.querySelectorAll('.blk'), function (el) {
+      var id = el.getAttribute('data-b')
+      el.classList.toggle('has-change', !!changedBlocks[id])
+      var rv = !!state.reviewed[id]
+      el.classList.toggle('is-reviewed', rv)
+      if (rv) reviewed++
+    })
+    var unitCount = {}
+    Array.prototype.forEach.call(document.querySelectorAll('.lesson'), function (el) {
+      var lid = el.getAttribute('data-lesson'), uid = el.getAttribute('data-unit-of')
+      el.classList.toggle('has-change', !!changedLessons[lid])
+      if (changedLessons[lid]) changedUnits[uid] = true
+      el.classList.toggle('all-reviewed', !el.querySelector('.blk:not(.is-reviewed)'))
+      var n = el.querySelectorAll('.blk.has-change').length
+      unitCount[uid] = (unitCount[uid] || 0) + n
+    })
+    for (var p2 in state.fields) if (p2.indexOf('U:') === 0) { var u2 = p2.split(':')[1]; unitCount[u2] = (unitCount[u2] || 0) + 1 }
+    Array.prototype.forEach.call(document.querySelectorAll('.unit'), function (el) {
+      var uid = el.getAttribute('data-unit')
+      el.classList.toggle('has-change', !!changedUnits[uid])
+      var lessons = document.querySelectorAll('.lesson[data-unit-of="' + uid + '"]')
+      el.classList.toggle('all-reviewed', Array.prototype.every.call(lessons, function (l) { return l.classList.contains('all-reviewed') }))
+    })
+    Array.prototype.forEach.call(document.querySelectorAll('[data-toc]'), function (a) {
+      var c = a.querySelector('.count'), n = unitCount[a.getAttribute('data-toc')] || 0
+      c.hidden = !n; c.textContent = n
+    })
+
+    var nFields = Object.keys(state.fields).length, nNotes = Object.keys(state.notes).filter(function (k) { return state.notes[k] }).length
+    $('log-count').textContent = nFields + nNotes
+    $('rv-count').textContent = reviewed + '/' + BLOCKS.length
+    $('rv-fill').style.width = (BLOCKS.length ? reviewed / BLOCKS.length * 100 : 0) + '%'
+    $('nav-prev').disabled = $('nav-next').disabled = !(nFields + nNotes)
+    Array.prototype.forEach.call(document.querySelectorAll('[data-rv]'), function (cb) { cb.checked = !!state.reviewed[cb.getAttribute('data-rv')] })
+    applyFilterEmpty()
+    renderStatus()
+    if ($('drawer').classList.contains('is-on')) renderLog()
+  }
+
+  /* ============ saving ============ */
+
+  function snapshot() {
+    return { version: 1, commit: META.commit, savedAt: state.savedAt || Date.now(), fields: state.fields, notes: state.notes, reviewed: state.reviewed }
+  }
+  function fileHtml() {
+    var json = JSON.stringify(snapshot(), null, 1).replace(/</g, '\\u003c')
+    return PRISTINE.replace(/(<script id="siraj-edits" type="application\/json">)[\s\S]*?(<\/script>)/, function (_, a, b) { return a + json + b })
+  }
+  var CAN_LINK = typeof window.showSaveFilePicker === 'function'
+
+  function scheduleSave() {
+    clearTimeout(saveTimer)
+    if (fileHandle) saveTimer = setTimeout(writeFile, 500)
+  }
+  function writeFile() {
+    if (!fileHandle || saving) { if (saving) scheduleSave(); return Promise.resolve() }
+    saving = true; renderStatus()
+    return fileHandle.createWritable().then(function (w) {
+      return w.write(new Blob([fileHtml()], { type: 'text/html' })).then(function () { return w.close() })
+    }).then(function () {
+      saving = false; dirty = false; lastWrite = Date.now(); renderStatus()
+    }).catch(function (err) {
+      saving = false
+      if (err && err.name === 'NotAllowedError') { fileHandle = null; showLinkBanner(true); toast('انتهى إذن الحفظ. اضغط «ربط الملف» مرةً أخرى') }
+      else toast('تعذّر الحفظ في الملف. جرّب «تنزيل نسخة»')
+      renderStatus()
+    })
+  }
+  var lastWrite = 0
+  function linkFile() {
+    if (!CAN_LINK) { download(); return Promise.resolve() }
+    return window.showSaveFilePicker({
+      suggestedName: currentName(),
+      types: [{ description: 'HTML', accept: { 'text/html': ['.html', '.htm'] } }],
+    }).then(function (h) {
+      fileHandle = h; showLinkBanner(false)
+      return writeFile().then(function () { toast('تم الربط. كل تعديل يُحفظ في الملف الآن') })
+    }).catch(function (err) { if (err && err.name !== 'AbortError') toast('تعذّر ربط الملف') })
+  }
+  function currentName() {
+    var n = decodeURIComponent((location.pathname.split('/').pop() || '')).trim()
+    return /\.html?$/i.test(n) ? n : 'siraj-review.html'
+  }
+  function save() {
+    if (fileHandle) return writeFile().then(function () { toast('حُفظ في الملف') })
+    return linkFile()
+  }
+  function download() {
+    var name = currentName().replace(/(\.html?)$/i, '') + '-edited.html'
+    if (/-edited-edited/.test(name)) name = name.replace('-edited-edited', '-edited')
+    var url = URL.createObjectURL(new Blob([fileHtml()], { type: 'text/html' }))
+    var a = document.createElement('a'); a.href = url; a.download = name
+    document.body.appendChild(a); a.click(); a.remove()
+    setTimeout(function () { URL.revokeObjectURL(url) }, 4000)
+    dirty = false; downloaded = true; renderStatus()
+    toast('نزل الملف: ' + name)
+  }
+
+  function renderStatus() {
+    var s = $('status'), n = Object.keys(state.fields).length + Object.keys(state.notes).filter(function (k) { return state.notes[k] }).length
+    var cls = '', txt
+    if (saving) { txt = 'يُحفظ…' }
+    else if (fileHandle && !dirty) { cls = 'status--ok'; txt = '✓ محفوظ في الملف' }
+    else if (!n && !dirty && !Object.keys(state.reviewed).length) { txt = 'لا تعديلات بعد' }
+    else if (!dirty) { cls = 'status--ok'; txt = downloaded ? '✓ نزلت نسخة بالتعديلات' : '✓ محفوظ في الملف' }
+    else if (fileHandle) { txt = 'يُحفظ…' }
+    else { cls = 'status--warn'; txt = 'محفوظ في المتصفح فقط' }
+    s.className = 'status ' + cls; s.textContent = txt
+    $('btn-save').textContent = fileHandle ? 'حفظ الآن' : (CAN_LINK ? 'حفظ في الملف' : 'تنزيل الملف')
+  }
+  function showLinkBanner(on) {
+    $('banner-link').classList.toggle('is-on', !!(on && CAN_LINK))
+    $('banner-fallback').classList.toggle('is-on', !CAN_LINK)
+  }
+
+  /* ============ changes log, navigation, filters ============ */
+
+  function changeList() {
+    var list = []
+    Array.prototype.forEach.call(document.querySelectorAll('[data-f]'), function (el) {
+      var p = el.getAttribute('data-f')
+      if (state.fields[p]) list.push({ kind: 'field', path: p, block: BLOCK_OF[p] })
+    })
+    BLOCKS.forEach(function (b) { if (state.notes[b]) list.push({ kind: 'note', block: b }) })
+    return list
+  }
+  function renderLog() {
+    var items = changeList(), h = ''
+    if (!items.length) { $('log').innerHTML = '<p class="log__empty">لا تعديلات بعد. اضغط على أي نص في الصفحة لتعديله.</p>'; return }
+    var fields = items.filter(function (x) { return x.kind === 'field' }), notes = items.filter(function (x) { return x.kind === 'note' })
+    if (fields.length) h += '<h3>نصوص معدّلة (' + ar(fields.length) + ')</h3>'
+    fields.forEach(function (x) {
+      var f = state.fields[x.path]
+      h += '<div class="log__item"><div class="log__where">' + esc(WHERE[x.path]) + '</div><div class="log__diff">' + diffHtml(f.from, f.to, 'both') + '</div>' +
+        '<div class="log__acts"><button type="button" data-jump="' + esc(x.path) + '">اذهب إليه</button><button type="button" data-undo="' + esc(x.path) + '">↺ استرجاع الأصل</button></div></div>'
+    })
+    if (notes.length) h += '<h3>ملاحظات (' + ar(notes.length) + ')</h3>'
+    notes.forEach(function (x) {
+      h += '<div class="log__item log__note"><div class="log__where">' + esc(BLOCK_WHERE[x.block]) + '</div><div class="log__diff">' + esc(state.notes[x.block]) + '</div>' +
+        '<div class="log__acts"><button type="button" data-jumpb="' + esc(x.block) + '">اذهب إليها</button></div></div>'
+    })
+    $('log').innerHTML = h
+  }
+  function openDrawer(on) {
+    $('drawer').classList.toggle('is-on', on); $('drawer').setAttribute('aria-hidden', on ? 'false' : 'true')
+    if (on) renderLog()
+  }
+  function jumpTo(target) {
+    if (!target) return
+    var blk = target.closest('.blk') || target
+    if (getComputedStyle(blk).display === 'none') setFilter('all')
+    target.scrollIntoView({ block: 'center' })
+    blk.classList.add('is-flash'); setTimeout(function () { blk.classList.remove('is-flash') }, 1200)
+  }
+  var navIdx = -1
+  function navStep(dir) {
+    var list = changeList(); if (!list.length) return
+    var targets = list.map(function (x) { return x.kind === 'field' ? EL[x.path] : $(x.block) })
+    /* start from where the reader is, not from the last jump */
+    var mid = window.innerHeight / 2, best = -1
+    targets.forEach(function (t, i) { if (t.getBoundingClientRect().top < mid - 5) best = i })
+    navIdx = dir > 0 ? best + 1 : best - (targets[best] && Math.abs(targets[best].getBoundingClientRect().top - mid) < 60 ? 1 : 0)
+    if (navIdx >= targets.length) navIdx = 0
+    if (navIdx < 0) navIdx = targets.length - 1
+    jumpTo(targets[navIdx])
+  }
+  var filter = 'all'
+  function setFilter(f) {
+    filter = f
+    document.body.classList.toggle('f-changed', f === 'changed')
+    document.body.classList.toggle('f-open', f === 'open')
+    Array.prototype.forEach.call(document.querySelectorAll('[data-filter]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-filter') === f ? 'true' : 'false') })
+    applyFilterEmpty()
+  }
+  function applyFilterEmpty() {
+    var any = filter === 'all' || Array.prototype.some.call(document.querySelectorAll('.blk'), function (b) { return getComputedStyle(b).display !== 'none' })
+    $('empty').style.display = any ? 'none' : 'block'
+  }
+
+  var toastTimer = 0
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('is-on')
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('is-on') }, 2600)
+  }
+
+  /* ============ boot ============ */
+
+  render()
+  $('brand-img').src = IMG.main
+  $('meta').innerHTML = ar(BLOCKS.length) + ' عنصرًا للمراجعة، من الإصدار <span class="num">' + esc(META.commit || '?') + '</span> بتاريخ <span class="num">' + esc(META.builtAt) + '</span>'
+
+  /* pick the newest of: edits saved in this file, or a draft left in this browser */
+  var draft = null
+  try { draft = safeParse(localStorage.getItem(DRAFT_KEY)) } catch (e) {}
+  var base = fileEdits
+  if (draft && (draft.savedAt || 0) > (fileEdits.savedAt || 0)) {
+    base = draft; dirty = true
+    $('draft-msg').textContent = 'استرجعنا تعديلاتك غير المحفوظة من هذا المتصفح. اضغط «حفظ في الملف» لتثبيتها في الملف.'
+    $('banner-draft').classList.add('is-on')
+  }
+  state.fields = {}; state.notes = base.notes || {}; state.reviewed = base.reviewed || {}; state.savedAt = base.savedAt || 0
+  var orphans = []
+  Object.keys(base.fields || {}).forEach(function (p) {
+    var f = base.fields[p]
+    if (!EL[p]) { orphans.push(p); return }
+    state.fields[p] = { from: ORIG[p], to: f.to, where: WHERE[p] }
+    EL[p].textContent = f.to
+  })
+  /* fold in anything harvested from a "Save page as" copy */
+  var harvested = 0
+  Object.keys(HARVEST.fields).forEach(function (p) {
+    if (!EL[p] || state.fields[p]) return
+    var to = norm(HARVEST.fields[p])
+    if (to !== norm(ORIG[p])) { state.fields[p] = { from: ORIG[p], to: to, where: WHERE[p] }; EL[p].textContent = to; harvested++ }
+  })
+  Object.keys(HARVEST.notes).forEach(function (b) { if (!state.notes[b]) { state.notes[b] = HARVEST.notes[b]; harvested++ } })
+  if (harvested) { dirty = true; state.savedAt = Date.now() }
+  if (orphans.length) toast('بعض التعديلات القديمة لا تطابق هذا الإصدار (' + orphans.length + ')')
+
+  Object.keys(EL).forEach(function (p) { makeEditable(EL[p]); paintField(p) })
+  Array.prototype.forEach.call(document.querySelectorAll('[data-n]'), function (el) {
+    makeEditable(el)
+    var b = el.getAttribute('data-n')
+    if (state.notes[b]) { el.textContent = state.notes[b]; el.closest('.note').classList.add('is-open') }
+  })
+  showLinkBanner(true)
+  refreshMarks()
+
+  var app = document.body
+  app.addEventListener('input', function (e) {
+    var t = e.target
+    if (t.hasAttribute && t.hasAttribute('data-f')) onInput(t)
+    else if (t.hasAttribute && t.hasAttribute('data-n')) {
+      var b = t.getAttribute('data-n'), v = t.innerText.replace(/ /g, ' ').trim()
+      if (v) state.notes[b] = v; else delete state.notes[b]
+      touch(b)
+    }
+  })
+  app.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); save(); return }
+    if (e.key === 'Escape') { if ($('drawer').classList.contains('is-on')) openDrawer(false); else if (document.activeElement) document.activeElement.blur() }
+    if (e.target.hasAttribute && e.target.hasAttribute('data-f')) {
+      if (e.key === 'Enter') { e.preventDefault(); e.target.blur() }
+      if (e.key === 'Escape') { e.target.blur() }
+    }
+  })
+  app.addEventListener('paste', function (e) {
+    var t = e.target.closest && e.target.closest('[contenteditable]')
+    if (!t) return
+    e.preventDefault()
+    var text = (e.clipboardData || window.clipboardData).getData('text/plain') || ''
+    if (t.hasAttribute('data-f')) text = text.replace(/[\r\n]+/g, ' ')
+    document.execCommand('insertText', false, text)
+  })
+  app.addEventListener('drop', function (e) { if (e.target.closest && e.target.closest('[contenteditable]')) e.preventDefault() })
+  app.addEventListener('focusout', function (e) {
+    var t = e.target
+    if (t.hasAttribute && t.hasAttribute('data-f')) {
+      var p = t.getAttribute('data-f')
+      var want = state.fields[p] ? state.fields[p].to : ORIG[p]
+      if (t.textContent !== want) t.textContent = want /* tidy stray spaces and line breaks */
+    }
+  })
+  app.addEventListener('change', function (e) {
+    var t = e.target
+    if (t.hasAttribute && t.hasAttribute('data-rv')) {
+      var b = t.getAttribute('data-rv')
+      if (t.checked) state.reviewed[b] = true; else delete state.reviewed[b]
+      touch(b)
+    }
+  })
+  app.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('button,[data-close],a[href^="#"]') : null
+    if (!t) return
+    if (t.hasAttribute('data-undo')) { restore(t.getAttribute('data-undo')); return }
+    if (t.hasAttribute('data-jump')) { openDrawer(false); var el = EL[t.getAttribute('data-jump')]; jumpTo(el); return }
+    if (t.hasAttribute('data-jumpb')) { openDrawer(false); jumpTo($(t.getAttribute('data-jumpb'))); return }
+    if (t.hasAttribute('data-close')) { openDrawer(false); return }
+    if (t.hasAttribute('data-filter')) { setFilter(t.getAttribute('data-filter')); return }
+    if (t.hasAttribute('data-note-open')) {
+      var w = t.closest('.note'); w.classList.add('is-open'); w.querySelector('.note__ed').focus(); return
+    }
+    if (t.hasAttribute('data-toc') && filter !== 'all') { setFilter('all') }
+  })
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t)
+    var dark = t === 'dark'
+    $('btn-theme').setAttribute('aria-pressed', dark ? 'true' : 'false')
+    $('theme-ico').textContent = dark ? '☀' : '☾'
+    $('theme-lbl').textContent = dark ? 'نهاري' : 'ليلي'
+    try { localStorage.setItem('siraj-review-theme', t) } catch (e) {}
+  }
+  var savedTheme = null
+  try { savedTheme = localStorage.getItem('siraj-review-theme') } catch (e) {}
+  setTheme(savedTheme === 'dark' ? 'dark' : 'light')
+  $('btn-theme').addEventListener('click', function () {
+    setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
+  })
+  $('btn-save').addEventListener('click', save)
+  $('btn-link').addEventListener('click', linkFile)
+  $('btn-download').addEventListener('click', download)
+  $('btn-log').addEventListener('click', function () { openDrawer(true) })
+  $('nav-prev').addEventListener('click', function () { navStep(-1) })
+  $('nav-next').addEventListener('click', function () { navStep(1) })
+  $('btn-orig').addEventListener('click', function () {
+    var on = document.body.classList.toggle('hide-orig')
+    this.setAttribute('aria-pressed', on ? 'false' : 'true')
+  })
+  window.addEventListener('beforeunload', function (e) {
+    if (dirty && !fileHandle) { e.preventDefault(); e.returnValue = '' }
+  })
+})()
+</script>
+</body>
+</html>
