@@ -675,6 +675,8 @@
 }
 .step--lighting .slab{animation:step-light .8s var(--e-elastic) both}
 .step--lighting{z-index:60!important}
+/* Siraj hops for the new step on the drawing he already wears */
+.step--lighting .siraj img{animation:siraj-cheer 1.25s var(--e-out) both}
 
 .reward-pop{
   position:absolute;inset:0;z-index:30;margin:auto;
@@ -687,6 +689,179 @@
 .reward-pop__icon{display:grid;place-items:center;width:68px;height:68px;border-radius:50%;background:var(--yellow);color:var(--maroon);box-shadow:0 6px 0 var(--yellow-deep);margin-bottom:6px}
 .reward-pop strong{font-family:var(--font-display);font-size:1.35rem}
 .reward-pop__xp{font-size:1.05rem;font-weight:900;color:var(--orange)}
+
+/* ---- crossing into a new unit (Home.tsx, UnitOpener.tsx) ----
+   The camera climbs from the step just finished to the new unit, then a
+   gate in the new unit's colour swings open on its name. Every moving
+   part here is transform or opacity. */
+.crossing-veil{position:absolute;inset:0;z-index:5}
+
+/* the banner changing hands as the camera passes into the new unit */
+@keyframes unitcard-arrive{
+  0%  {transform:translateY(-10px) scale(.9)}
+  45% {transform:translateY(3px) scale(1.05)}
+  100%{transform:none}
+}
+.unitcard--arrive{animation:unitcard-arrive .6s var(--e-back) both}
+
+.opener{
+  position:absolute;inset:0;z-index:70;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  padding:18px var(--gutter) 20px;text-align:center;
+  background:
+    radial-gradient(75% 50% at 50% 30%,rgba(254,189,1,.34),rgba(254,98,9,.1) 55%,transparent 80%),
+    color-mix(in srgb,var(--bg) 90%,transparent);
+}
+.opener__stage{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%}
+
+/* the glow and rays sit behind the gate, not inside its (transformed) slab */
+.opener__crown{position:relative;display:grid;place-items:center}
+/* the gate: a chunky slab in the unit's colour, like the banner and the steps */
+.opener__gate{
+  position:relative;
+  width:150px;height:178px;padding:10px 10px 0;
+  border-radius:75px 75px 18px 18px;
+  background:var(--face,var(--orange));
+  box-shadow:0 var(--depth-lg) 0 var(--edge,var(--orange-deep)),var(--lift-3);
+  animation:gate-rise .6s var(--e-back) both;
+}
+@keyframes gate-rise{
+  0%  {transform:translateY(70px) scale(.3);opacity:0}
+  40% {opacity:1}
+  100%{transform:none;opacity:1}
+}
+.opener__glow{
+  position:absolute;left:50%;top:50%;
+  width:420px;height:420px;margin:-210px 0 0 -210px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(255,212,74,.8),rgba(254,189,1,.35) 45%,transparent);
+  opacity:0;transform:scale(.3);
+  transition:transform 1s var(--e-out),opacity .5s var(--e-out);
+}
+.is-lit .opener__glow{opacity:1;transform:scale(1)}
+.opener__rays{
+  position:absolute;left:50%;top:50%;
+  --rays:min(620px,100vw);
+  width:var(--rays);height:var(--rays);margin:calc(var(--rays) / -2) 0 0 calc(var(--rays) / -2);
+  border-radius:50%;pointer-events:none;
+  background:repeating-conic-gradient(from 0deg,var(--yellow) 0deg 8deg,transparent 8deg 18deg);
+  -webkit-mask-image:radial-gradient(closest-side,#000 18%,rgba(0,0,0,.55) 52%,transparent 88%);
+  mask-image:radial-gradient(closest-side,#000 18%,rgba(0,0,0,.55) 52%,transparent 88%);
+  opacity:0;
+  transition:opacity .8s var(--e-out);
+  animation:result-rays 22s linear infinite;
+}
+.is-lit .opener__rays{opacity:.3}
+
+.opener__arch{
+  position:relative;height:100%;overflow:hidden;
+  border-radius:65px 65px 8px 8px;
+  perspective:460px;
+  display:grid;place-items:center;
+  background:radial-gradient(90% 75% at 50% 62%,#FFF6D8,var(--yellow-lit) 35%,var(--yellow) 65%,var(--orange));
+  color:var(--maroon);
+}
+.opener__light{
+  position:absolute;inset:-30%;border-radius:50%;
+  background:radial-gradient(closest-side,#fff,rgba(255,246,216,.6) 45%,transparent);
+  opacity:0;transform:scale(.2);
+  transition:transform .9s var(--e-out) .1s,opacity .5s var(--e-out) .1s;
+}
+.is-open .opener__light{opacity:1;transform:scale(1)}
+.opener__icon{
+  position:relative;display:grid;place-items:center;
+  transform:scale(.3);opacity:0;
+  transition:transform .7s var(--e-elastic),opacity .3s var(--e-out);
+}
+.is-lit .opener__icon{transform:none;opacity:1}
+
+/* two carved doors, hinged at the jambs, swinging away from you */
+.opener__door{
+  position:absolute;top:0;bottom:0;width:50%;
+  display:grid;place-items:center;
+  background:linear-gradient(to bottom,#6A1310,var(--maroon));
+  color:var(--yellow);
+  box-shadow:inset 0 0 0 5px rgba(254,189,1,.22);
+  backface-visibility:hidden;
+  transition:transform .95s cubic-bezier(.6,0,.2,1);
+}
+.opener__door--l{left:0;transform-origin:0 50%;border-right:1.5px solid rgba(254,189,1,.55)}
+.opener__door--r{right:0;transform-origin:100% 50%;border-left:1.5px solid rgba(254,189,1,.55)}
+.is-open .opener__door--l{transform:rotateY(100deg)}
+.is-open .opener__door--r{transform:rotateY(-100deg)}
+
+.opener__text{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  opacity:0;transform:translateY(18px) scale(.8);
+  transition:transform .6s var(--e-elastic),opacity .3s var(--e-out);
+}
+.is-named .opener__text{opacity:1;transform:none}
+.opener__kicker{font-size:.72rem;font-weight:900;letter-spacing:.08em;color:var(--orange-deep);background:var(--orange-soft);padding:5px 12px;border-radius:var(--r-pill)}
+.opener__title{font-family:var(--font-display);font-size:var(--t-hero);font-weight:700;line-height:1.1;color:var(--orange)}
+.opener__sub{font-size:.95rem;font-weight:800;color:var(--ink-2)}
+
+/* the row of units, one more filled in: proof the climb is real */
+.opener__track{
+  display:flex;gap:8px;justify-content:center;
+  opacity:0;transform:translateY(12px);
+  transition:transform .45s var(--e-back) .15s,opacity .3s var(--e-out) .15s;
+}
+.is-named .opener__track{opacity:1;transform:none}
+.opener__pip{
+  position:relative;display:grid;place-items:center;
+  width:32px;height:32px;border-radius:50%;
+  background:var(--bg-sunk);color:var(--ink-3);
+  box-shadow:0 3px 0 var(--paper-edge);
+}
+.opener__pip svg{position:relative}
+.opener__fill{
+  position:absolute;inset:0;border-radius:50%;
+  background:var(--yellow);box-shadow:0 3px 0 var(--yellow-deep);
+  transform:scale(0);
+}
+.opener__pip.is-done{color:var(--maroon)}
+.opener__pip.is-done .opener__fill{transform:none}
+/* the unit just finished fills in a beat after the row appears */
+.opener__pip.is-just{color:var(--ink-3);transition:color .2s .75s}
+.opener__pip.is-just .opener__fill{transform:scale(0);transition:transform .5s var(--e-elastic) .7s}
+.is-named .opener__pip.is-just{color:var(--maroon)}
+.is-named .opener__pip.is-just .opener__fill{transform:none}
+.opener__pip.is-next{color:var(--orange)}
+.opener__pip.is-next::after{
+  content:'';position:absolute;inset:-4px;border-radius:50%;
+  border:2.5px solid var(--orange);
+  animation:medal-ring 1.3s var(--e-out) infinite;
+}
+
+.opener__host{
+  display:flex;align-items:flex-end;gap:14px;width:100%;max-width:420px;
+  opacity:0;transform:translateY(24px);
+  transition:transform .5s var(--e-back),opacity .3s var(--e-out);
+}
+.is-cheer .opener__host{opacity:1;transform:none}
+.opener__host .siraj{flex:0 0 auto}
+.opener__host .siraj img{animation-play-state:paused}
+.is-cheer .opener__host .siraj img{animation-play-state:running}
+.opener__bubble{flex:1;min-width:0;font-size:.95rem;text-align:start;padding:12px 14px;margin-bottom:22px}
+.opener__bubble b{color:var(--orange)}
+.opener__action{
+  width:100%;max-width:420px;
+  opacity:0;transform:translateY(16px);pointer-events:none;
+  transition:transform .4s var(--e-back),opacity .25s var(--e-out);
+}
+.is-ready .opener__action{opacity:1;transform:none;pointer-events:auto}
+
+@media (max-height:640px){
+  .opener{gap:10px}
+  .opener__stage{gap:10px}
+  .opener__gate{width:118px;height:140px;border-radius:59px 59px 14px 14px}
+  .opener__arch{border-radius:50px 50px 6px 6px}
+}
+
+/* reduced motion: the gate stands open and everything is simply there */
+.calm .opener__gate{animation:none}
+.calm .opener__door,.calm .opener__rays{display:none}
+.calm .opener *{transition:none!important}
+.calm .opener__light{opacity:1;transform:none}
 
 /* =========================================================
    8. LESSON

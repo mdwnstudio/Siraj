@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType } 
 import { AnimatePresence, LazyMotion, domAnimation, m as motion } from 'framer-motion'
 import type { Lesson as LessonT } from './core/types'
 import type { ApplyResult, LessonOutcome } from './core/engine/progress'
-import { PATH } from './core/content/path'
+import { PATH, UNIT_OF } from './core/content/path'
 import { AppProvider, useApp, useCalmMotion } from './ui/state'
 import { StatBar, NavBar, SideNav, type Tab } from './ui/components/Bars'
 import { Rail } from './ui/components/Rail'
@@ -100,6 +100,8 @@ function Shell() {
   const [scene, setScene] = useState<Scene>({ at: 'splash' })
   const [tab, setTab] = useState<Tab>('path')
   const [celebrate, setCelebrate] = useState<string | null>(null)
+  const [crossFrom, setCrossFrom] = useState<string | null>(null)
+  const clearCrossFrom = useCallback(() => setCrossFrom(null), [])
 
   // a first visit goes to onboarding straight after the splash: fetch it now
   useEffect(() => {
@@ -142,7 +144,10 @@ function Shell() {
     const next = PATH[i + 1]
     setScene({ at: 'app' })
     setTab('path')
-    if (next && !next.soon) setTimeout(() => setCelebrate(next.id), 420)
+    if (!next || next.soon) return
+    // the next step is in a new unit: the stair climbs to it and opens the unit
+    if (UNIT_OF.get(next.id) !== UNIT_OF.get(scene.outcome.nodeId)) setCrossFrom(scene.outcome.nodeId)
+    else setTimeout(() => setCelebrate(next.id), 420)
   }
 
   return (
@@ -177,7 +182,8 @@ function Shell() {
                     style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}
                   >
                     {tab === 'path' && (
-                      <Home onStart={startNode} celebrate={celebrate} onCelebrated={() => setCelebrate(null)} />
+                      <Home onStart={startNode} celebrate={celebrate} onCelebrated={() => setCelebrate(null)}
+                        crossFrom={crossFrom} onCrossFrom={clearCrossFrom} />
                     )}
                     <Suspense fallback={null}>
                       {tab === 'review' && <ReviewPage onStart={startNode} />}

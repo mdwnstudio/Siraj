@@ -82,6 +82,14 @@ hold their content to a reading column (`--col-max`), and the lesson's action
 bar and verdict become full-width bars with the button at the far end.
 On desktop, **Enter** does whatever the lesson's one big button would.
 
+**Crossing into a new unit is never a snap.** When the current step moves to a
+new unit (a claimed chest, or a lesson whose next step is in the next unit),
+`Home.tsx` holds the camera on the step just finished, carries it up the road
+(`glideTo()` in `PathLandscape.tsx`, which only writes `scrollTop`, so both
+cameras follow it), then opens the gate (`components/UnitOpener.tsx`, its own
+lazy chunk). Siraj stays beside the old step until the gate covers the stair,
+so he never jumps on screen.
+
 **A lesson is two phases, never one.** The brief was explicitly *not* generic
 quizzing: you **learn first**, then the exercises **make it stick**. Every
 exercise draws only on what the cards just taught.

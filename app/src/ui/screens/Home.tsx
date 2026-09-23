@@ -2,14 +2,16 @@ import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type R
 import { AnimatePresence, m as motion } from 'framer-motion'
 import { UNIT_OF, unitById } from '../../core/content/path'
 import { getLesson } from '../../core/content/lessons'
-import type { PathNode, Progress } from '../../core/types'
+import type { PathNode, Progress, Unit } from '../../core/types'
 import {
   currentNodeId, isCompleted, isUnlocked, NODE_INDEX_SAFE,
 } from '../../core/engine/pathView'
 import { useApp, useCalmMotion, useDarkTheme } from '../state'
 import { Icon, Star, Sparkle, Lantern, Droplet } from '../icons/SirajIcons'
 import { Siraj } from '../components/Siraj'
-import { COMPOSITOR_CAMERA, focusStep, LANDSCAPE_UNITS, PathLandscape, PathSky, useLandscapeParallax } from '../components/PathLandscape'
+import {
+  COMPOSITOR_CAMERA, focusStep, glideTime, glideTo, LANDSCAPE_UNITS, PathLandscape, PathSky, useLandscapeParallax,
+} from '../components/PathLandscape'
 import { Button } from '../components/Button'
 import { Burst } from '../components/Burst'
 import { useLayout } from '../useLayout'
@@ -20,12 +22,24 @@ import { haptic } from '../../platform/haptics'
 /** how far a step sits off the centre line - a gentle wind, not a zigzag */
 const dx = (i: number) => Math.round(Math.sin(i * 0.82) * 34)
 
+/* The unit opener is its own chunk. It is fetched the moment a crossing
+   starts, and shown only once it has arrived, a few seconds later. */
+let openerChunk: typeof import('../components/UnitOpener') | undefined
+const loadOpener = () => import('../components/UnitOpener').then((m) => (openerChunk = m))
+
+/** Crossing into a new unit: hold on the step just finished, carry the
+ *  camera up the road to the new one, then open the gate. */
+type Crossing = { from: Unit; to: Unit; fromNode: string; node: string; hold: number; phase: 'hold' | 'glide' | 'open' }
+
 export function Home({
-  onStart, celebrate, onCelebrated,
+  onStart, celebrate, onCelebrated, crossFrom = null, onCrossFrom,
 }: {
   onStart: (nodeId: string) => void
   celebrate: string | null
   onCelebrated: () => void
+  /** the step a lesson just finished, when the next one is in a new unit */
+  crossFrom?: string | null
+  onCrossFrom?: () => void
 }) {
   const { progress, dispatch } = useApp()
   const calm = useCalmMotion()
@@ -47,9 +61,77 @@ export function Home({
   const native = flat && COMPOSITOR_CAMERA
   useLandscapeParallax(scroller, calm, { sky, onUnit: setShownUnit, lite, native })
 
+  const [crossing, setCrossing] = useState<Crossing | null>(null)
+  const [lit, setLit] = useState<string | null>(null)
+  const [arrived, setArrived] = useState(0)
+  const lastCurrent = useRef(current)
+
+  // Stepping into a new unit used to snap the camera straight to it, and
+  // the learner lost their place. Now the camera stays on the step they
+  // just finished and climbs to the new unit, so the crossing is felt.
   useLayoutEffect(() => {
+    const prev = lastCurrent.current
+    lastCurrent.current = current
+    const fromId = crossFrom ?? (prev !== current ? prev : null)
+    if (crossFrom) onCrossFrom?.()
+    const from = fromId ? UNIT_OF.get(fromId) : undefined
+    const to = UNIT_OF.get(current)
+    if (fromId && from && to && to.index > from.index && isCompleted(progress, fromId)) {
+      const root = scroller.current
+      focusStep(root, root?.querySelector<HTMLElement>(`[data-node="${fromId}"]`) ?? null)
+      // a claimed chest shows its reward first; back from a lesson, a beat to find your feet
+      setCrossing({ from, to, fromNode: fromId, node: current, hold: crossFrom ? 700 : 1250, phase: 'hold' })
+      void loadOpener()
+      return
+    }
     focusStep(scroller.current, currentRef.current)
   }, [current])
+
+  useEffect(() => {
+    if (!crossing || crossing.phase === 'open') return
+    if (crossing.phase === 'hold') {
+      const t = setTimeout(() => setCrossing((c) => c && { ...c, phase: 'glide' }), crossing.hold)
+      return () => clearTimeout(t)
+    }
+    const root = scroller.current
+    const el = currentRef.current
+    const ms = calm ? 0 : glideTime(root, el)
+    if (ms) sfx.ascend((ms / 1000) * 0.85)
+    let live = true
+    const stop = glideTo(root, el, ms, () => {
+      void loadOpener().then(() => { if (live) setCrossing((c) => c && { ...c, phase: 'open' }) })
+    })
+    return () => { live = false; stop() }
+  }, [crossing, calm])
+
+  // the banner changes hands as the camera passes into the new unit
+  const bannerUnit = unit.id
+  const gliding = crossing?.phase === 'glide'
+  useEffect(() => {
+    if (!gliding) return
+    setArrived((n) => n + 1)
+    sfx.tick(4)
+    haptic('tap')
+    // a change of unit only, not the start of the glide
+  }, [bannerUnit])
+
+  // Siraj waits beside the step just finished while the camera climbs, and
+  // takes his place on the new step behind the gate, so he never jumps on screen
+  const sirajAt = crossing && crossing.phase !== 'open' ? crossing.fromNode : current
+
+  const opened = useCallback(() => {
+    if (crossing) setLit(crossing.node)
+    setCrossing(null)
+  }, [crossing])
+
+  // the new step lights once the gate has closed behind you
+  useEffect(() => {
+    if (!lit) return
+    sfx.unlock()
+    haptic('unlock')
+    const t = setTimeout(() => setLit(null), 1400)
+    return () => clearTimeout(t)
+  }, [lit])
 
   // the newly-lit step gets a beat of glory, then settles
   useEffect(() => {
@@ -93,10 +175,13 @@ export function Home({
     <div className={`home${native ? ' home--native' : ''}`}>
       <PathSky skyRef={sky} />
 
-      <Stair scroller={scroller} currentRef={currentRef} progress={progress} current={current}
-        celebrate={celebrate} onOpen={openNode} flat={flat} native={native} dark={dark} />
+      <Stair scroller={scroller} currentRef={currentRef} progress={progress} current={current} sirajAt={sirajAt}
+        celebrate={celebrate ?? lit} onOpen={openNode} flat={flat} native={native} dark={dark} />
 
-      <div className={`unitcard unitcard--${unit.tone}`}>
+      {/* nothing on the stair takes a tap while the camera is climbing */}
+      {crossing && crossing.phase !== 'open' && <div className="crossing-veil" aria-hidden />}
+
+      <div key={arrived} className={`unitcard unitcard--${unit.tone}${arrived ? ' unitcard--arrive' : ''}`}>
         <div className="unitcard__main">
           <div className="unitcard__kicker">الوحدة {toAr(unit.index + 1)} · {unit.subtitle}</div>
           <div className="unitcard__title">{unit.title}</div>
@@ -108,6 +193,9 @@ export function Home({
       </div>
 
       <AnimatePresence>
+        {crossing?.phase === 'open' && openerChunk && (
+          <openerChunk.UnitOpener key="opener" from={crossing.from} to={crossing.to} onDone={opened} />
+        )}
         {reward && (
           <motion.div className="reward-pop"
             initial={{ opacity: 0, scale: 0.55, y: 24 }}
@@ -135,11 +223,13 @@ export function Home({
 /* ---------------- the stair itself ----------------
    Memoised: the unit banner changes as you scroll, and that must not
    re-render thirty steps in the middle of a flick. */
-const Stair = memo(function Stair({ scroller, currentRef, progress, current, celebrate, onOpen, flat, native, dark }: {
+const Stair = memo(function Stair({ scroller, currentRef, progress, current, sirajAt, celebrate, onOpen, flat, native, dark }: {
   scroller: RefObject<HTMLDivElement | null>
   currentRef: RefObject<HTMLDivElement | null>
   progress: Progress
   current: string
+  /** the step Siraj stands beside: the current one, except mid-crossing */
+  sirajAt: string
   celebrate: string | null
   onOpen: (n: PathNode) => void
   flat: boolean
@@ -169,6 +259,7 @@ const Stair = memo(function Stair({ scroller, currentRef, progress, current, cel
                 <div
                   key={n.id}
                   ref={isCurrent ? currentRef : undefined}
+                  data-node={n.id}
                   data-persp
                   data-dx={dx(i)}
                   className={[
@@ -224,13 +315,15 @@ const Stair = memo(function Stair({ scroller, currentRef, progress, current, cel
                   </button>
 
                   {isCurrent && (
-                    <>
-                      <span className="step__cta">{n.kind === 'lesson' ? 'ابدأ' : 'افتح المكافأة'}</span>
-                      <span className={`step__siraj${dx(i) < 0 ? ' step__siraj--flip' : ''}`}>
-                        <span className="step__plinth" aria-hidden />
-                        <Siraj mood="idle" size={76} flip={dx(i) < 0} />
-                      </span>
-                    </>
+                    <span className="step__cta">{n.kind === 'lesson' ? 'ابدأ' : 'افتح المكافأة'}</span>
+                  )}
+                  {n.id === sirajAt && (
+                    <span className={`step__siraj${dx(i) < 0 ? ' step__siraj--flip' : ''}`}>
+                      <span className="step__plinth" aria-hidden />
+                      {/* the same drawing when he cheers (app.css hops it): swapping
+                          to the other image mid-light made him visibly snap */}
+                      <Siraj mood="idle" size={76} flip={dx(i) < 0} />
+                    </span>
                   )}
                 </div>
               )
