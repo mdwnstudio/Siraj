@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { AnimatePresence, m as motion } from 'framer-motion'
 import { Siraj } from '../components/Siraj'
 import { Button } from '../components/Button'
@@ -39,10 +39,21 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     setStep(s)
   }
 
-  const finish = () => {
+  // the button, the skip link and the keyboard's Enter all end here, once:
+  // Enter used to show the greeting without ever finishing, and stuck there
+  const started = useRef(false)
+  const start = (keepName: boolean) => {
+    if (started.current) return
+    started.current = true
+    if (!keepName) setName('')
+    go('ready')
+    setTimeout(() => finish(keepName), 120)
+  }
+
+  const finish = (keepName: boolean) => {
     sfx.win()
     haptic('win')
-    dispatch({ type: 'onboard', name: name.trim() || null, language: lang })
+    dispatch({ type: 'onboard', name: (keepName && name.trim()) || null, language: lang })
     setTimeout(onDone, 1450)
   }
 
@@ -121,7 +132,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 placeholder="اسمك (اختياري)"
                 autoComplete="off"
                 enterKeyHint="done"
-                onKeyDown={(e) => e.key === 'Enter' && go('ready')}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && start(true)}
               />
               <p style={{ textAlign: 'center', color: 'var(--ink-3)', fontSize: '.84rem', fontWeight: 600 }}>
                 يبقى على جهازك وحده.
@@ -153,8 +164,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         {step === 'lang' && <Button block onClick={() => go('name')}>متابعة</Button>}
         {step === 'name' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Button block onClick={() => { go('ready'); setTimeout(finish, 120) }}>ابدأ الرحلة</Button>
-            <Button block tone="quiet" size="md" onClick={() => { setName(''); go('ready'); setTimeout(finish, 120) }}>
+            <Button block onClick={() => start(true)}>ابدأ الرحلة</Button>
+            <Button block tone="quiet" size="md" onClick={() => start(false)}>
               تخطّي
             </Button>
           </div>
