@@ -1322,12 +1322,20 @@
   padding:0 var(--gutter);
 }
 .result__rays{
-  position:absolute;left:50%;top:35%;width:480px;height:480px;margin:-240px 0 0 -240px;
-  border-radius:50%;opacity:.16;pointer-events:none;
+  /* no wider than the screen, and feathered to nothing well before its rim:
+     a hard-edged disc wider than a phone was cut off flat by both sides */
+  --rays:min(560px,100vw);
+  position:absolute;left:50%;top:35%;width:var(--rays);height:var(--rays);
+  margin:calc(var(--rays) / -2) 0 0 calc(var(--rays) / -2);
+  border-radius:50%;opacity:.2;pointer-events:none;
   background:repeating-conic-gradient(from 0deg,var(--yellow) 0deg 9deg,transparent 9deg 20deg);
-  animation:result-rays 16s linear infinite;
+  -webkit-mask-image:radial-gradient(closest-side,#000 18%,rgba(0,0,0,.55) 52%,transparent 88%);
+  mask-image:radial-gradient(closest-side,#000 18%,rgba(0,0,0,.55) 52%,transparent 88%);
+  animation:result-rays 16s linear infinite,rays-in .9s var(--e-out) both;
 }
-@keyframes result-rays{from{transform:rotate(0deg) scale(.8)}to{transform:rotate(360deg) scale(1.05)}}
+/* a pure turn, so the loop is seamless (it used to jump from 1.05x back to .8x) */
+@keyframes result-rays{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes rays-in{from{opacity:0}}
 .result__crest{position:relative;display:grid;place-items:center;width:150px;height:132px}
 .result__orbit{position:absolute;display:grid;place-items:center;color:var(--orange);filter:drop-shadow(0 2px 0 var(--yellow-deep))}
 .result__orbit--a{top:4px;left:8px;animation:crest-float-a 1.8s var(--e-in-out) infinite alternate}
