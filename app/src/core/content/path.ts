@@ -19,13 +19,14 @@ export const UNITS: Unit[] = [
     nodes: [
       { id: 'n-intro-1', unitId: 'u-intro', kind: 'lesson', lessonId: 'l-intro-1' },
       { id: 'n-intro-2', unitId: 'u-intro', kind: 'lesson', lessonId: 'l-intro-2' },
+      { id: 'n-intro-3', unitId: 'u-intro', kind: 'lesson', lessonId: 'l-intro-3' },
       { id: 'n-intro-chest', unitId: 'u-intro', kind: 'chest', label: 'صندوق' },
     ],
   },
   {
     id: 'u-shahada',
     index: 1,
-    title: 'الشهادة',
+    title: 'الشهادتان',
     subtitle: 'الركن الأول',
     icon: 'Star',
     tone: 'ember',
@@ -38,13 +39,14 @@ export const UNITS: Unit[] = [
   {
     id: 'u-salah',
     index: 2,
-    title: 'الصلاة',
+    title: 'إقام الصلاة',
     subtitle: 'الركن الثاني',
     icon: 'Sun',
     tone: 'gold',
     nodes: [
-      { id: 'n-salah-1', unitId: 'u-salah', kind: 'lesson', lessonId: 'l-salah-1' },
-      { id: 'n-salah-2', unitId: 'u-salah', kind: 'lesson', lessonId: 'l-salah-2' },
+      /* الوضوء قبل الصلاة: the wudu lesson comes first on the stair */
+      { id: 'n-salah-1', unitId: 'u-salah', kind: 'lesson', lessonId: 'l-salah-2' },
+      { id: 'n-salah-2', unitId: 'u-salah', kind: 'lesson', lessonId: 'l-salah-1' },
       { id: 'n-salah-trophy', unitId: 'u-salah', kind: 'trophy', label: 'إنجاز' },
     ],
   },
