@@ -595,6 +595,14 @@
 .step--done:not(.step--chest) .slab::before{
   background:repeating-linear-gradient(100deg,var(--top) 0 14px,color-mix(in srgb,var(--top) 55%,#fff) 14px 40px,var(--top) 40px 54px);
 }
+/* open but not yet reached: only the tester name (مدونة) opens steps above the
+   current one. A softer orange than the current step, so that one still leads. */
+.step--open:not(.step--done):not(.step--current) .slab{
+  --face:color-mix(in srgb,var(--orange) 55%,var(--tread-face));
+  --top:color-mix(in srgb,var(--orange-lit) 32%,var(--tread-top));
+  --rim:color-mix(in srgb,var(--orange-deep) 70%,var(--tread-rim));
+  --fg:var(--orange-deep);
+}
 .step--current .slab{--face:var(--orange);--top:color-mix(in srgb,var(--orange-lit) 78%,#fff);--rim:var(--orange-deep);--fg:#fff}
 .step--chest .slab  {--fg:var(--maroon);width:220px;justify-content:flex-start;padding-inline:18px}
 /* a reward is the same neutral tread with a gold disc: gold already means "earned" */
