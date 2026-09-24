@@ -286,8 +286,6 @@ function SortEx({ ex, locked, onAutoSubmit }: ExProps & { ex: SortExercise }) {
     }, 230)
   }
 
-  const count = (b: string) => Object.values(placements).filter((x) => x === b).length
-
   return (
     <>
       <Prompt>{ex.prompt}</Prompt>
@@ -322,15 +320,24 @@ function SortEx({ ex, locked, onAutoSubmit }: ExProps & { ex: SortExercise }) {
           )}
         </div>
 
-        <div className="sort__buckets">
-          <button className="bucket" disabled={locked || !remaining.length} onClick={() => assign(ex.buckets[0].id, 1)}>
-            <span>{ex.buckets[0].label}</span>
-            <span className="bucket__count num">{count(ex.buckets[0].id)}</span>
-          </button>
-          <button className="bucket" disabled={locked || !remaining.length} onClick={() => assign(ex.buckets[1].id, -1)}>
-            <span>{ex.buckets[1].label}</span>
-            <span className="bucket__count num">{count(ex.buckets[1].id)}</span>
-          </button>
+        {/* say, in words a child reads at a glance, what to do with the card */}
+        <p className="sort__cue" aria-live="polite">
+          {remaining.length ? (
+            <>
+              البطاقة <span className="num">{at + 1}</span> من <span className="num">{order.length}</span>:
+              اضغط على الجواب
+            </>
+          ) : '\u00a0'}
+        </p>
+
+        {/* the two answers nudge until the first tap, so it is clear they are buttons */}
+        <div className={`sort__buckets${at === 0 && !fly ? ' is-waiting' : ''}`}>
+          {ex.buckets.map((b, i) => (
+            <button key={b.id} className="bucket" disabled={locked || !remaining.length}
+              onClick={() => assign(b.id, i === 0 ? 1 : -1)}>
+              {b.label}
+            </button>
+          ))}
         </div>
       </div>
     </>
