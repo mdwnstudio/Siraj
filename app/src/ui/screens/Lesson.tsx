@@ -270,7 +270,7 @@ export function Lesson({
             </Button>
           ) : ex && (ex.kind === 'match' || ex.kind === 'sort') ? (
             <p style={{ textAlign: 'center', color: 'var(--ink-3)', fontWeight: 700, fontSize: '.9rem', padding: '14px 0' }}>
-              {ex.kind === 'match' ? 'اختر من كل عمودٍ ما يقابله' : 'صنّف كل بطاقة في مكانها'}
+              {ex.kind === 'match' ? 'اختر من كل عمودٍ ما يقابله' : 'لكل بطاقة: اضغط على الجواب الصحيح'}
             </p>
           ) : (
             <Button block disabled={!canCheck} onClick={check}>تحقّق</Button>
@@ -363,31 +363,41 @@ function CardView({ card, unitId, withScene }: { card: Card; unitId: string; wit
         {body ? (
           <>
             {body[0]}
-            <button className="term" onClick={() => { primeAudio(); sfx.select(); setOpen(!open) }}>
-              {body[1]}
-            </button>
+            {termBtn(body[1])}
             {body[2]}
           </>
         ) : (
           card.body
         )}
       </p>
-      <AnimatePresence>
-        {open && card.term && (
-          <motion.span className="termpop"
-            initial={{ opacity: 0, y: -8, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }}
-            exit={{ opacity: 0, y: -8, height: 0 }} transition={{ duration: 0.24, ease: [0.23, 1, 0.32, 1] }}>
+      {/* a term the body never spells out still gets its word to tap */}
+      {card.term && !body && <div className="kcard__term">{termBtn(card.term.word)}</div>}
+      {card.term && (
+        /* the meaning and the hint share one slot sized to the meaning, and only
+           cross-fade: nothing below the body ever grows, shrinks or jumps */
+        <div className="termslot">
+          <motion.span className="termpop" aria-hidden={!open} initial={false}
+            animate={{ opacity: open ? 1 : 0, y: open ? 0 : -8 }}
+            transition={{ duration: open ? 0.24 : 0.18, ease: open ? [0.23, 1, 0.32, 1] : [0.4, 0, 1, 1] }}>
             {card.term.meaning}
           </motion.span>
-        )}
-      </AnimatePresence>
-      {card.term && !open && (
-        <p style={{ fontSize: '.8rem', color: 'var(--ink-3)', fontWeight: 650 }}>
-          اضغط على الكلمة المُظلّلة لمعناها
-        </p>
+          <motion.p className="termhint" aria-hidden={open} initial={false}
+            animate={{ opacity: open ? 0 : 1 }}
+            transition={{ duration: 0.18, delay: open ? 0 : 0.1 }}>
+            اضغط على الكلمة المُظلّلة لمعناها
+          </motion.p>
+        </div>
       )}
     </div>
   )
+
+  function termBtn(text: string) {
+    return (
+      <button className="term" aria-expanded={open} onClick={() => { primeAudio(); sfx.select(); setOpen(!open) }}>
+        {text}
+      </button>
+    )
+  }
 }
 
 /* Arabic letters and harakat, minus Arabic punctuation (، ؛ ؟ ٪…) */
@@ -397,7 +407,12 @@ const WORD_CHAR = /[\u0621-\u065F\u0670-\u06D3\u06D5-\u06ED]/
  * stopped at «مُسلِم» inside «مُسلِمًا», the ending would sit in another element
  * and the letters could not join across it. */
 function splitTerm(body: string, word: string): [string, string, string] | null {
-  const i = body.indexOf(word)
+  let i = body.indexOf(word)
+  // «الهلال» written as «هلاله»: try the word without its article
+  if (i < 0 && word.startsWith('ال') && word.length > 4) {
+    word = word.slice(2)
+    i = body.indexOf(word)
+  }
   if (i < 0) return null
   let a = i
   let b = i + word.length

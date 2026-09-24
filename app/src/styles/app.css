@@ -936,8 +936,12 @@
   cursor:help;padding-bottom:1px;
 }
 .term:active{color:var(--orange)}
+.kcard__term{font-size:var(--t-lead);line-height:1.85}
+.termslot{display:grid}
+.termslot > *{grid-area:1/1;align-self:start}
+.termhint{font-size:.8rem;color:var(--ink-3);font-weight:650}
 .termpop{
-  display:block;margin-top:10px;
+  display:block;
   background:var(--orange-soft);color:var(--maroon);
   border-radius:var(--r);padding:11px 14px;
   font-size:.92rem;font-weight:600;line-height:1.6;
@@ -1104,16 +1108,30 @@
 .sort__card--back{transform:scale(.92) translateY(14px);opacity:.55;box-shadow:var(--lift-1)}
 .sort__card--back2{transform:scale(.85) translateY(26px);opacity:.3;box-shadow:none}
 .sort__buckets{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%}
+.sort__cue{
+  margin:-4px 0 -6px;
+  font-size:.9rem;font-weight:750;color:var(--ink-2);text-align:center;
+}
+/* the answers are chunky buttons, not drop zones: nothing here is dragged */
 .bucket{
   display:grid;place-items:center;gap:6px;
   padding:18px 12px;min-height:84px;
   border-radius:var(--r-lg);
-  background:var(--bg-sunk);border:2.5px dashed var(--paper-edge);
-  font-weight:800;font-size:.95rem;text-align:center;line-height:1.35;
-  transition:transform var(--d-tap) var(--e-out),background 180ms,border-color 180ms;
+  background:var(--paper);border:2.5px solid var(--orange);
+  box-shadow:0 5px 0 var(--orange);color:var(--orange-deep);
+  font-weight:800;font-size:1rem;text-align:center;line-height:1.35;
+  transition:transform var(--d-tap) var(--e-out),box-shadow var(--d-tap) var(--e-out),opacity 200ms;
 }
-.bucket:active{transform:scale(.96);background:var(--orange-soft);border-color:var(--orange)}
-.bucket__count{font-size:.74rem;color:var(--ink-3);font-weight:800}
+.bucket:active:not(:disabled){transform:translateY(5px);box-shadow:0 0 0 var(--orange)}
+.bucket:disabled{opacity:.5}
+.sort__buckets.is-waiting .bucket{animation:bucket-nudge 1.6s var(--e-out) .9s infinite}
+.sort__buckets.is-waiting .bucket + .bucket{animation-delay:1.05s}
+@keyframes bucket-nudge{
+  0%,60%,100%{transform:translateY(0)}
+  20%{transform:translateY(-5px)}
+  40%{transform:translateY(1px)}
+}
+.calm .sort__buckets .bucket{animation:none}
 
 /* ---- the feedback banner ---- */
 
