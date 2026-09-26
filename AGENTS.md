@@ -359,7 +359,10 @@ seen: it can never drift from the content.
 
 **Language.** The request carries `context.lang`. For `en` the Worker uses
 `buildEnglishPrompt()`, the same rules in English plus one more: always answer
-in English, whatever language the question is in. The error messages the
+in English, whatever language the question is in. The prompt alone was not
+enough (an Arabic question in the English app got an Arabic reply), so a
+one-line developer message after the question repeats the reply language
+(`REPLY_IN`), in both languages. The error messages the
 learner reads come back in their language too (`MESSAGES` in
 `server/chatHandler.ts`). Keep the two prompts in step when either changes.
 
