@@ -381,22 +381,43 @@ function nativeCamera(
   const stop = () => { for (const a of running) a.cancel(); running = [] }
 
   // 0 at the first step, 1 at the last: the sky cools from dawn to open blue
-  // as you climb, in twenty small steps written from a scroll listener. As
+  // as you climb, in twenty small steps written when the road settles. As
   // an opacity animation it lifted the blue layer and the sun above it into
   // two full-screen layers blended on every frame, more than a budget
   // phone's GPU can fill at 90Hz. Still, the sky is one texture, and a step
   // repaints it once.
   let skyMax = 1
   let skyOp = ''
-  let skyQueued = 0
   const paintSky = () => {
-    skyQueued = 0
     if (!high) return
     const op = (Math.round((1 - root.scrollTop / skyMax) * 20) / 20).toFixed(2)
     if (op !== skyOp) { high.style.opacity = op; skyOp = op }
   }
-  const onScroll = () => { if (!skyQueued) skyQueued = requestAnimationFrame(paintSky) }
+
+  // While the stair moves, the main thread stays as quiet as it can. Chrome
+  // keeps the scroll-linked bodies in step only while its main-thread frames
+  // are cheap (see [data-persp] in app.css section 15), so nothing else adds
+  // to them mid-scroll: the idle loops on the stair pause and the sky holds
+  // while the road moves (.is-moving in app.css), and the sky catches up once
+  // it settles. The flag sits on the screen, which holds the sky and the road.
+  const screen = root.parentElement ?? root
+  let moving = false
+  let still = 0
+  const settle = () => {
+    clearTimeout(still)
+    still = 0
+    if (!moving) return
+    moving = false
+    screen.classList.remove('is-moving')
+    paintSky()
+  }
+  const onScroll = () => {
+    if (!moving) { moving = true; screen.classList.add('is-moving') }
+    clearTimeout(still)
+    still = window.setTimeout(settle, 220)
+  }
   root.addEventListener('scroll', onScroll, { passive: true })
+  root.addEventListener('scrollend', settle)
 
   const build = () => {
     stop()
@@ -488,8 +509,10 @@ function nativeCamera(
     observer.disconnect()
     watch?.disconnect()
     media.removeEventListener('change', rebuild)
-    cancelAnimationFrame(skyQueued)
+    clearTimeout(still)
     root.removeEventListener('scroll', onScroll)
+    root.removeEventListener('scrollend', settle)
+    screen.classList.remove('is-moving')
     if (high) high.style.opacity = ''
     stop()
   }

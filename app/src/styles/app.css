@@ -378,7 +378,13 @@
 .sky__high{
   position:absolute;inset:0;opacity:0;
   background:linear-gradient(to bottom,var(--sky-high-a),var(--sky-high-b) 80%);
+  transition:opacity 400ms var(--e-out);
 }
+/* While the road moves the main thread stays quiet (nativeCamera in
+   PathLandscape.tsx): the idle loops on the stair pause and the sky holds,
+   then both carry on once it settles. */
+.is-moving .step__cta,.is-moving .siraj img{animation-play-state:paused}
+.is-moving .sky__high{transition:none}
 .sky__sun{
   position:absolute;top:-110px;inset-inline-start:-90px;width:340px;height:340px;border-radius:50%;
   background:radial-gradient(circle,var(--sun),transparent 66%);
@@ -1862,6 +1868,17 @@
 .stairwrap--native .stage{position:static;height:auto;overflow:visible}
 .stairwrap--native .stair{will-change:auto;overflow:clip}
 .stairwrap--native .stair-spacer{display:none}
+/* The treads and captions are told their transform keeps changing. Without
+   the hint Chrome rasters them again at every new size the camera gives them,
+   the next frame waits on that raster, and meanwhile the compositor draws the
+   scroll-linked bodies from a stale scroll offset. On a Vivo Y36 they updated
+   on one frame in three while the road itself scrolled on every frame: hard
+   jitter, worst after a reload or on a loaded phone, and never in WebView.
+   With the hint a scroll-linked probe kept step on 270 of 297 frames after a
+   reload (79 of 295 without). The islands are left out: held at full size
+   they overran the phone's tile memory, and as images they cost little to
+   redraw anyway. */
+.stairwrap--native .step[data-persp],.stairwrap--native .path-unit__caption{will-change:transform}
 /* the clouds hold still under the compositor camera: one screen-sized
    texture with the sky, instead of three layers each two screens tall */
 .home--native .sky__clouds{will-change:auto;height:100%}
