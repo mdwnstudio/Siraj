@@ -15,7 +15,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* The document itself never scrolls: every screen scrolls inside its own
    panel. Installed Android PWAs can report 100dvh taller than the window
    (the status bar gets counted), which made every screen a finger-drag
-   too tall, so the root is pinned to the viewport box instead. */
+   too tall, so the root takes 100% of the viewport box instead.
+   Not position:fixed: a fixed root costs Chrome one more full-screen
+   composited layer over the stair, and the budget phone's GPU showed it
+   as jitter mid-flick. */
 html,body{height:100%;overflow:hidden}
 body{
   font-family:var(--font-ui);
@@ -41,7 +44,7 @@ h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.2;letter-
 .num{direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
 
 /* ---------- app shell ---------- */
-#root{position:fixed;inset:0;display:flex;justify-content:center;background:var(--bg);overflow:hidden}
+#root{height:100%;display:flex;justify-content:center;background:var(--bg);overflow:hidden}
 .shell{
   width:var(--shell);
   height:100%;
