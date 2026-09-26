@@ -76,31 +76,68 @@ export function Lesson({
     setCardAt(cardAt - 1)
   }
 
-  /* a sideways flick on a card turns it: toward the start of the line (left)
-     is forward, back the other way. The card leans after the finger a little
-     while it is held, on transform only. Vertical drags stay scrolls. */
-  const swipe = useRef<{ x: number; y: number; id: number; el: HTMLElement } | null>(null)
+  /* a sideways flick turns the card, the way a page turns in an Arabic book:
+     the next card waits on the left, so dragging right (toward the end of the
+     line) moves forward and dragging left goes back. The deck follows the
+     finger one to one, on transform only; a committed flick leaves the deck
+     where the finger let go and the exit carries it on from there, so nothing
+     jumps. Vertical drags stay scrolls. */
+  const drag = useRef<{
+    x: number; y: number; id: number; el: HTMLElement
+    axis: 0 | 'x' | 'y'; dx: number; v: number; lx: number; lt: number
+  } | null>(null)
+  // the card on its way out keeps its old handlers; it must not take a new flick
+  const live = useRef('')
+  live.current = phase === 'learn' ? `c${cardAt}` : ''
   const onCardDown = (e: React.PointerEvent<HTMLElement>) => {
-    if (e.pointerType === 'mouse') return
-    swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId, el: e.currentTarget }
+    if (e.pointerType === 'mouse' || !e.isPrimary || live.current !== `c${cardAt}`) return
+    const el = e.currentTarget.firstElementChild as HTMLElement | null
+    if (!el) return
+    el.style.transition = ''
+    drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId, el, axis: 0, dx: 0, v: 0, lx: e.clientX, lt: e.timeStamp }
   }
   const onCardMove = (e: React.PointerEvent<HTMLElement>) => {
-    const s0 = swipe.current
-    if (!s0 || s0.id !== e.pointerId) return
-    const dx = e.clientX - s0.x
-    if (Math.abs(dx) > Math.abs(e.clientY - s0.y)) s0.el.style.transform = `translateX(${dx * 0.3}px)`
+    const d = drag.current
+    if (!d || d.id !== e.pointerId) return
+    const dx = e.clientX - d.x
+    if (!d.axis) {
+      const dy = e.clientY - d.y
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+      d.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
+      if (d.axis === 'x') {
+        try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* pointer already gone */ }
+      }
+    }
+    if (d.axis !== 'x') return
+    const dt = e.timeStamp - d.lt
+    if (dt > 0) d.v = 0.8 * ((e.clientX - d.lx) / dt) + 0.2 * d.v
+    d.lx = e.clientX
+    d.lt = e.timeStamp
+    d.dx = dx
+    // nothing before the first card: the deck gives a little, then resists
+    const off = dx < 0 && cardAt === 0 ? dx * 0.25 : dx
+    d.el.style.transform = `translate3d(${off}px,0,0)`
+  }
+  const settleDeck = (el: HTMLElement) => {
+    el.style.transition = 'transform 280ms cubic-bezier(0.23, 1, 0.32, 1)'
+    el.style.transform = ''
   }
   const onCardUp = (e: React.PointerEvent<HTMLElement>) => {
-    const s0 = swipe.current
-    if (!s0 || s0.id !== e.pointerId) return
-    swipe.current = null
-    s0.el.style.transform = ''
-    const dx = e.clientX - s0.x
-    const dy = e.clientY - s0.y
-    if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.4) return
+    const d = drag.current
+    if (!d || d.id !== e.pointerId) return
+    drag.current = null
+    if (d.axis !== 'x') return
+    const fwd = d.dx > 0
+    const flung = Math.abs(d.v) > 0.45 && Math.abs(d.dx) > 24 && d.v > 0 === fwd
+    const far = Math.abs(d.dx) > d.el.offsetWidth * 0.22
+    if (e.type === 'pointercancel' || !(flung || far) || (!fwd && cardAt === 0)) {
+      settleDeck(d.el)
+      return
+    }
     primeAudio()
-    if (dx < 0) { sfx.tap(); nextCard() }
-    else if (cardAt > 0) { sfx.tap(); prevCard() }
+    sfx.tap()
+    if (fwd) nextCard()
+    else prevCard()
   }
 
   /* ---- practice ---- */
@@ -173,7 +210,7 @@ export function Lesson({
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
-      // arrows turn the cards the way the swipe does: left is forward in RTL
+      // arrows point at the card to go to: in RTL the next one waits on the left
       if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.repeat) {
         cardKey.current(e.key === 'ArrowLeft' ? 1 : -1)
         return
@@ -223,7 +260,9 @@ export function Lesson({
       </div>
 
       <div className="lesson__body">
-        <AnimatePresence mode="wait" initial={false}>
+        {/* custom reaches the card already leaving, so it exits the way the
+            learner is going now, not the way they came in */}
+        <AnimatePresence mode="wait" initial={false} custom={dir}>
           {/* ---------------- تعلّم ---------------- */}
           {phase === 'learn' && (
             <motion.div key={`c${cardAt}`} className="cardstage" custom={dir} variants={cardTurn}
@@ -231,11 +270,13 @@ export function Lesson({
               transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
               onPointerDown={onCardDown} onPointerMove={onCardMove} onPointerUp={onCardUp}
               onPointerCancel={onCardUp}>
-              <CardView card={lesson.cards[cardAt]} unitId={unit?.id ?? 'u-intro'} withScene={cardAt === sceneCard} />
-              <div className="dots">
-                {lesson.cards.map((_, i) => (
-                  <span key={i} className={`dots__d${i === cardAt ? ' is-on' : i < cardAt ? ' is-past' : ''}`} />
-                ))}
+              <div className="cardstage__deck">
+                <CardView card={lesson.cards[cardAt]} unitId={unit?.id ?? 'u-intro'} withScene={cardAt === sceneCard} />
+                <div className="dots">
+                  {lesson.cards.map((_, i) => (
+                    <span key={i} className={`dots__d${i === cardAt ? ' is-on' : i < cardAt ? ' is-past' : ''}`} />
+                  ))}
+                </div>
               </div>
             </motion.div>
           )}
@@ -243,7 +284,7 @@ export function Lesson({
           {/* ---------------- رسّخ ---------------- */}
           {phase === 'practice' && ex && (
             <motion.div key={`e${exAt}`} className="ex"
-              initial={{ opacity: 0, x: 34 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -34 }}
+              initial={{ opacity: 0, x: -34 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 34 }}
               transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}>
               <span className="ex__kicker">
                 <Star size={13} /> تمرين {toAr(exAt + 1)} من {toAr(total)}
@@ -345,12 +386,14 @@ export function Lesson({
   )
 }
 
-/* forward: the new card comes in from the right and the old one leaves left;
-   back reverses both, so the motion always matches the finger */
+/* RTL: going forward, the card leaves to the right and the next one comes
+   in from the left; back reverses both, so the motion always matches the
+   finger. The exit is quicker and eases in, so a flicked card keeps its
+   speed on the way out. */
 const cardTurn = {
-  enter: (d: number) => ({ opacity: 0, x: 34 * d }),
+  enter: (d: number) => ({ opacity: 0, x: -40 * d }),
   shown: { opacity: 1, x: 0 },
-  leave: (d: number) => ({ opacity: 0, x: -34 * d }),
+  leave: (d: number) => ({ opacity: 0, x: 48 * d, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] as const } }),
 }
 
 const GOOD = ['أحسنت!', 'ممتاز!', 'بالضبط!', 'رائع!', 'أصبتَ!', 'تمامًا!']

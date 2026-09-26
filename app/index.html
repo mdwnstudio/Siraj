@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl" data-theme="light">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#FEBD00" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -20,8 +20,8 @@
     <style>
       /* Inlined boot paint: the brand splash shows before any JS parses. */
       html{color-scheme:light}
-      html,body{margin:0;padding:0;background:#FEBD00;overscroll-behavior:none}
-      #root{min-height:100dvh}
+      html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#FEBD00;overscroll-behavior:none}
+      #root{position:fixed;inset:0}
       #boot{position:fixed;inset:0;background:#FEBD00;z-index:9999;pointer-events:none;
         transition:opacity .4s ease-out}
     </style>
