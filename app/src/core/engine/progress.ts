@@ -1,10 +1,9 @@
-import type { Progress, NodeResult } from '../types'
+import type { Lang, Progress, NodeResult } from '../types'
 import { PATH, NODE_INDEX } from '../content/path'
 import { DEFAULT_BANNER } from '../content/avatars'
 
-export const MAX_OIL = 5
-/** one drop back every 20 minutes */
-const OIL_REGEN_MS = 20 * 60 * 1000
+/** every right answer in a lesson earns this, on top of the lesson's own xp */
+export const XP_PER_CORRECT = 2
 
 export function defaultProgress(): Progress {
   return {
@@ -18,8 +17,6 @@ export function defaultProgress(): Progress {
     xp: 0,
     streak: 0,
     lastActiveDay: null,
-    oil: MAX_OIL,
-    oilUpdatedAt: Date.now(),
     completed: {},
     achievements: [],
     // Light by default. Dark is still available in Settings, and 'auto'
@@ -52,29 +49,6 @@ export function currentStreak(p: Progress): number {
   const gap = daysBetween(p.lastActiveDay, dayKey())
   if (gap === 0 || gap === 1) return p.streak
   return 0
-}
-
-/* ---------------- oil (lives) ---------------- */
-
-export function currentOil(p: Progress): number {
-  if (p.oil >= MAX_OIL) return MAX_OIL
-  const regained = Math.floor((Date.now() - p.oilUpdatedAt) / OIL_REGEN_MS)
-  return Math.min(MAX_OIL, p.oil + regained)
-}
-
-export function msToNextOil(p: Progress): number {
-  if (currentOil(p) >= MAX_OIL) return 0
-  const elapsed = (Date.now() - p.oilUpdatedAt) % OIL_REGEN_MS
-  return OIL_REGEN_MS - elapsed
-}
-
-export function spendOil(p: Progress, n = 1): Progress {
-  const now = currentOil(p)
-  return { ...p, oil: Math.max(0, now - n), oilUpdatedAt: Date.now() }
-}
-
-export function refillOil(p: Progress): Progress {
-  return { ...p, oil: MAX_OIL, oilUpdatedAt: Date.now() }
 }
 
 /* ---------------- unlocking ---------------- */
@@ -152,22 +126,39 @@ export interface Achievement {
   id: string
   title: string
   note: string
+  en: { title: string; note: string }
   icon: 'Sun' | 'Lantern' | 'Star' | 'Droplet' | 'Crescent' | 'Sparkle' | 'Flame'
 }
 
 export const ACHIEVEMENTS: Achievement[] = [
-  { id: 'first-step', title: 'أوّل خطوة', note: 'أتممتَ أوّل درس', icon: 'Sun' },
-  { id: 'flawless', title: 'بلا خطأ', note: 'درسٌ كامل دون خطأ واحد', icon: 'Sparkle' },
-  { id: 'full-lamp', title: 'مصباحٌ ممتلئ', note: 'أنهيتَ درسًا دون أن تفقد قطرة', icon: 'Droplet' },
-  { id: 'streak-3', title: 'ثلاثة أيام', note: 'تعلّمتَ ثلاثة أيام متتالية', icon: 'Flame' },
-  { id: 'unit-intro', title: 'البداية', note: 'أتممتَ وحدة البداية', icon: 'Star' },
-  { id: 'unit-shahada', title: 'الشهادتان', note: 'أتممتَ وحدة الشهادتين', icon: 'Star' },
-  { id: 'unit-salah', title: 'إقام الصلاة', note: 'أتممتَ وحدة إقام الصلاة', icon: 'Lantern' },
-  { id: 'unit-zakah', title: 'الزكاة', note: 'أتممتَ وحدة الزكاة', icon: 'Droplet' },
-  { id: 'unit-sawm', title: 'الصوم', note: 'أتممتَ وحدة الصوم', icon: 'Crescent' },
-  { id: 'unit-hajj', title: 'الحج', note: 'أتممتَ الأركان الخمسة كلّها', icon: 'Sparkle' },
-  { id: 'curious', title: 'سائلٌ فَطِن', note: 'سألتَ سراجًا أوّل سؤال', icon: 'Crescent' },
+  { id: 'first-step', title: 'أوّل خطوة', note: 'أتممتَ أوّل درس', icon: 'Sun',
+    en: { title: 'First step', note: 'You finished your first lesson' } },
+  { id: 'flawless', title: 'بلا خطأ', note: 'درسٌ كامل دون خطأ واحد', icon: 'Sparkle',
+    en: { title: 'Flawless', note: 'A whole lesson without a single mistake' } },
+  { id: 'streak-3', title: 'ثلاثة أيام', note: 'تعلّمتَ ثلاثة أيام متتالية', icon: 'Flame',
+    en: { title: 'Three days', note: 'You learned three days in a row' } },
+  { id: 'unit-intro', title: 'البداية', note: 'أتممتَ وحدة البداية', icon: 'Star',
+    en: { title: 'The Beginning', note: 'You finished The Beginning' } },
+  { id: 'unit-shahada', title: 'الشهادتان', note: 'أتممتَ وحدة الشهادتين', icon: 'Star',
+    en: { title: 'The Shahadah', note: 'You finished the Shahadah unit' } },
+  { id: 'unit-salah', title: 'إقام الصلاة', note: 'أتممتَ وحدة إقام الصلاة', icon: 'Lantern',
+    en: { title: 'Establishing Prayer', note: 'You finished the prayer unit' } },
+  { id: 'unit-zakah', title: 'الزكاة', note: 'أتممتَ وحدة الزكاة', icon: 'Droplet',
+    en: { title: 'Zakah', note: 'You finished the Zakah unit' } },
+  { id: 'unit-sawm', title: 'الصوم', note: 'أتممتَ وحدة الصوم', icon: 'Crescent',
+    en: { title: 'Fasting', note: 'You finished the fasting unit' } },
+  { id: 'unit-hajj', title: 'الحج', note: 'أتممتَ الأركان الخمسة كلّها', icon: 'Sparkle',
+    en: { title: 'Hajj', note: 'You finished all five pillars' } },
+  { id: 'curious', title: 'سائلٌ فَطِن', note: 'سألتَ سراجًا أوّل سؤال', icon: 'Crescent',
+    en: { title: 'Curious mind', note: 'You asked Siraj your first question' } },
 ]
+
+/** achievements that no longer exist, dropped from saved progress so the counts stay true */
+export const RETIRED_ACHIEVEMENTS = ['full-lamp']
+
+export function achievementText(a: Achievement, lang: Lang): { title: string; note: string } {
+  return lang === 'en' ? a.en : { title: a.title, note: a.note }
+}
 
 export function achievementById(id: string) {
   return ACHIEVEMENTS.find((a) => a.id === id)
@@ -180,7 +171,6 @@ export interface LessonOutcome {
   xp: number
   total: number
   correct: number
-  oilLost: number
   seconds: number
 }
 
@@ -231,7 +221,6 @@ export function applyLesson(p: Progress, o: LessonOutcome): ApplyResult {
   }
   if (Object.keys(next.completed).length === 1) add('first-step')
   if (accuracy === 1) add('flawless')
-  if (o.oilLost === 0) add('full-lamp')
   if (streak >= 3) add('streak-3')
 
   for (const [unitId, achId] of [

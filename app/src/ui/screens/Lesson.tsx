@@ -3,13 +3,13 @@ import { AnimatePresence, m as motion } from 'framer-motion'
 import type { Card, CardArt, Lesson as LessonT, PrayerPose } from '../../core/types'
 import type { Answer } from '../../core/engine/grading'
 import { correctAnswerText, isCorrect } from '../../core/engine/grading'
-import type { LessonOutcome } from '../../core/engine/progress'
+import { XP_PER_CORRECT, type LessonOutcome } from '../../core/engine/progress'
 import { getLesson } from '../../core/content/lessons'
-import { UNIT_OF } from '../../core/content/path'
-import { useApp, useCalmMotion } from '../state'
-import { Icon, Sparkle, Droplet, Star, Crescent } from '../icons/SirajIcons'
+import { UNIT_OF, unitText } from '../../core/content/path'
+import { useApp, useCalmMotion, useT } from '../state'
+import { Icon, Sparkle, Star, Crescent } from '../icons/SirajIcons'
 import { Button, IconButton } from '../components/Button'
-import { ProgressBar } from '../components/Bars'
+import { Counter, ProgressBar } from '../components/Bars'
 import { Siraj } from '../components/Siraj'
 import { Burst } from '../components/Burst'
 import { ExerciseView, HostMood } from '../components/Exercises'
@@ -18,7 +18,6 @@ import type { Mood } from '../components/Siraj'
 import { AskSiraj } from './AskSiraj'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
-import { toAr } from './Home'
 
 type Phase = 'warmup' | 'learn' | 'practice' | 'ask'
 
@@ -30,10 +29,15 @@ export function Lesson({
   onExit: () => void
   onDone: (o: LessonOutcome, lesson: LessonT) => void
 }) {
-  const lesson = getLesson(lessonId)!
+  const { progress } = useApp()
+  const t = useT()
+  const lang = progress.language
+  const lesson = getLesson(lessonId, lang)!
   const unit = UNIT_OF.get(nodeId)
   const calm = useCalmMotion()
-  const { progress, dispatch } = useApp()
+  /* Arabic pages turn to the left, English pages to the right: the next
+     card waits on the side the reader is heading. +1 in RTL, -1 in LTR. */
+  const side = lang === 'en' ? -1 : 1
 
   const [phase, setPhase] = useState<Phase>('warmup')
   const [cardAt, setCardAt] = useState(0)
@@ -43,9 +47,11 @@ export function Lesson({
   const [answer, setAnswer] = useState<Answer | null>(null)
   const [verdict, setVerdict] = useState<null | 'good' | 'bad'>(null)
   const [combo, setCombo] = useState(0)
-  const [oilPulse, setOilPulse] = useState(false)
+  // the XP this lesson has earned so far: each right answer, then the
+  // lesson's own XP once the exercises are done. It ends on what the result shows.
+  const [earned, setEarned] = useState(0)
+  const [xpPop, setXpPop] = useState(0)
   const correctCount = useRef(0)
-  const oilLost = useRef(0)
   const started = useRef(Date.now())
 
   // the scene goes on the second fact card: quotes and lists have their own layout
@@ -115,7 +121,7 @@ export function Lesson({
     d.lt = e.timeStamp
     d.dx = dx
     // nothing before the first card: the deck gives a little, then resists
-    const off = dx < 0 && cardAt === 0 ? dx * 0.25 : dx
+    const off = dx * side < 0 && cardAt === 0 ? dx * 0.25 : dx
     d.el.style.transform = `translate3d(${off}px,0,0)`
   }
   const settleDeck = (el: HTMLElement) => {
@@ -127,8 +133,8 @@ export function Lesson({
     if (!d || d.id !== e.pointerId) return
     drag.current = null
     if (d.axis !== 'x') return
-    const fwd = d.dx > 0
-    const flung = Math.abs(d.v) > 0.45 && Math.abs(d.dx) > 24 && d.v > 0 === fwd
+    const fwd = d.dx * side > 0
+    const flung = Math.abs(d.v) > 0.45 && Math.abs(d.dx) > 24 && d.v * side > 0 === fwd
     const far = Math.abs(d.dx) > d.el.offsetWidth * 0.22
     if (e.type === 'pointercancel' || !(flung || far) || (!fwd && cardAt === 0)) {
       settleDeck(d.el)
@@ -152,16 +158,14 @@ export function Lesson({
       correctCount.current += 1
       const c = combo + 1
       setCombo(c)
+      setEarned((x) => x + XP_PER_CORRECT)
+      setXpPop((k) => k + 1)
       sfx.correct(c - 1)
       haptic('correct')
     } else {
       setCombo(0)
-      oilLost.current += 1
       sfx.wrong()
       haptic('wrong')
-      setOilPulse(true)
-      setTimeout(() => setOilPulse(false), 520)
-      dispatch({ type: 'set', progress: { ...progress, oil: Math.max(0, progress.oil - 1), oilUpdatedAt: Date.now() } })
     }
     setVerdict(ok ? 'good' : 'bad')
   }
@@ -170,17 +174,22 @@ export function Lesson({
     setVerdict(null)
     setAnswer(null)
     if (exAt < total - 1) setExAt(exAt + 1)
-    else { sfx.swoosh(); setPhase('ask') }
+    else {
+      sfx.swoosh()
+      setPhase('ask')
+      // the exercises are done: the lesson's own XP joins the count
+      setEarned((x) => x + lesson.xp)
+      setXpPop((k) => k + 1)
+    }
   }
 
   const finish = () => {
     onDone(
       {
         nodeId,
-        xp: lesson.xp + Math.round((correctCount.current / Math.max(1, total)) * 10),
+        xp: lesson.xp + correctCount.current * XP_PER_CORRECT,
         total,
         correct: correctCount.current,
-        oilLost: oilLost.current,
         seconds: Math.max(1, Math.round((Date.now() - started.current) / 1000)),
       },
       lesson,
@@ -195,6 +204,8 @@ export function Lesson({
   /* Enter does whatever the one big button would, so a keyboard learner can
      run a whole lesson without the mouse. Not while typing to Siraj. */
   const primary = useRef<() => void>(() => {})
+  const sideRef = useRef(side)
+  sideRef.current = side
   const cardKey = useRef<(d: number) => void>(() => {})
   cardKey.current = (d) => {
     if (phase !== 'learn') return
@@ -210,9 +221,10 @@ export function Lesson({
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
-      // arrows point at the card to go to: in RTL the next one waits on the left
+      // arrows point at the card to go to: in RTL the next one waits on the
+      // left, in English on the right
       if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.repeat) {
-        cardKey.current(e.key === 'ArrowLeft' ? 1 : -1)
+        cardKey.current((e.key === 'ArrowLeft' ? 1 : -1) * sideRef.current)
         return
       }
       if (e.key !== 'Enter' || e.repeat || e.isComposing) return
@@ -247,25 +259,26 @@ export function Lesson({
       </AnimatePresence>
 
       <div className="lesson__top">
-        <IconButton label="إغلاق" onClick={onExit}>
+        <IconButton label={t.close} onClick={onExit}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
             <path d="M6 6 L18 18 M18 6 L6 18" />
           </svg>
         </IconButton>
         <ProgressBar value={progressValue} tone={phase === 'learn' ? 'gold' : 'good'} />
-        <div className={`lesson__oil${progress.oil <= 1 ? ' is-low' : ''}${oilPulse ? ' is-draining' : ''}`}>
-          <Droplet size={21} />
-          <span className="num">{progress.oil}</span>
+        {/* where the oil drop was: the XP this lesson has earned, rising with each right answer */}
+        <div className="lesson__xp" title={t.lessonXp} aria-label={`${t.lessonXp}: ${earned}`}>
+          <span key={xpPop} className={xpPop ? 'lesson__xpstar is-bump' : 'lesson__xpstar'}><Star size={21} /></span>
+          <Counter value={earned} duration={500} />
         </div>
       </div>
 
       <div className="lesson__body">
         {/* custom reaches the card already leaving, so it exits the way the
             learner is going now, not the way they came in */}
-        <AnimatePresence mode="wait" initial={false} custom={dir}>
+        <AnimatePresence mode="wait" initial={false} custom={dir * side}>
           {/* ---------------- تعلّم ---------------- */}
           {phase === 'learn' && (
-            <motion.div key={`c${cardAt}`} className="cardstage" custom={dir} variants={cardTurn}
+            <motion.div key={`c${cardAt}`} className="cardstage" custom={dir * side} variants={cardTurn}
               initial="enter" animate="shown" exit="leave"
               transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
               onPointerDown={onCardDown} onPointerMove={onCardMove} onPointerUp={onCardUp}
@@ -284,10 +297,10 @@ export function Lesson({
           {/* ---------------- رسّخ ---------------- */}
           {phase === 'practice' && ex && (
             <motion.div key={`e${exAt}`} className="ex"
-              initial={{ opacity: 0, x: -34 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 34 }}
+              initial={{ opacity: 0, x: -34 * side }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 34 * side }}
               transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}>
               <span className="ex__kicker">
-                <Star size={13} /> تمرين {toAr(exAt + 1)} من {toAr(total)}
+                <Star size={13} /> {t.exerciseOf(exAt + 1, total)}
               </span>
               <HostMood.Provider value={hostMood}>
                 <ExerciseView
@@ -307,7 +320,7 @@ export function Lesson({
             <motion.div key="ask" className="ask"
               initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.32, ease: [0.23, 1, 0.32, 1] }}>
-              <AskSiraj lesson={lesson} unitTitle={unit?.title ?? ''} onFinish={finish} />
+              <AskSiraj lesson={lesson} unitTitle={unit ? unitText(unit, lang).title : ''} onFinish={finish} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -320,7 +333,7 @@ export function Lesson({
               animate={{ y: 0, opacity: 1, rotate: 0 }}
               exit={{ y: -30, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 460, damping: 22 }}>
-              <Sparkle size={15} /> {toAr(combo)} متتالية
+              <Sparkle size={15} /> {t.inARow(combo)}
             </motion.div>
           )}
         </AnimatePresence>
@@ -340,16 +353,16 @@ export function Lesson({
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round"><path d="M6 6 L18 18 M18 6 L6 18" /></svg>
                   )}
                 </span>
-                <span className="verdict__title">{verdict === 'good' ? pick(GOOD, exAt) : 'ليست بعيدة'}</span>
+                <span className="verdict__title">{verdict === 'good' ? pick(t.good, exAt) : t.notQuite}</span>
               </div>
               <p className="verdict__text">
                 {verdict === 'bad' && (
-                  <>الصحيح: <span className="verdict__answer">{correctAnswerText(ex!)}</span><br /></>
+                  <>{t.correctIs}<span className="verdict__answer">{correctAnswerText(ex!, lang)}</span><br /></>
                 )}
                 {'explain' in ex! && ex!.explain}
               </p>
               <Button block tone={verdict === 'good' ? 'good' : 'danger'} onClick={advance}>
-                {exAt < total - 1 ? 'متابعة' : 'أنهِ التمارين'}
+                {exAt < total - 1 ? t.continue : t.finishExercises}
               </Button>
             </motion.div>
           )}
@@ -361,8 +374,10 @@ export function Lesson({
         <div className="lesson__foot">
           {phase === 'learn' ? (
             <div className="learnbar">
-              {/* back: a small square beside the big button, first in RTL so it sits on the right */}
-              <button className="backbtn" aria-label="البطاقة السابقة" disabled={cardAt === 0}
+              {/* back: a small square beside the big button, first in RTL so it sits on
+                  the right. It is the same in English: the button keeps its place, and
+                  its chevron keeps pointing out toward the edge it sits on. */}
+              <button className="backbtn" aria-label={t.prevCard} disabled={cardAt === 0}
                 onPointerDown={() => { primeAudio(); sfx.tap(); haptic('tap') }} onClick={prevCard}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
                   strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
@@ -370,15 +385,15 @@ export function Lesson({
                 </svg>
               </button>
               <Button block tone="gold" onClick={nextCard}>
-                {cardAt < lesson.cards.length - 1 ? 'التالي' : 'لنتدرّب'}
+                {cardAt < lesson.cards.length - 1 ? t.next : t.practise}
               </Button>
             </div>
           ) : ex && (ex.kind === 'match' || ex.kind === 'sort') ? (
             <p style={{ textAlign: 'center', color: 'var(--ink-3)', fontWeight: 700, fontSize: '.9rem', padding: '14px 0' }}>
-              {ex.kind === 'match' ? 'اختر من كل عمودٍ ما يقابله' : 'لكل بطاقة: اضغط على الجواب الصحيح'}
+              {ex.kind === 'match' ? t.matchHint : t.sortHint}
             </p>
           ) : (
-            <Button block disabled={!canCheck} onClick={check}>تحقّق</Button>
+            <Button block disabled={!canCheck} onClick={check}>{t.check}</Button>
           )}
         </div>
       )}
@@ -388,15 +403,15 @@ export function Lesson({
 
 /* RTL: going forward, the card leaves to the right and the next one comes
    in from the left; back reverses both, so the motion always matches the
-   finger. The exit is quicker and eases in, so a flicked card keeps its
-   speed on the way out. */
+   finger. English passes the direction in mirrored (dir * side), so there
+   the next card comes in from the right. The exit is quicker and eases in,
+   so a flicked card keeps its speed on the way out. */
 const cardTurn = {
   enter: (d: number) => ({ opacity: 0, x: -40 * d }),
   shown: { opacity: 1, x: 0 },
   leave: (d: number) => ({ opacity: 0, x: 48 * d, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] as const } }),
 }
 
-const GOOD = ['أحسنت!', 'ممتاز!', 'بالضبط!', 'رائع!', 'أصبتَ!', 'تمامًا!']
 const pick = (a: string[], i: number) => a[i % a.length]
 
 const POSE_DIR = `${import.meta.env.BASE_URL}img/salah/`
@@ -408,6 +423,7 @@ function isPose(art: CardArt | undefined): art is { pose: PrayerPose } {
 /* ---------------- a teaching card ---------------- */
 
 function CardView({ card, unitId, withScene }: { card: Card; unitId: string; withScene: boolean }) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   useEffect(() => setOpen(false), [card.id])
 
@@ -415,15 +431,21 @@ function CardView({ card, unitId, withScene }: { card: Card; unitId: string; wit
     return (
       <div className="kcard">
         <span className="kcard__kicker">
-          {card.of === 'ayah' ? <><Crescent size={13} /> من القرآن</> : <><Star size={13} /> من السنّة</>}
+          {card.of === 'ayah' ? <><Crescent size={13} /> {t.fromQuran}</> : <><Star size={13} /> {t.fromSunnah}</>}
         </span>
         <motion.div className={`quote quote--${card.of}`}
           initial={{ opacity: 0, scale: 0.94, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}>
           <span className="quote__corner quote__corner--a"><Sparkle size={17} /></span>
           <span className="quote__corner quote__corner--b"><Sparkle size={17} /></span>
+          {/* a translation shows the Arabic it translates above it, and links its source */}
+          {card.original && <p className="quote__original" lang="ar" dir="rtl">{card.original}</p>}
           <p className="quote__text">{card.text}</p>
-          <p className="quote__src">﴿ {card.source} ﴾</p>
+          {card.url ? (
+            <a className="quote__src quote__src--link" href={card.url} target="_blank" rel="noreferrer noopener">{card.source}</a>
+          ) : (
+            <p className="quote__src">﴿ {card.source} ﴾</p>
+          )}
         </motion.div>
         {card.note && <p className="quote__note" style={{ textAlign: 'center' }}>{card.note}</p>}
       </div>
@@ -507,7 +529,7 @@ function CardView({ card, unitId, withScene }: { card: Card; unitId: string; wit
           <motion.p className="termhint" aria-hidden={open} initial={false}
             animate={{ opacity: open ? 0 : 1 }}
             transition={{ duration: 0.18, delay: open ? 0 : 0.1 }}>
-            اضغط على الكلمة المُظلّلة لمعناها
+            {t.termHint}
           </motion.p>
         </div>
       )}
@@ -523,8 +545,9 @@ function CardView({ card, unitId, withScene }: { card: Card; unitId: string; wit
   }
 }
 
-/* Arabic letters and harakat, minus Arabic punctuation (، ؛ ؟ ٪…) */
-const WORD_CHAR = /[\u0621-\u065F\u0670-\u06D3\u06D5-\u06ED]/
+/* Arabic letters and harakat, minus Arabic punctuation (، ؛ ؟ ٪…), and
+   the Latin letters an English term is spelled with */
+const WORD_CHAR = /[\u0621-\u065F\u0670-\u06D3\u06D5-\u06EDA-Za-z]/
 
 /** Split around the term, stretched to the whole written word. If the highlight
  * stopped at «مُسلِم» inside «مُسلِمًا», the ending would sit in another element

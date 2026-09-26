@@ -27,7 +27,11 @@ Built for a hackathon on the track
 - **اسأل سراج.** After each lesson, ask the thing you did not understand. The
   assistant answers **only by quoting four trusted sources** and refuses to
   improvise or stray off topic.
-- **Oil, not hearts.** Siraj is a lamp. A wrong answer costs a drop of oil.
+- **No lives to lose.** A wrong answer costs only the XP it would have earned;
+  the lesson shows its XP climbing as you go.
+- **Arabic and English (beta).** A first visit opens in the device's language.
+  The layout stays as it is; English text reads left to right. English Quran
+  and hadith come from quran.com and sunnah.com.
 - **No audio files.** Every sound is synthesised in the browser. The correct
   answer chime rises in pitch with your streak.
 

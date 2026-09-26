@@ -1,4 +1,4 @@
-import type { Exercise } from '../types'
+import type { Exercise, Lang } from '../types'
 
 export type Answer =
   | { kind: 'choice'; optionId: string }
@@ -36,24 +36,26 @@ export function explanationFor(ex: Exercise): string | undefined {
   return 'explain' in ex ? ex.explain : undefined
 }
 
-/** the right answer, rendered as readable Arabic, for the "not quite" banner */
-export function correctAnswerText(ex: Exercise): string {
+/** the right answer, rendered as readable text, for the "not quite" banner */
+export function correctAnswerText(ex: Exercise, lang: Lang = 'ar'): string {
+  const en = lang === 'en'
+  const comma = en ? ', ' : '، '
   switch (ex.kind) {
     case 'choice':
       return ex.options.find((o) => o.id === ex.answerId)?.label ?? ''
     case 'boolean':
-      return ex.answer ? 'صح' : 'خطأ'
+      return ex.answer ? (en ? 'True' : 'صح') : en ? 'False' : 'خطأ'
     case 'order':
       return ex.answer
         .map((id) => ex.items.find((i) => i.id === id)?.label ?? '')
-        .join(' ← ')
+        .join(en ? ' → ' : ' ← ')
     case 'match':
-      return ex.pairs.map((p) => `${p.left}: ${p.right}`).join('، ')
+      return ex.pairs.map((p) => `${p.left}: ${p.right}`).join(comma)
     case 'sort':
       return ex.buckets
         .map(
           (b) =>
-            `${b.label}: ${ex.items.filter((i) => i.bucket === b.id).map((i) => i.label).join('، ')}`,
+            `${b.label}: ${ex.items.filter((i) => i.bucket === b.id).map((i) => i.label).join(comma)}`,
         )
         .join(' • ')
   }

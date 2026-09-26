@@ -23,7 +23,11 @@ const ENDPOINT = import.meta.env.VITE_CHAT_ENDPOINT || '/api/chat'
 
 /* The suggested-question pills answer from bundled text, so the feature
    still demonstrates itself with no server and no network. */
-const OFFLINE = 'المحادثة المباشرة غير متاحة الآن، لكن الأسئلة المقترحة أعلاه تعمل دون اتصال.'
+const OFFLINE = {
+  ar: 'المحادثة المباشرة غير متاحة الآن، لكن الأسئلة المقترحة أعلاه تعمل دون اتصال.',
+  en: 'Live chat is not available right now, but the suggested questions above work offline.',
+}
+const FAILED = { ar: 'حدث خطأ.', en: 'Something went wrong.' }
 
 export interface StreamHandlers {
   /** what Siraj is doing: searching the sources, or writing the reply */
@@ -38,6 +42,7 @@ export interface StreamHandlers {
 export async function askSirajStream(
   question: string, context: AskContext, h: StreamHandlers = {},
 ): Promise<AskResult> {
+  const lang = context.lang ?? 'ar'
   let res: Response
   try {
     res = await fetch(ENDPOINT, {
@@ -46,15 +51,15 @@ export async function askSirajStream(
       body: JSON.stringify({ question, context, stream: true }),
     })
   } catch {
-    return { ok: false, code: 'network', message: OFFLINE }
+    return { ok: false, code: 'network', message: OFFLINE[lang] }
   }
 
   const type = res.headers.get('content-type') ?? ''
   if (!type.includes('ndjson')) {
     const data = await res.json().catch(() => null)
-    if (!data) return { ok: false, code: 'network', message: OFFLINE }
+    if (!data) return { ok: false, code: 'network', message: OFFLINE[lang] }
     if (data.ok) return { ok: true, answer: data.answer, sources: data.sources ?? [] }
-    return { ok: false, code: data.code ?? 'upstream', message: data.message ?? 'حدث خطأ.' }
+    return { ok: false, code: data.code ?? 'upstream', message: data.message ?? FAILED[lang] }
   }
 
   let text = ''
@@ -66,7 +71,7 @@ export async function askSirajStream(
     if (ev.t === 'status' && ev.s) h.onStatus?.(ev.s)
     else if (ev.t === 'delta' && ev.d) { text += ev.d; h.onText?.(stripLinks(text)) }
     else if (ev.t === 'done') result = { ok: true, answer: ev.answer, sources: ev.sources ?? [] }
-    else if (ev.t === 'error') result = { ok: false, code: ev.code ?? 'upstream', message: ev.message ?? 'حدث خطأ.' }
+    else if (ev.t === 'error') result = { ok: false, code: ev.code ?? 'upstream', message: ev.message ?? FAILED[lang] }
   }
 
   try {
@@ -94,10 +99,11 @@ export async function askSirajStream(
 
   if (result) return result
   if (text.trim()) return { ok: true, answer: stripLinks(text).trim(), sources: [] }
-  return { ok: false, code: 'network', message: OFFLINE }
+  return { ok: false, code: 'network', message: OFFLINE[lang] }
 }
 
 export async function askSiraj(question: string, context: AskContext): Promise<AskResult> {
+  const lang = context.lang ?? 'ar'
   try {
     const res = await fetch(ENDPOINT, {
       method: 'POST',
@@ -106,11 +112,11 @@ export async function askSiraj(question: string, context: AskContext): Promise<A
     })
     const data = await res.json().catch(() => null)
     if (!data) {
-      return { ok: false, code: 'network', message: OFFLINE }
+      return { ok: false, code: 'network', message: OFFLINE[lang] }
     }
     if (data.ok) return { ok: true, answer: data.answer, sources: data.sources ?? [] }
-    return { ok: false, code: data.code ?? 'upstream', message: data.message ?? 'حدث خطأ.' }
+    return { ok: false, code: data.code ?? 'upstream', message: data.message ?? FAILED[lang] }
   } catch {
-    return { ok: false, code: 'network', message: OFFLINE }
+    return { ok: false, code: 'network', message: OFFLINE[lang] }
   }
 }

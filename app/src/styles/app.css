@@ -197,11 +197,31 @@
 .stat__icon{display:grid;place-items:center;will-change:transform}
 .stat--flame{color:var(--orange)}
 .stat--star {color:var(--yellow-deep)}
-.stat--oil  {color:var(--info)}
-.stat--oil:active{transform:scale(.94)}
 .stat__val{color:inherit;font-weight:900}
 .stat--star .stat__val{color:color-mix(in srgb,var(--yellow-deep) 80%,var(--maroon))}
-.stat--oil  .stat__val{color:var(--info-deep)}
+/* the language, where the oil drop was: the flag of the one in use */
+.statlang{position:relative;display:flex}
+.stat--lang:active{transform:scale(.94)}
+.stat__flag{display:grid;border-radius:5px;overflow:hidden;box-shadow:0 0 0 1.5px rgba(69,7,5,.12)}
+.stat--lang.is-open .stat__flag{box-shadow:0 0 0 2.5px var(--orange)}
+.langpop{
+  position:absolute;top:calc(100% + 8px);inset-inline-end:0;z-index:30;
+  width:236px;padding:8px;
+  display:flex;flex-direction:column;gap:6px;
+  background:var(--paper);border:2px solid var(--paper-edge);border-radius:var(--r-lg);
+  box-shadow:var(--lift-2,0 10px 30px rgba(69,7,5,.18));
+  transform-origin:top left;
+}
+.langpop__item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 12px;border-radius:var(--r);
+  font-weight:800;font-size:.95rem;color:var(--ink);text-align:start;
+  border:2px solid transparent;
+  transition:background 160ms,border-color 160ms;
+}
+.langpop__item:active{transform:scale(.98)}
+.langpop__item.is-on{background:var(--orange-soft);border-color:var(--orange);color:var(--orange-deep)}
+.langpop__note{padding:4px 6px 2px;font-size:.74rem;font-weight:650;line-height:1.5;color:var(--ink-3)}
 .stat.is-idle{color:var(--inert-deep)}
 .stat.is-idle .stat__val{color:var(--ink-3)}
 @media (max-width:360px){
@@ -356,6 +376,14 @@
 .lang__flag{flex:0 0 auto;border-radius:5px;overflow:hidden;box-shadow:0 0 0 1.5px rgba(69,7,5,.12)}
 .lang__soon{margin-inline-start:auto;font-size:.72rem;font-weight:800;color:var(--ink-3);
   background:var(--bg-sunk);padding:3px 9px;border-radius:var(--r-pill)}
+/* English is ready but unreviewed */
+.lang__beta{margin-inline-start:auto;font-size:.66rem;font-weight:900;letter-spacing:.08em;
+  color:var(--orange-deep);background:var(--orange-soft);padding:3px 8px;border-radius:var(--r-pill);
+  direction:ltr;unicode-bidi:isolate}
+.seg__b .lang__beta{margin-inline-start:6px}
+.lang[aria-disabled="true"]{opacity:.62}
+/* a line the language slide moves: a block, so it can travel across its bubble */
+.slidetext{display:block}
 
 /* =========================================================
    7. THE STAIR - الدرج
@@ -880,12 +908,15 @@
   padding:calc(12px + var(--safe-t)) var(--gutter) 12px;
   flex:0 0 auto;
 }
-.lesson__oil{display:flex;align-items:center;gap:4px;color:var(--info);font-weight:800}
-.lesson__oil.is-low{color:var(--bad)}
-@keyframes oil-drain{
+/* the XP this lesson has earned, where the oil drop was */
+.lesson__xp{display:flex;align-items:center;gap:4px;min-width:44px;color:var(--yellow-deep);font-weight:900}
+.lesson__xp .num{color:color-mix(in srgb,var(--yellow-deep) 80%,var(--maroon))}
+.lesson__xpstar{display:grid}
+@keyframes xp-bump{
   0%{transform:scale(1)}35%{transform:scale(1.5) rotate(-14deg)}100%{transform:scale(1)}
 }
-.lesson__oil.is-draining{animation:oil-drain .5s var(--e-back)}
+.lesson__xpstar.is-bump{animation:xp-bump .5s var(--e-back)}
+.calm .lesson__xpstar.is-bump{animation:none}
 
 .lesson__body{flex:1;min-height:0;position:relative;overflow:hidden}
 .lesson__foot{
@@ -988,6 +1019,13 @@
 .quote__corner--a{top:10px;inset-inline-start:12px}
 .quote__corner--b{bottom:10px;inset-inline-end:12px}
 .quote__note{margin-top:12px;font-size:.88rem;color:var(--ink-2);font-weight:600}
+/* a translated quote: the Arabic it translates, above it */
+.quote__original{
+  font-family:var(--font-display);font-size:1.02rem;font-weight:700;line-height:2;
+  color:color-mix(in srgb,var(--maroon) 62%,transparent);
+  margin-bottom:10px;padding-bottom:10px;border-bottom:1.5px solid var(--cream-deep);
+}
+a.quote__src--link{display:inline-block;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
 
 .klist{display:flex;flex-direction:column;gap:9px}
 .klist__row{
@@ -1178,7 +1216,7 @@
 
 /* the streak flag that flies in on a run of right answers */
 .combo{
-  position:absolute;top:-2px;inset-inline-end:var(--gutter);z-index:12;
+  position:absolute;top:10px;inset-inline-end:var(--gutter);z-index:12;
   display:flex;align-items:center;gap:6px;
   padding:6px 14px;border-radius:var(--r-pill);
   background:var(--orange);color:#fff;font-weight:900;font-size:.82rem;
@@ -1440,6 +1478,7 @@
   font-size:.72rem;font-weight:900;letter-spacing:.09em;color:var(--ink-3);
   margin-bottom:9px;
 }
+.section__note{margin-top:8px;padding-inline:4px;font-size:.76rem;font-weight:650;line-height:1.55;color:var(--ink-3)}
 
 .card{
   background:var(--paper);border:2px solid var(--paper-edge);
@@ -1798,6 +1837,9 @@
   .unitcard{left:0;right:0;margin-inline:auto;width:min(600px,calc(100% - 48px));top:18px}
   .stair{padding-top:132px}
   .path-unit{max-width:580px}
+  /* the whole road, scenery and Siraj drawn larger to fill the column;
+     Home.tsx fits --road-zoom to the column's size */
+  .stairwrap{zoom:var(--road-zoom,1)}
   .sky__clouds{background-size:520px auto;background-repeat:repeat}
   .sky__sun{width:520px;height:520px;top:-180px}
 
@@ -1895,3 +1937,31 @@
 /* the banner swaps colour as units pass under a flick; easing box-shadow
    and colour would run on the main thread in the middle of the scroll */
 .lite .unitcard{transition:none}
+
+/* =========================================================
+   16. ENGLISH: LTR text in an RTL frame
+   The document keeps dir="rtl" in every language, so the layout never
+   mirrors: the sidebar, the nav, every button stays where it is. What
+   turns is the text. With lang="en" each element resolves its own
+   paragraph direction from its first strong letter (plaintext), so
+   English reads and aligns left to right, while an Arabic line inside
+   it (a quote's original) still reads right to left. It changes no
+   flex order and no logical side, which is why it can be this broad.
+   Zero specificity, so .num's own isolate still wins.
+   ========================================================= */
+
+:where(html[lang="en"]) :where(body *, body *::before, body *::after){unicode-bidi:plaintext}
+/* a field has no text to judge by until something is typed */
+html[lang="en"] :is(input,textarea){direction:ltr}
+/* small labels read as labels in English */
+html[lang="en"] .section__label{text-transform:uppercase}
+/* the translation is longer than the Arabic it carries: the UI face, set smaller */
+html[lang="en"] .quote .quote__text{font-family:var(--font-ui);font-size:1.02rem;font-weight:700;line-height:1.65}
+@media (min-width:700px){
+  html[lang="en"] .quote .quote__text{font-size:1.22rem}
+}
+/* a label that heads a card sits where its text starts, icon first */
+html[lang="en"] :is(.kcard__kicker,.ex__kicker){align-self:flex-end;direction:ltr}
+html[lang="en"] .verdict__head{direction:ltr}
+/* "0 · The Beginning", number first, as English reads it */
+html[lang="en"] .path-unit__caption{direction:ltr}

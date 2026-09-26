@@ -1,12 +1,14 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { AnimatePresence, m as motion } from 'framer-motion'
-import { UNIT_OF, unitById } from '../../core/content/path'
+import { UNIT_OF, unitById, unitText } from '../../core/content/path'
 import { getLesson } from '../../core/content/lessons'
 import type { PathNode, Progress, Unit } from '../../core/types'
 import {
   currentNodeId, isCompleted, isUnlocked, NODE_INDEX_SAFE,
 } from '../../core/engine/pathView'
-import { useApp, useCalmMotion, useDarkTheme } from '../state'
+import { useApp, useCalmMotion, useDarkTheme, useT } from '../state'
+import { ordinal, type Lang } from '../../core/i18n'
+import type { Strings } from '../strings'
 import { Icon, Star, Sparkle, Lantern, Droplet } from '../icons/SirajIcons'
 import { Siraj } from '../components/Siraj'
 import {
@@ -21,6 +23,14 @@ import { haptic } from '../../platform/haptics'
 
 /** how far a step sits off the centre line - a gentle wind, not a zigzag */
 const dx = (i: number) => Math.round(Math.sin(i * 0.82) * 34)
+
+/* On a wide screen the stair is drawn larger (zoom on .stairwrap, app.css
+   14), so the road fills the column instead of standing phone-sized in the
+   middle of it. The column is fitted to a phone-shaped view of the road:
+   the camera works inside the zoom, so its maths is untouched. */
+const ROAD_VIEW_H = 640
+const ROAD_VIEW_W = 600
+const ROAD_ZOOM_MAX = 1.9
 
 /* The unit opener is its own chunk. It is fetched the moment a crossing
    starts, and shown only once it has arrived, a few seconds later. */
@@ -42,6 +52,8 @@ export function Home({
   onCrossFrom?: () => void
 }) {
   const { progress, dispatch } = useApp()
+  const t = useT()
+  const lang = progress.language
   const calm = useCalmMotion()
   const lite = useLite()
   const phone = useLayout() === 'phone'
@@ -50,6 +62,7 @@ export function Home({
   const [reward, setReward] = useState<PathNode | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const sky = useRef<HTMLDivElement>(null)
+  const homeRef = useRef<HTMLDivElement>(null)
   const currentRef = useRef<HTMLDivElement>(null)
 
   const current = currentNodeId(progress)
@@ -62,6 +75,27 @@ export function Home({
   useLandscapeParallax(scroller, calm, { sky, onUnit: setShownUnit, lite, native })
 
   const [crossing, setCrossing] = useState<Crossing | null>(null)
+
+  // before the first focus below, so the step is found at its final size
+  useLayoutEffect(() => {
+    const home = homeRef.current
+    if (!home || phone) return
+    let zoom = ''
+    const fit = () => {
+      const z = Math.min(home.clientHeight / ROAD_VIEW_H, home.clientWidth / ROAD_VIEW_W)
+      const next = Math.min(ROAD_ZOOM_MAX, Math.max(1, z)).toFixed(2)
+      if (next === zoom) return
+      const first = !zoom
+      zoom = next
+      home.style.setProperty('--road-zoom', next)
+      // a new zoom moves the road under the camera: stand at the current step again
+      if (!first) focusStep(scroller.current, currentRef.current)
+    }
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(home)
+    return () => { observer.disconnect(); home.style.removeProperty('--road-zoom') }
+  }, [phone])
   const [lit, setLit] = useState<string | null>(null)
   const [arrived, setArrived] = useState(0)
   const lastCurrent = useRef(current)
@@ -172,21 +206,21 @@ export function Home({
   const unitDone = unit.nodes.filter((n) => isCompleted(progress, n.id)).length
 
   return (
-    <div className={`home${native ? ' home--native' : ''}`}>
+    <div className={`home${native ? ' home--native' : ''}`} ref={homeRef}>
       <PathSky skyRef={sky} />
 
       <Stair scroller={scroller} currentRef={currentRef} progress={progress} current={current} sirajAt={sirajAt}
-        celebrate={celebrate ?? lit} onOpen={openNode} flat={flat} native={native} dark={dark} />
+        celebrate={celebrate ?? lit} onOpen={openNode} flat={flat} native={native} dark={dark} t={t} lang={lang} />
 
       {/* nothing on the stair takes a tap while the camera is climbing */}
       {crossing && crossing.phase !== 'open' && <div className="crossing-veil" aria-hidden />}
 
       <div key={arrived} className={`unitcard unitcard--${unit.tone}${arrived ? ' unitcard--arrive' : ''}`}>
         <div className="unitcard__main">
-          <div className="unitcard__kicker">الوحدة {toAr(unit.index + 1)} · {unit.subtitle}</div>
-          <div className="unitcard__title">{unit.title}</div>
+          <div className="unitcard__kicker">{t.unitKicker(unit.index + 1, unitText(unit, lang).subtitle)}</div>
+          <div className="unitcard__title">{unitText(unit, lang).title}</div>
         </div>
-        <div className="unitcard__side" aria-label={`${unitDone} من ${unit.nodes.length}`}>
+        <div className="unitcard__side" aria-label={t.outOf(unitDone, unit.nodes.length)}>
           <Icon name={unit.icon} size={24} />
           <span className="num">{unitDone}/{unit.nodes.length}</span>
         </div>
@@ -204,8 +238,8 @@ export function Home({
             transition={{ type: 'spring', stiffness: 360, damping: 18 }}>
             {!calm && <Burst count={28} flavour="gold" spread={180} />}
             <span className="reward-pop__icon"><Sparkle size={38} /></span>
-            <strong>مكافأة الطريق</strong>
-            <span className="reward-pop__xp"><span className="num">+{reward.kind === 'trophy' ? 60 : 30}</span> نقطة</span>
+            <strong>{t.roadReward}</strong>
+            <span className="reward-pop__xp"><span className="num">+{reward.kind === 'trophy' ? 60 : 30}</span> {t.points}</span>
           </motion.div>
         )}
         {picked && (
@@ -223,7 +257,7 @@ export function Home({
 /* ---------------- the stair itself ----------------
    Memoised: the unit banner changes as you scroll, and that must not
    re-render thirty steps in the middle of a flick. */
-const Stair = memo(function Stair({ scroller, currentRef, progress, current, sirajAt, celebrate, onOpen, flat, native, dark }: {
+const Stair = memo(function Stair({ scroller, currentRef, progress, current, sirajAt, celebrate, onOpen, flat, native, dark, t, lang }: {
   scroller: RefObject<HTMLDivElement | null>
   currentRef: RefObject<HTMLDivElement | null>
   progress: Progress
@@ -235,23 +269,25 @@ const Stair = memo(function Stair({ scroller, currentRef, progress, current, sir
   flat: boolean
   native: boolean
   dark: boolean
+  t: Strings
+  lang: Lang
 }) {
   return (
     <div className={`stairwrap scroll${native ? ' stairwrap--native' : ''}`} ref={scroller}>
       <div className="stage">
       <div className="stair">
         {LANDSCAPE_UNITS.map((landscapeUnit) => (
-          <section className="path-unit" key={landscapeUnit.id} data-unit={landscapeUnit.id} aria-label={landscapeUnit.title}>
+          <section className="path-unit" key={landscapeUnit.id} data-unit={landscapeUnit.id} aria-label={unitText(landscapeUnit, lang).title}>
             <PathLandscape unitId={landscapeUnit.id} flat={flat} dark={dark} />
             <div className="path-unit__caption" data-persp aria-hidden="true">
-              <span>{toAr(landscapeUnit.index)}</span>{landscapeUnit.title}
+              <span>{ordinal(landscapeUnit.index, lang)}</span>{unitText(landscapeUnit, lang).title}
             </div>
             {[...landscapeUnit.nodes].reverse().map((n) => {
               const i = NODE_INDEX_SAFE(n.id)
               const done = isCompleted(progress, n.id)
               const isCurrent = n.id === current
               const open = isUnlocked(progress, n.id)
-              const lesson = n.lessonId ? getLesson(n.lessonId) : undefined
+              const lesson = n.lessonId ? getLesson(n.lessonId, lang) : undefined
               const lighting = celebrate === n.id
               const rewardXp = n.kind === 'trophy' ? 60 : 30
 
@@ -284,7 +320,7 @@ const Stair = memo(function Stair({ scroller, currentRef, progress, current, sir
                     className="slab"
                     onClick={() => onOpen(n)}
                     disabled={!open || (done && n.kind !== 'lesson')}
-                    aria-label={lesson?.title ?? n.label ?? 'خطوة'}
+                    aria-label={lesson?.title ?? (n.kind === 'chest' ? t.chest : n.kind === 'trophy' ? t.trophy : t.step)}
                   >
                     <span className="slab__medal">
                       {n.kind === 'chest' ? (
@@ -300,7 +336,7 @@ const Stair = memo(function Stair({ scroller, currentRef, progress, current, sir
 
                     {n.kind !== 'lesson' && (
                       <span className="slab__reward">
-                        {done ? 'تم الاستلام' : <>مكافأة <b className="num">+{rewardXp}</b></>}
+                        {done ? t.claimed : <>{t.reward} <b className="num">+{rewardXp}</b></>}
                       </span>
                     )}
 
@@ -311,11 +347,11 @@ const Stair = memo(function Stair({ scroller, currentRef, progress, current, sir
                         ))}
                       </span>
                     )}
-                    {n.soon && <span className="slab__soon">قريبًا</span>}
+                    {n.soon && <span className="slab__soon">{t.soon}</span>}
                   </button>
 
                   {isCurrent && (
-                    <span className="step__cta">{n.kind === 'lesson' ? 'ابدأ' : 'افتح المكافأة'}</span>
+                    <span className="step__cta">{n.kind === 'lesson' ? t.start : t.openReward}</span>
                   )}
                   {n.id === sirajAt && (
                     <span className={`step__siraj${dx(i) < 0 ? ' step__siraj--flip' : ''}`}>
@@ -340,7 +376,9 @@ const Stair = memo(function Stair({ scroller, currentRef, progress, current, sir
 /* ---------------- the step preview ---------------- */
 
 function StepSheet({ node, onClose, onStart }: { node: PathNode; onClose: () => void; onStart: () => void }) {
-  const lesson = node.lessonId ? getLesson(node.lessonId) : undefined
+  const t = useT()
+  const { progress } = useApp()
+  const lesson = node.lessonId ? getLesson(node.lessonId, progress.language) : undefined
   const unit = UNIT_OF.get(node.id)
   const n = unit?.nodes.findIndex((x) => x.id === node.id) ?? 0
   const total = unit?.nodes.filter((x) => x.kind === 'lesson').length ?? 1
@@ -362,15 +400,15 @@ function StepSheet({ node, onClose, onStart }: { node: PathNode; onClose: () => 
           </span>
           <div style={{ flex: 1 }}>
             <div className="unitcard__kicker" style={{ color: 'var(--ink-3)' }}>
-              الدرس {toAr(n + 1)} من {toAr(total)}
+              {t.lessonOf(n + 1, total)}
             </div>
             <h2 className="sheet__title" style={{ marginBottom: 0 }}>{lesson?.title ?? node.label}</h2>
           </div>
         </div>
         <p style={{ color: 'var(--ink-2)', fontWeight: 650, fontSize: '.94rem', margin: '4px 0 16px' }}>
-          {lesson ? `${toAr(lesson.cards.length)} بطاقات تعلُّم، ثم ${toAr(lesson.exercises.length)} تمارين.` : ''}
+          {lesson ? t.lessonShape(lesson.cards.length, lesson.exercises.length) : ''}
         </p>
-        <Button block onClick={onStart}>ابدأ الدرس</Button>
+        <Button block onClick={onStart}>{t.startLesson}</Button>
       </motion.div>
     </>
   )

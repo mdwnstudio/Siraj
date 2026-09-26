@@ -1,13 +1,15 @@
-import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType } from 'react'
 import { AnimatePresence, LazyMotion, domAnimation, m as motion } from 'framer-motion'
 import type { Lesson as LessonT } from './core/types'
 import type { ApplyResult, LessonOutcome } from './core/engine/progress'
 import { PATH, UNIT_OF } from './core/content/path'
+import { loadLessons } from './core/content/lessons'
 import { AppProvider, useApp, useCalmMotion } from './ui/state'
 import { StatBar, NavBar, SideNav, type Tab } from './ui/components/Bars'
 import { Rail } from './ui/components/Rail'
 import { preloadSiraj } from './ui/components/Siraj'
 import { useLayout } from './ui/useLayout'
+import { APP_TEXT, slideText } from './ui/textSlide'
 import { Splash } from './ui/screens/Splash'
 import { Home } from './ui/screens/Home'
 
@@ -114,10 +116,23 @@ function Shell() {
     if (inApp) whenIdle(() => { void lessonChunk.load(); void resultChunk.load(); void pagesChunk.load(); preloadSiraj() })
   }, [inApp])
 
+  // an English learner's lessons are their own chunk: fetch them behind the splash
+  const lang = progress.language
+  useEffect(() => { void loadLessons(lang) }, [lang])
+
+  // switched from the flag in the top bar or from settings: the words on
+  // screen slide across to their new side (onboarding runs its own)
+  const shownLang = useRef(lang)
+  useLayoutEffect(() => {
+    if (shownLang.current === lang) return
+    shownLang.current = lang
+    if (scene.at === 'app' && !calm) slideText(document.querySelector('.app'), lang, APP_TEXT)
+  }, [lang])
+
   const afterSplash = useCallback(() => {
-    if (progress.onboarded) setScene({ at: 'app' })
+    if (progress.onboarded) void loadLessons(lang).then(() => setScene({ at: 'app' }))
     else whenLoaded(onboardingChunk, () => setScene({ at: 'onboarding' }))
-  }, [progress.onboarded])
+  }, [progress.onboarded, lang])
 
   // the stair is in the first download; every other tab waits for its chunk
   const goTab = useCallback((t: Tab) => {
@@ -158,7 +173,7 @@ function Shell() {
         {scene.at === 'onboarding' && (
           <motion.div key="ob" {...fade} transition={{ duration: 0.3 }} style={{ flex: 1, minHeight: 0 }}>
             <Suspense fallback={null}>
-              <Onboarding onDone={() => setScene({ at: 'app' })} />
+              <Onboarding onDone={() => void loadLessons(lang).then(() => setScene({ at: 'app' }))} />
             </Suspense>
           </motion.div>
         )}

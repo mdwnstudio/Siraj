@@ -9,6 +9,7 @@ import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
 import { Sparkle } from '../icons/SirajIcons'
 import { Siraj, type Mood } from './Siraj'
+import { useT } from '../state'
 
 /** how the host feels right now; the lesson owns it (thinking, cheering, sad) */
 export const HostMood = createContext<Mood>('idle')
@@ -85,6 +86,7 @@ function ChoiceEx({ ex, locked, onChange, revealed }: ExProps & { ex: ChoiceExer
 /* ---------------- صح أم خطأ ---------------- */
 
 function BooleanEx({ ex, locked, onChange, revealed }: ExProps & { ex: BooleanExercise }) {
+  const t = useT()
   const [sel, setSel] = useState<boolean | null>(null)
   useEffect(() => { setSel(null); onChange(null) }, [ex.id])
 
@@ -105,11 +107,11 @@ function BooleanEx({ ex, locked, onChange, revealed }: ExProps & { ex: BooleanEx
 
   return (
     <>
-      <Prompt>{ex.prompt ?? 'صحيح أم خطأ؟'}</Prompt>
+      <Prompt>{ex.prompt ?? t.trueOrFalse}</Prompt>
       <div className="ex__statement">{ex.statement}</div>
       <div className="bools">
-        {cell(true, 'صح', 'bool--yes')}
-        {cell(false, 'خطأ', 'bool--no')}
+        {cell(true, t.true, 'bool--yes')}
+        {cell(false, t.false, 'bool--no')}
       </div>
     </>
   )
@@ -118,6 +120,7 @@ function BooleanEx({ ex, locked, onChange, revealed }: ExProps & { ex: BooleanEx
 /* ---------------- رتّب الخطوات ---------------- */
 
 function OrderEx({ ex, locked, onChange, revealed }: ExProps & { ex: OrderExercise }) {
+  const t = useT()
   const [placed, setPlaced] = useState<string[]>([])
   useEffect(() => { setPlaced([]); onChange(null) }, [ex.id])
 
@@ -142,7 +145,7 @@ function OrderEx({ ex, locked, onChange, revealed }: ExProps & { ex: OrderExerci
     <>
       <Prompt>{ex.prompt}</Prompt>
 
-      <div className="slots" data-hint="اضغط على الخطوات بالترتيب">
+      <div className="slots" data-hint={t.orderHint}>
         <AnimatePresence initial={false}>
           {placed.map((id, i) => {
             const ok = revealed && ex.answer[i] === id
@@ -183,7 +186,7 @@ function OrderEx({ ex, locked, onChange, revealed }: ExProps & { ex: OrderExerci
 
       {revealed && (
         <p style={{ marginTop: 14, fontWeight: 700, color: 'var(--ink-2)', fontSize: '.9rem' }}>
-          الترتيب الصحيح: {ex.answer.map(label).join(' ← ')}
+          {t.rightOrder}{ex.answer.map(label).join(t.orderArrow)}
         </p>
       )}
     </>
@@ -257,6 +260,7 @@ function MatchEx({ ex, locked, onAutoSubmit }: ExProps & { ex: MatchExercise }) 
 /* ---------------- صنّف ---------------- */
 
 function SortEx({ ex, locked, onAutoSubmit }: ExProps & { ex: SortExercise }) {
+  const t = useT()
   const order = useMemo(() => shuffle(ex.items.map((i) => i.id), 5), [ex.id])
   const [at, setAt] = useState(0)
   const [placements, setPlacements] = useState<Record<string, string>>({})
@@ -315,7 +319,7 @@ function SortEx({ ex, locked, onAutoSubmit }: ExProps & { ex: SortExercise }) {
           {remaining.length === 0 && (
             <div style={{ display: 'grid', placeItems: 'center', gap: 8, color: 'var(--good-deep)' }}>
               <Sparkle size={34} />
-              <b>تمّ التصنيف</b>
+              <b>{t.sorted}</b>
             </div>
           )}
         </div>
@@ -324,8 +328,8 @@ function SortEx({ ex, locked, onAutoSubmit }: ExProps & { ex: SortExercise }) {
         <p className="sort__cue" aria-live="polite">
           {remaining.length ? (
             <>
-              البطاقة <span className="num">{at + 1}</span> من <span className="num">{order.length}</span>:
-              اضغط على الجواب
+              {t.sortCue.card} <span className="num">{at + 1}</span> {t.sortCue.of} <span className="num">{order.length}</span>:
+              {' '}{t.sortCue.tap}
             </>
           ) : '\u00a0'}
         </p>

@@ -6,7 +6,7 @@ import { parseAnswer } from '../../core/ai/answerText'
 import { conceptsFromLesson } from '../../core/ai/systemPrompt'
 import { SirajPose, usePreloadPoses, type Pose } from '../components/SirajPose'
 import { Button } from '../components/Button'
-import { useApp, useCalmMotion } from '../state'
+import { useApp, useCalmMotion, useT } from '../state'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
 
@@ -28,15 +28,6 @@ interface Msg {
    the real stream (searching, then writing); the later lines only appear
    if a search genuinely runs long, so the wait always has a voice. */
 type Stage = 'reading' | 'searching' | 'digging' | 'patient' | 'writing'
-const STAGE_TEXT: Record<Stage, string> = {
-  reading: 'أقرأ سؤالك…',
-  searching: 'أبحث في مصادري الموثوقة…',
-  digging: 'أراجع ما وجدتُ لأنقله بدقّة…',
-  patient: 'ما زلت أبحث، الجواب الدقيق يستحق لحظة صبر…',
-  writing: 'وجدتُ الجواب، أكتبه لك…',
-}
-
-const AFTER = ['هل بقي شيء غير واضح؟', 'تفضّل بسؤال آخر.', 'اسألني عن أي شيء في هذا الدرس.']
 
 export function AskSiraj({
   lesson, unitTitle, onFinish,
@@ -48,6 +39,7 @@ export function AskSiraj({
   onFinish?: () => void
 }) {
   const { progress, dispatch } = useApp()
+  const t = useT()
   const calm = useCalmMotion()
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [text, setText] = useState('')
@@ -146,7 +138,7 @@ export function AskSiraj({
       grow: r ? { w: r.width, h: r.height } : { w: 64, h: 46 },
     })
     setBusy(false)
-    setSay('إليك الجواب:')
+    setSay(t.hereIsAnswer)
     sfx.chirp(); haptic('tap')
     react('answer')
   }
@@ -179,7 +171,7 @@ export function AskSiraj({
   const answered = () => {
     sfx.snap()
     react('celebrate', 1500)
-    setSay(AFTER[Math.floor(Math.random() * AFTER.length)])
+    setSay(t.after[Math.floor(Math.random() * t.after.length)])
     if (!progress.achievements.includes('curious')) dispatch({ type: 'grant', id: 'curious' })
   }
 
@@ -187,7 +179,7 @@ export function AskSiraj({
     setStage('reading')
     setBusy(true)
     react('think')
-    setSay('لحظة، دعني أتحقّق…')
+    setSay(t.letMeCheck)
   }
 
   /* A suggested question answers instantly from bundled text - no
@@ -217,6 +209,7 @@ export function AskSiraj({
       unitTitle,
       lessonTitle: lesson.title,
       taughtConcepts: conceptsFromLesson(lesson.cards),
+      lang: progress.language,
     }, {
       // the stream drives what Siraj says he is doing; the text itself
       // is typed once it is complete (it lands within about a second
@@ -231,10 +224,10 @@ export function AskSiraj({
       answered()
     } else {
       setBusy(false)
-      push({ who: 'err', text: res.message ?? 'تعذّر الحصول على إجابة.' })
+      push({ who: 'err', text: res.message ?? t.askFailed })
       sfx.wrong()
       react('oops', 2800)
-      setSay('عذرًا، لم أتمكّن هذه المرة.')
+      setSay(t.askSorry)
     }
   }
 
@@ -249,7 +242,7 @@ export function AskSiraj({
             <motion.span key={say ?? 'intro'} style={{ display: 'block' }}
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18 }}>
-              {say ?? <>شيءٌ لم يتّضح في <b style={{ color: 'var(--orange)' }}>{lesson.title}</b>؟ اسألني.</>}
+              {say ?? <>{t.askIntro.before}<b style={{ color: 'var(--orange)' }}>{lesson.title}</b>{t.askIntro.after}</>}
             </motion.span>
           </AnimatePresence>
         </div>
@@ -274,7 +267,7 @@ export function AskSiraj({
                 <motion.span key={stage} className="thinking__say"
                   initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 6 }}
                   transition={{ duration: 0.2 }}>
-                  {STAGE_TEXT[stage]}
+                  {t.stage[stage]}
                 </motion.span>
               </AnimatePresence>
             </div>
@@ -305,24 +298,25 @@ export function AskSiraj({
           className="ask__input"
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, 400))}
-          placeholder="أو اكتب سؤالك…"
+          placeholder={t.askPlaceholder}
           enterKeyHint="send"
           onKeyDown={(e) => e.key === 'Enter' && askLive()}
           disabled={writing}
         />
-        <button className="ask__send" onClick={askLive} disabled={writing || !text.trim()} aria-label="إرسال">
+        <button className="ask__send" onClick={askLive} disabled={writing || !text.trim()} aria-label={t.send}>
           <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12 H5 M11 6 L5 12 L11 18" />
+            {/* the arrow points the way the text reads: left in Arabic, right in English */}
+            <path d={progress.language === 'en' ? 'M5 12 H19 M13 6 L19 12 L13 18' : 'M19 12 H5 M11 6 L5 12 L11 18'} />
           </svg>
         </button>
       </div>
 
-      <p className="ask__note">يجيب سراج نقلًا عن مصادر موثوقة فقط.</p>
+      <p className="ask__note">{t.askNote}</p>
 
       {onFinish && (
         <div className="ask__finish">
           <Button block tone={msgs.length ? 'primary' : 'quiet'} onClick={onFinish}>
-            {msgs.length ? 'تابع' : 'تخطّي'}
+            {msgs.length ? t.askDone : t.skip}
           </Button>
         </div>
       )}
