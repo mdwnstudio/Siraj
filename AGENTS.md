@@ -92,7 +92,17 @@ so he never jumps on screen.
 
 **A lesson is two phases, never one.** The brief was explicitly *not* generic
 quizzing: you **learn first**, then the exercises **make it stick**. Every
-exercise draws only on what the cards just taught.
+exercise draws only on what the cards just taught. In تعلّم the learner can go
+back: a small square button beside التالي, a sideways swipe on the card (left
+is forward, right is back), or the arrow keys on desktop.
+
+**The profile (ملفي).** Onboarding asks name, then أخ / أخت, then a picture
+from that set (`core/content/avatars.ts`, drawings in `public/img/avatars`).
+The faces are blank on purpose: **no eyes, nose or mouth on any person we
+draw**, glasses only. The profile page has a cover banner (five, drawn in SVG
+by `components/Profile.tsx`) with the picture lifted over its edge and a
+pencil that opens the edit sheet. The last tab carries the learner's picture
+and their own name instead of «ملفي».
 
 ---
 
@@ -161,6 +171,10 @@ Do not add an eighth without a very good reason.
 Grammar: 24x24 box, solid fills, `currentColor`, rounded corners via the
 fill+stroke trick. They must stay legible at 20px: that is the real constraint.
 
+Two plain utility glyphs sit outside the seven, as the close X already did:
+the pencil (edit profile) and the back chevron in the lesson footer. They
+are affordances, not brand marks; keep it that way.
+
 The droplet-as-oil idea is load-bearing: it is a better metaphor than hearts
 because the lamp is the brand.
 
@@ -179,7 +193,9 @@ because the lamp is the brand.
 
 ### Card kinds
 - `fact`: one atomic idea. Optional `term` renders a tap-to-reveal definition.
-  Optional `art` shows Siraj or one of the seven icons.
+  Optional `art` shows Siraj, one of the seven icons, or `{ pose }`: one of
+  the eight prayer postures drawn for صفة الصلاة (`public/img/salah`, faceless
+  like every person in the app).
 - `quote`: آية or حديث, in the reverent gold frame. **Always cite the source.**
 - `list`: the numbered/iconed list (the five pillars, the five prayers).
 
@@ -198,8 +214,9 @@ shows a hint instead. If you add a sixth kind, wire it in `grading.ts`,
 
 ### Current scope
 All six units are playable: `٠ البداية` (3 lessons, the third is أركان الإيمان),
-`١ الشهادتان`, `٢ إقام الصلاة` (الوضوء comes first on the stair, then the
-prayers), `٣ الزكاة`, `٤ الصوم`, `٥ الحج` (2 lessons each). The `soon: true`
+`١ الشهادتان`, `٢ إقام الصلاة` (3: الوضوء, the prayer times, then صفة الصلاة),
+`٣ الزكاة`, `٤ الصوم` (2 each), `٥ الحج` (3: مكة والكعبة, الإحرام والطواف, then
+أيام الحج day by day, told simply). العمرة is deliberately left out. The `soon: true`
 flag on a `PathNode` still works if a future unit goes on the stair before it
 is written.
 
@@ -529,7 +546,8 @@ Light theme by default. Dark mode exists and is selectable in Settings, but
 Roughly in priority order.
 
 1. **A second content review pass** on the lessons rewritten after the first
-   one (see section 7), then the full sign-off before public release.
+   one (see section 7), especially the new صفة الصلاة and أيام الحج lessons
+   and the سجود drawing, then the full sign-off before public release.
 2. **Wire the deployment env vars** (`OPENAI_API_KEY` on the Worker and
    `CHAT_ENDPOINT` in GitHub Actions) and verify the live Ask Siraj path end to
    end. The default model is `gpt-5.6-luna`; only the canned pills are proven

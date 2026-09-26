@@ -347,7 +347,7 @@ function StepSheet({ node, onClose, onStart }: { node: PathNode; onClose: () => 
   // a phone gets a sheet from the bottom edge; a wide screen a card in the middle
   const phone = useLayout() === 'phone'
   const motionProps = phone
-    ? { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' }, transition: { type: 'spring' as const, stiffness: 380, damping: 36 } }
+    ? { initial: { y: '100%' }, animate: { y: '0%' }, exit: { y: '100%' }, transition: { type: 'spring' as const, stiffness: 380, damping: 36 } }
     : { initial: { opacity: 0, scale: 0.92, y: 16 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.96, y: 8 }, transition: { type: 'spring' as const, stiffness: 420, damping: 30 } }
 
   return (

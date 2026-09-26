@@ -5,8 +5,10 @@ import { useProgress } from '../state'
 import { currentOil, currentStreak, MAX_OIL } from '../../core/engine/progress'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
+import { Avatar, profileLabel } from './Profile'
 
 const WORDMARK = `${import.meta.env.BASE_URL}img/siraj-wordmark-ar.svg`
+const PEEK = `${import.meta.env.BASE_URL}img/siraj-peek.webp`
 
 /* ---------------- a number that rolls up instead of snapping ---------------- */
 
@@ -150,13 +152,13 @@ export function NavBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
         className={`nav__item nav__item--me${tab === 'me' ? ' is-on' : ''}`}
         onPointerDown={() => { primeAudio(); sfx.tap(); haptic('tap') }}
         onClick={() => onTab('me')}
-        aria-label="ملفي"
+        aria-label={profileLabel(p.name)}
         aria-current={tab === 'me' ? 'page' : undefined}
       >
         {tab === 'me' && (
           <motion.span layoutId="nav-pill" className="nav__pill" transition={{ type: 'spring', stiffness: 420, damping: 32 }} />
         )}
-        <span className="nav__avatar">{(p.name?.trim()?.[0] ?? 'س')}</span>
+        <Avatar id={p.avatar} name={p.name} size={30} className="nav__avatar" />
       </button>
     </nav>
   )
@@ -177,11 +179,14 @@ const SIDE_TONES: Record<Tab, string> = {
 
 export function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const p = useProgress()
-  const items = [...TABS, { id: 'me' as Tab, label: 'ملفي', Icon: null }]
+  // the last tab is the learner: their picture, and their own name
+  const items = [...TABS, { id: 'me' as Tab, label: profileLabel(p.name), Icon: null }]
   return (
     <nav className="side" aria-label="التنقّل">
       <div className="side__brand">
         <img className="side__wordmark" src={WORDMARK} alt="سراج" />
+        {/* Siraj peeks over the edge beside his name (wide sidebar only) */}
+        <img className="side__peek" src={PEEK} alt="" width={83} height={80} />
       </div>
       <div className="side__items">
         {items.map(({ id, label, Icon }) => (
@@ -199,7 +204,7 @@ export function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
                 transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
             )}
             <span className="side__ico">
-              {Icon ? <Icon size={30} /> : <span className="nav__avatar">{(p.name?.trim()?.[0] ?? 'س')}</span>}
+              {Icon ? <Icon size={30} /> : <Avatar id={p.avatar} name={p.name} size={32} className="nav__avatar" />}
             </span>
             <span className="side__label">{label}</span>
           </button>

@@ -47,6 +47,7 @@ export const UNITS: Unit[] = [
       /* الوضوء قبل الصلاة: the wudu lesson comes first on the stair */
       { id: 'n-salah-1', unitId: 'u-salah', kind: 'lesson', lessonId: 'l-salah-2' },
       { id: 'n-salah-2', unitId: 'u-salah', kind: 'lesson', lessonId: 'l-salah-1' },
+      { id: 'n-salah-3', unitId: 'u-salah', kind: 'lesson', lessonId: 'l-salah-3' },
       { id: 'n-salah-trophy', unitId: 'u-salah', kind: 'trophy', label: 'إنجاز' },
     ],
   },
@@ -86,6 +87,7 @@ export const UNITS: Unit[] = [
     nodes: [
       { id: 'n-hajj-1', unitId: 'u-hajj', kind: 'lesson', lessonId: 'l-hajj-1' },
       { id: 'n-hajj-2', unitId: 'u-hajj', kind: 'lesson', lessonId: 'l-hajj-2' },
+      { id: 'n-hajj-3', unitId: 'u-hajj', kind: 'lesson', lessonId: 'l-hajj-3' },
       { id: 'n-hajj-trophy', unitId: 'u-hajj', kind: 'trophy', label: 'الختام' },
     ],
   },

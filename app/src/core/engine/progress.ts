@@ -1,5 +1,6 @@
 import type { Progress, NodeResult } from '../types'
 import { PATH, NODE_INDEX } from '../content/path'
+import { DEFAULT_BANNER } from '../content/avatars'
 
 export const MAX_OIL = 5
 /** one drop back every 20 minutes */
@@ -10,6 +11,9 @@ export function defaultProgress(): Progress {
     version: 1,
     onboarded: false,
     name: null,
+    gender: null,
+    avatar: null,
+    banner: DEFAULT_BANNER,
     language: 'ar',
     xp: 0,
     streak: 0,
@@ -79,25 +83,13 @@ export function isCompleted(p: Progress, nodeId: string): boolean {
   return !!p.completed[nodeId]
 }
 
-/** Test feature: onboarding with this name opens every step on the stair,
- *  so a demo or a reviewer can jump straight to any lesson. Nothing is marked
- *  done, so XP and stars still come only from lessons actually played. */
-const TEST_NAME = 'مدونة'
-
-export function isTester(p: Progress): boolean {
-  if (!p.name) return false
-  // ignore spacing, tashkeel and tatweel, and accept ه for ة
-  const n = p.name.replace(/[\u064B-\u0652\u0640\s]/g, '').replace(/ه$/, 'ة')
-  return n === TEST_NAME
-}
-
 /** a step opens once the step below it is done. the first step is always open. */
 export function isUnlocked(p: Progress, nodeId: string): boolean {
   const i = NODE_INDEX.get(nodeId)
   if (i === undefined) return false
   const node = PATH[i]
   if (node.soon) return false
-  if (i === 0 || isTester(p)) return true
+  if (i === 0) return true
   const prev = PATH[i - 1]
   return isCompleted(p, prev.id)
 }

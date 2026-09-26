@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, m as motion } from 'framer-motion'
-import type { Card, Lesson as LessonT } from '../../core/types'
+import type { Card, CardArt, Lesson as LessonT, PrayerPose } from '../../core/types'
 import type { Answer } from '../../core/engine/grading'
 import { correctAnswerText, isCorrect } from '../../core/engine/grading'
 import type { LessonOutcome } from '../../core/engine/progress'
@@ -37,6 +37,8 @@ export function Lesson({
 
   const [phase, setPhase] = useState<Phase>('warmup')
   const [cardAt, setCardAt] = useState(0)
+  // which way the last card move went: 1 forward, -1 back. Sets the slide direction.
+  const [dir, setDir] = useState(1)
   const [exAt, setExAt] = useState(0)
   const [answer, setAnswer] = useState<Answer | null>(null)
   const [verdict, setVerdict] = useState<null | 'good' | 'bad'>(null)
@@ -47,9 +49,15 @@ export function Lesson({
   const started = useRef(Date.now())
 
   // the scene goes on the second fact card: quotes and lists have their own layout
-  const sceneCard = lesson.cards.map((c, i) => (c.kind === 'fact' ? i : -1)).filter((i) => i >= 0)[1] ?? -1
+  // (a posture card already is a picture, so it never takes the scene)
+  const sceneCard = lesson.cards.map((c, i) => (c.kind === 'fact' && !isPose(c.art) ? i : -1)).filter((i) => i >= 0)[1] ?? -1
   const ex = lesson.exercises[exAt]
   const total = lesson.exercises.length
+
+  // posture drawings are fetched during the warmup, so no card waits on its picture
+  useEffect(() => {
+    for (const c of lesson.cards) if (c.kind === 'fact' && isPose(c.art)) new Image().src = poseSrc(c.art.pose)
+  }, [lesson])
 
   useEffect(() => {
     const t = setTimeout(() => { setPhase('learn'); started.current = Date.now() }, 900)
@@ -58,8 +66,41 @@ export function Lesson({
 
   /* ---- teaching ---- */
   const nextCard = () => {
+    setDir(1)
     if (cardAt < lesson.cards.length - 1) setCardAt(cardAt + 1)
     else { sfx.swoosh(); setPhase('practice') }
+  }
+  const prevCard = () => {
+    if (cardAt === 0) return
+    setDir(-1)
+    setCardAt(cardAt - 1)
+  }
+
+  /* a sideways flick on a card turns it: toward the start of the line (left)
+     is forward, back the other way. The card leans after the finger a little
+     while it is held, on transform only. Vertical drags stay scrolls. */
+  const swipe = useRef<{ x: number; y: number; id: number; el: HTMLElement } | null>(null)
+  const onCardDown = (e: React.PointerEvent<HTMLElement>) => {
+    if (e.pointerType === 'mouse') return
+    swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId, el: e.currentTarget }
+  }
+  const onCardMove = (e: React.PointerEvent<HTMLElement>) => {
+    const s0 = swipe.current
+    if (!s0 || s0.id !== e.pointerId) return
+    const dx = e.clientX - s0.x
+    if (Math.abs(dx) > Math.abs(e.clientY - s0.y)) s0.el.style.transform = `translateX(${dx * 0.3}px)`
+  }
+  const onCardUp = (e: React.PointerEvent<HTMLElement>) => {
+    const s0 = swipe.current
+    if (!s0 || s0.id !== e.pointerId) return
+    swipe.current = null
+    s0.el.style.transform = ''
+    const dx = e.clientX - s0.x
+    const dy = e.clientY - s0.y
+    if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.4) return
+    primeAudio()
+    if (dx < 0) { sfx.tap(); nextCard() }
+    else if (cardAt > 0) { sfx.tap(); prevCard() }
   }
 
   /* ---- practice ---- */
@@ -117,6 +158,12 @@ export function Lesson({
   /* Enter does whatever the one big button would, so a keyboard learner can
      run a whole lesson without the mouse. Not while typing to Siraj. */
   const primary = useRef<() => void>(() => {})
+  const cardKey = useRef<(d: number) => void>(() => {})
+  cardKey.current = (d) => {
+    if (phase !== 'learn') return
+    if (d > 0) nextCard()
+    else prevCard()
+  }
   primary.current = () => {
     if (verdict) advance()
     else if (phase === 'learn') nextCard()
@@ -124,9 +171,14 @@ export function Lesson({
   }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Enter' || e.repeat || e.isComposing) return
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      // arrows turn the cards the way the swipe does: left is forward in RTL
+      if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.repeat) {
+        cardKey.current(e.key === 'ArrowLeft' ? 1 : -1)
+        return
+      }
+      if (e.key !== 'Enter' || e.repeat || e.isComposing) return
       // a focused tile would also "click" on Enter; the lesson owns this key
       e.preventDefault()
       primeAudio()
@@ -174,9 +226,11 @@ export function Lesson({
         <AnimatePresence mode="wait" initial={false}>
           {/* ---------------- تعلّم ---------------- */}
           {phase === 'learn' && (
-            <motion.div key={`c${cardAt}`} className="cardstage"
-              initial={{ opacity: 0, x: 34 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -34 }}
-              transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}>
+            <motion.div key={`c${cardAt}`} className="cardstage" custom={dir} variants={cardTurn}
+              initial="enter" animate="shown" exit="leave"
+              transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+              onPointerDown={onCardDown} onPointerMove={onCardMove} onPointerUp={onCardUp}
+              onPointerCancel={onCardUp}>
               <CardView card={lesson.cards[cardAt]} unitId={unit?.id ?? 'u-intro'} withScene={cardAt === sceneCard} />
               <div className="dots">
                 {lesson.cards.map((_, i) => (
@@ -265,9 +319,19 @@ export function Lesson({
       {!verdict && phase !== 'ask' && phase !== 'warmup' && (
         <div className="lesson__foot">
           {phase === 'learn' ? (
-            <Button block tone="gold" onClick={nextCard}>
-              {cardAt < lesson.cards.length - 1 ? 'التالي' : 'لنتدرّب'}
-            </Button>
+            <div className="learnbar">
+              {/* back: a small square beside the big button, first in RTL so it sits on the right */}
+              <button className="backbtn" aria-label="البطاقة السابقة" disabled={cardAt === 0}
+                onPointerDown={() => { primeAudio(); sfx.tap(); haptic('tap') }} onClick={prevCard}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
+                  strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
+                  <path d="M9 5 L16 12 L9 19" />
+                </svg>
+              </button>
+              <Button block tone="gold" onClick={nextCard}>
+                {cardAt < lesson.cards.length - 1 ? 'التالي' : 'لنتدرّب'}
+              </Button>
+            </div>
           ) : ex && (ex.kind === 'match' || ex.kind === 'sort') ? (
             <p style={{ textAlign: 'center', color: 'var(--ink-3)', fontWeight: 700, fontSize: '.9rem', padding: '14px 0' }}>
               {ex.kind === 'match' ? 'اختر من كل عمودٍ ما يقابله' : 'لكل بطاقة: اضغط على الجواب الصحيح'}
@@ -281,8 +345,22 @@ export function Lesson({
   )
 }
 
+/* forward: the new card comes in from the right and the old one leaves left;
+   back reverses both, so the motion always matches the finger */
+const cardTurn = {
+  enter: (d: number) => ({ opacity: 0, x: 34 * d }),
+  shown: { opacity: 1, x: 0 },
+  leave: (d: number) => ({ opacity: 0, x: -34 * d }),
+}
+
 const GOOD = ['أحسنت!', 'ممتاز!', 'بالضبط!', 'رائع!', 'أصبتَ!', 'تمامًا!']
 const pick = (a: string[], i: number) => a[i % a.length]
+
+const POSE_DIR = `${import.meta.env.BASE_URL}img/salah/`
+const poseSrc = (pose: PrayerPose) => `${POSE_DIR}${pose}.webp`
+function isPose(art: CardArt | undefined): art is { pose: PrayerPose } {
+  return typeof art === 'object' && 'pose' in art
+}
 
 /* ---------------- a teaching card ---------------- */
 
@@ -340,7 +418,7 @@ function CardView({ card, unitId, withScene }: { card: Card; unitId: string; wit
           <UnitScene unitId={unitId}>
             {card.art === 'siraj' || card.art === 'siraj-wave' ? (
               <Siraj mood={card.art === 'siraj-wave' ? 'wave' : 'idle'} size={96} />
-            ) : card.art ? (
+            ) : card.art && 'icon' in card.art ? (
               <span className="scene__medal"><Icon name={card.art.icon} size={34} /></span>
             ) : null}
           </UnitScene>
@@ -351,6 +429,8 @@ function CardView({ card, unitId, withScene }: { card: Card; unitId: string; wit
           transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}>
           {card.art === 'siraj' || card.art === 'siraj-wave' ? (
             <Siraj mood={card.art === 'siraj-wave' ? 'wave' : 'idle'} size={132} />
+          ) : 'pose' in card.art ? (
+            <img className="pose" src={poseSrc(card.art.pose)} alt="" width={356} height={410} decoding="async" />
           ) : (
             <span style={{ color: 'var(--orange)', background: 'var(--orange-soft)', padding: 22, borderRadius: 28, display: 'grid' }}>
               <Icon name={card.art.icon} size={52} />

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { m as motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import { useApp } from '../state'
 import type { Settings } from '../../core/types'
 import {
@@ -12,6 +12,7 @@ import { Icon, Star, Flame, Droplet, Sparkle, Sun, Crescent, Lantern } from '../
 import { Button } from '../components/Button'
 import { ProgressBar } from '../components/Bars'
 import { Siraj } from '../components/Siraj'
+import { Avatar, Pencil, ProfileBanner, ProfileSheet } from '../components/Profile'
 import { AskSiraj } from './AskSiraj'
 import { POSE_SRC } from '../components/SirajPose'
 import { toAr } from './Home'
@@ -129,20 +130,33 @@ export function MePage() {
   const { progress, dispatch } = useApp()
   const { level, into, span } = levelFromXp(progress.xp)
   const [confirm, setConfirm] = useState(false)
+  const [editing, setEditing] = useState(false)
   const oil = currentOil(progress)
 
   const set = (patch: Partial<Settings>) => dispatch({ type: 'settings', patch })
 
   return (
+    <>
     <div className="page">
-      <div className="hero">
-        <span className="hero__avatar">{progress.name?.trim()?.[0] ?? 'س'}</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="hero__name">{progress.name?.trim() || 'صديق سراج'}</div>
-          <div className="hero__lvl">المستوى {toAr(level)}</div>
-          <div style={{ marginTop: 8 }}><ProgressBar value={into / span} tone="gold" /></div>
+      {/* the profile: a cover across the top, the picture overlapping its
+          lower edge, and a pencil beside it that opens the edit sheet */}
+      <section className="profile">
+        <div className="profile__cover"><ProfileBanner id={progress.banner} /></div>
+        <div className="profile__row">
+          <div className="profile__who">
+            <h1 className="profile__name">{progress.name?.trim() || 'صديق سراج'}</h1>
+            <div className="profile__lvl">المستوى {toAr(level)}</div>
+            <div style={{ marginTop: 8 }}><ProgressBar value={into / span} tone="gold" /></div>
+          </div>
+          <div className="profile__pic">
+            <Avatar id={progress.avatar} name={progress.name} size={104} className="profile__avatar" />
+            <button className="profile__edit" aria-label="تعديل الملف"
+              onClick={() => { primeAudio(); sfx.tap(); setEditing(true) }}>
+              <Pencil size={18} />
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
 
       <div className="me-grid">
       <div>
@@ -232,6 +246,14 @@ export function MePage() {
       </div>
       <div style={{ height: 10 }} />
     </div>
+    <AnimatePresence>
+      {editing && (
+        <ProfileSheet name={progress.name} gender={progress.gender} avatar={progress.avatar} banner={progress.banner}
+          onChange={(patch) => dispatch({ type: 'profile', patch })}
+          onClose={() => setEditing(false)} />
+      )}
+    </AnimatePresence>
+    </>
   )
 }
 
