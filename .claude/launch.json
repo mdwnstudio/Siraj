@@ -26,6 +26,21 @@
         "--strictPort"
       ],
       "port": 4173
+    },
+    {
+      "name": "siraj-alt",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "app",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5181",
+        "--strictPort"
+      ],
+      "port": 5181
     }
   ]
 }
