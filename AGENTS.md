@@ -93,8 +93,11 @@ so he never jumps on screen.
 **A lesson is two phases, never one.** The brief was explicitly *not* generic
 quizzing: you **learn first**, then the exercises **make it stick**. Every
 exercise draws only on what the cards just taught. In تعلّم the learner can go
-back: a small square button beside التالي, a sideways swipe on the card (left
-is forward, right is back), or the arrow keys on desktop.
+back: a small square button beside التالي, a sideways swipe on the card, or
+the arrow keys on desktop. Cards turn like pages in an Arabic book: the next
+one waits on the left, so dragging right moves forward and dragging left goes
+back (and the left arrow key is forward). The card follows the finger one to
+one and a flick carries it out from where it was let go.
 
 **The profile (ملفي).** Onboarding asks name, then أخ / أخت, then a picture
 from that set (`core/content/avatars.ts`, drawings in `public/img/avatars`).
