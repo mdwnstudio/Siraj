@@ -191,6 +191,9 @@ export function MePage() {
           <p style={{ fontSize: '.86rem', color: 'var(--ink-2)', fontWeight: 650, lineHeight: 1.7 }}>
             رحلة تفاعلية لتعلّم أساسيات الإسلام. المحتوى منقول عن مصادر موثوقة،
             ويُراجَع من أهل العلم قبل النشر.
+            <span style={{ display: 'block', marginTop: 4, fontSize: '.72rem', color: 'var(--ink-3)' }}>
+              الإصدار <span className="num">{__BUILD__}</span>
+            </span>
           </p>
         </div>
       </div>
