@@ -1,15 +1,20 @@
 import {
-  createContext, useContext, useEffect, useMemo, useReducer, useRef, useSyncExternalStore, type ReactNode,
+  createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useSyncExternalStore, type ReactNode,
 } from 'react'
 import type { Progress, Settings } from '../core/types'
+import { detectLang, type Lang } from '../core/i18n'
+import { STORAGE_KEY } from '../core/storage'
 import { webStore } from '../platform/webStorage'
+import { STRINGS, type Strings } from './strings'
+import { loadLessons } from '../core/content/lessons'
 import { applyLesson, claimReward, grantAchievement, type LessonOutcome, type ApplyResult } from '../core/engine/progress'
 import { setSound } from '../platform/sound'
 import { setHaptics } from '../platform/haptics'
 
 type Action =
   | { type: 'hydrate'; progress: Progress }
-  | { type: 'onboard'; name: string | null; language: string; gender: Progress['gender']; avatar: string | null }
+  | { type: 'onboard'; name: string | null; gender: Progress['gender']; avatar: string | null }
+  | { type: 'language'; lang: Lang }
   | { type: 'profile'; patch: Partial<Pick<Progress, 'name' | 'gender' | 'avatar' | 'banner'>> }
   | { type: 'finish-lesson'; outcome: LessonOutcome }
   | { type: 'claim-reward'; nodeId: string }
@@ -24,7 +29,10 @@ function reducer(state: Progress, action: Action): Progress {
     case 'set':
       return action.progress
     case 'onboard':
-      return { ...state, onboarded: true, name: action.name, language: action.language, gender: action.gender, avatar: action.avatar }
+      return { ...state, onboarded: true, name: action.name, gender: action.gender, avatar: action.avatar }
+    case 'language':
+      // only the language changes: xp, streak and every finished step stay
+      return { ...state, language: action.lang }
     case 'profile':
       return { ...state, ...action.patch }
     case 'finish-lesson':
@@ -49,8 +57,19 @@ interface Ctx {
 
 const AppCtx = createContext<Ctx | null>(null)
 
+/** Saved progress, or on a first visit a fresh start in the device's
+ *  language: an English phone opens in English, everything else in Arabic.
+ *  Only a first visit is detected; after that the learner's choice stands. */
+function boot(): Progress {
+  const p = webStore.load()
+  let saved = false
+  try { saved = localStorage.getItem(STORAGE_KEY) !== null } catch { /* no storage: a first visit every time */ }
+  if (!saved && typeof navigator !== 'undefined') p.language = detectLang(navigator.languages ?? [navigator.language])
+  return p
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [progress, dispatch] = useReducer(reducer, null, () => webStore.load())
+  const [progress, dispatch] = useReducer(reducer, null, boot)
   const latest = useRef(progress)
   latest.current = progress
 
@@ -64,6 +83,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSound(progress.settings.sound)
     setHaptics(progress.settings.haptics)
   }, [progress.settings.sound, progress.settings.haptics])
+
+  // the document speaks the learner's language. The frame stays dir="rtl"
+  // (layout never mirrors); lang="en" is what turns the text itself LTR,
+  // see section 16 of app.css.
+  useEffect(() => {
+    const root = document.documentElement
+    root.lang = progress.language
+    document.title = progress.language === 'en' ? 'Siraj - Learn Islam' : 'سراج - تعلّم الإسلام'
+  }, [progress.language])
 
   // theme
   useEffect(() => {
@@ -99,6 +127,22 @@ export function useApp(): Ctx {
 
 export function useProgress(): Progress {
   return useApp().progress
+}
+
+export function useLang(): Lang {
+  return useApp().progress.language
+}
+
+/** Switch language, keeping all progress. The lessons for that language
+ *  are fetched first, so nothing ever shows half translated. */
+export function useSetLanguage(): (lang: Lang) => Promise<void> {
+  const { dispatch } = useApp()
+  return useCallback((lang: Lang) => loadLessons(lang).then(() => dispatch({ type: 'language', lang })), [dispatch])
+}
+
+/** every interface string, in the learner's language */
+export function useT(): Strings {
+  return STRINGS[useApp().progress.language]
 }
 
 /* one shared media query, read on change rather than on every render */

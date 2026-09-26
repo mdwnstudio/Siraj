@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { m as motion } from 'framer-motion'
-import { UNITS } from '../../core/content/path'
+import { UNITS, unitText } from '../../core/content/path'
 import type { Unit } from '../../core/types'
-import { useCalmMotion } from '../state'
+import { useCalmMotion, useLang, useT } from '../state'
 import { Icon, Star } from '../icons/SirajIcons'
 import { Siraj } from './Siraj'
 import { Button } from './Button'
 import { Burst, Shockwave } from './Burst'
-import { toAr } from '../screens/Home'
 import { sfx } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
 
@@ -59,6 +58,10 @@ export function UnitOpener({ from, to, onDone }: { from: Unit; to: Unit; onDone:
     beat >= 5 && 'is-ready',
   ].filter(Boolean).join(' ')
 
+  const t = useT()
+  const lang = useLang()
+  const toText = unitText(to, lang)
+
   return (
     <motion.div className={cls} role="dialog" aria-modal="true" aria-labelledby="opener-title"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -84,12 +87,12 @@ export function UnitOpener({ from, to, onDone }: { from: Unit; to: Unit; onDone:
         </div>
 
         <div className="opener__text">
-          <span className="opener__kicker">وحدة جديدة</span>
-          <h2 id="opener-title" className="opener__title">{to.title}</h2>
-          <span className="opener__sub">الوحدة {toAr(to.index + 1)} · {to.subtitle}</span>
+          <span className="opener__kicker">{t.newUnit}</span>
+          <h2 id="opener-title" className="opener__title">{toText.title}</h2>
+          <span className="opener__sub">{t.unitKicker(to.index + 1, toText.subtitle)}</span>
         </div>
 
-        <div className="opener__track" aria-label={`أتممت ${toAr(to.index)} من ${toAr(UNITS.length)} وحدات`}>
+        <div className="opener__track" aria-label={t.unitsDone(to.index, UNITS.length)}>
           {UNITS.map((u) => (
             <span key={u.id} className={[
               'opener__pip',
@@ -109,13 +112,18 @@ export function UnitOpener({ from, to, onDone }: { from: Unit; to: Unit; onDone:
             so his drawing never swaps on screen */}
         <Siraj mood="cheer" size={84} />
         <div className="bubble bubble--side opener__bubble">
-          <b>أحسنت!</b> اكتملت وحدة «{from.title}». هيا نصعد إلى {to.subtitle}.
+          <b>{t.unitDoneLine.well}</b>{t.unitDoneLine.done(unitText(from, lang).title, lang === 'en' ? lowerFirst(toText.subtitle) : toText.subtitle)}
         </div>
       </div>
 
       <div className="opener__action">
-        <Button block onClick={onDone} tabIndex={beat >= 5 ? 0 : -1}>هيا نصعد</Button>
+        <Button block onClick={onDone} tabIndex={beat >= 5 ? 0 : -1}>{t.climb}</Button>
       </div>
     </motion.div>
   )
+}
+
+/** "The second pillar" reads "the second pillar" mid-sentence */
+function lowerFirst(s: string): string {
+  return s.charAt(0).toLowerCase() + s.slice(1)
 }

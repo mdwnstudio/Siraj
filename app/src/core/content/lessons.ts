@@ -1,4 +1,4 @@
-import type { Lesson } from '../types'
+import type { Lang, Lesson } from '../types'
 
 /* ============================================================
    المنهج - أركان الإسلام الخمسة
@@ -2019,6 +2019,42 @@ export const LESSONS: Record<string, Lesson> = {
   [hajjDays.id]: hajjDays,
 }
 
-export function getLesson(id: string): Lesson | undefined {
-  return LESSONS[id]
+/* The English curriculum is its own chunk: an Arabic learner never
+   downloads it. loadLessons('en') fetches it once; until it has arrived,
+   getLesson falls back to the Arabic, so callers wait on loadLessons
+   before switching the app to English. */
+let english: Record<string, Lesson> | undefined
+let englishLoading: Promise<void> | undefined
+
+export function loadLessons(lang: Lang): Promise<void> {
+  if (lang === 'ar' || english) return Promise.resolve()
+  return (englishLoading ??= import('./lessons.en').then((m) => {
+    english = withOriginals(m.LESSONS_EN)
+  }))
+}
+
+export function lessonsReady(lang: Lang): boolean {
+  return lang === 'ar' || !!english
+}
+
+export function getLesson(id: string, lang: Lang = 'ar'): Lesson | undefined {
+  return (lang === 'en' && english?.[id]) || LESSONS[id]
+}
+
+/** A translated quote card carries the Arabic wording it translates, taken
+ *  from the Arabic card with the same id, so the learner sees both. */
+function withOriginals(set: Record<string, Lesson>): Record<string, Lesson> {
+  const out: Record<string, Lesson> = {}
+  for (const [id, lesson] of Object.entries(set)) {
+    const ar = LESSONS[id]
+    out[id] = {
+      ...lesson,
+      cards: lesson.cards.map((c) => {
+        if (c.kind !== 'quote') return c
+        const twin = ar?.cards.find((x) => x.id === c.id)
+        return twin?.kind === 'quote' ? { ...c, original: twin.text } : c
+      }),
+    }
+  }
+  return out
 }

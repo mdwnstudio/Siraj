@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react'
 import { m as motion } from 'framer-motion'
 import type { LessonOutcome, ApplyResult } from '../../core/engine/progress'
-import { achievementById } from '../../core/engine/progress'
+import { achievementById, achievementText } from '../../core/engine/progress'
 import { Icon, Star, Flame, Sparkle } from '../icons/SirajIcons'
 import { Siraj } from '../components/Siraj'
 import { Button } from '../components/Button'
 import { Burst, Shockwave } from '../components/Burst'
 import { Counter } from '../components/Bars'
-import { useCalmMotion } from '../state'
+import { useCalmMotion, useLang, useT } from '../state'
 import { sfx } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
-import { toAr } from './Home'
 
 /* The payoff. Everything arrives in sequence rather than at once -
    the medal lands, then the stats, then the streak. A staggered
@@ -24,6 +23,8 @@ export function Result({
   onDone: () => void
 }) {
   const calm = useCalmMotion()
+  const t = useT()
+  const lang = useLang()
   const [beat, setBeat] = useState(0)
   const accuracy = Math.round((outcome.correct / Math.max(1, outcome.total)) * 100)
   const perfect = accuracy === 100
@@ -62,31 +63,29 @@ export function Result({
               {perfect ? <Sparkle size={56} /> : <Star size={52} />}
             </div>
           </div>
-          <span className="result__kicker">أضاءت درجة جديدة</span>
-          <h1 className="result__title">{perfect ? 'بلا خطأ!' : 'أحسنت!'}</h1>
+          <span className="result__kicker">{t.newStep}</span>
+          <h1 className="result__title">{perfect ? t.flawless : t.wellDone}</h1>
         </motion.div>
 
         <motion.p className="result__sub"
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: beat >= 1 ? 1 : 0, y: beat >= 1 ? 0 : 12 }}
           transition={{ duration: 0.34, ease: [0.23, 1, 0.32, 1] }}>
-          {perfect
-            ? 'أجبتَ عن كل شيء إجابةً صحيحة. درجةٌ أخرى خلفك.'
-            : `أصبتَ ${toAr(outcome.correct)} من ${toAr(outcome.total)}. الدرجة التالية مفتوحة.`}
+          {perfect ? t.perfectLine : t.scoreLine(outcome.correct, outcome.total)}
         </motion.p>
 
         <motion.div className="stats"
           initial={{ opacity: 0, y: 22 }} animate={{ opacity: beat >= 2 ? 1 : 0, y: beat >= 2 ? 0 : 22 }}
           transition={{ duration: 0.42, ease: [0.34, 1.56, 0.64, 1] }}>
           <div className="statcard statcard--xp">
-            <div className="statcard__head">نقاط</div>
+            <div className="statcard__head">{t.statXp}</div>
             <div className="statcard__body"><Star size={17} /><Counter value={beat >= 2 ? outcome.xp : 0} /></div>
           </div>
           <div className="statcard statcard--acc">
-            <div className="statcard__head">الدقّة</div>
-            <div className="statcard__body"><Counter value={beat >= 2 ? accuracy : 0} suffix="٪" /></div>
+            <div className="statcard__head">{t.statAccuracy}</div>
+            <div className="statcard__body"><Counter value={beat >= 2 ? accuracy : 0} suffix={t.percent} /></div>
           </div>
           <div className="statcard statcard--time">
-            <div className="statcard__head">الزمن</div>
+            <div className="statcard__head">{t.statTime}</div>
             <div className="statcard__body num">{fmt(outcome.seconds)}</div>
           </div>
         </motion.div>
@@ -98,7 +97,7 @@ export function Result({
             <motion.span animate={beat >= 3 ? { scale: [1, 1.4, 1], rotate: [0, -12, 0] } : {}} transition={{ duration: 0.6, delay: 0.1 }}>
               <Flame size={24} />
             </motion.span>
-            <span>{applied.progress.streak === 1 ? 'يومٌ متتالٍ' : `${toAr(applied.progress.streak)} أيام متتالية`}</span>
+            <span>{t.streakDays(applied.progress.streak)}</span>
           </motion.div>
         )}
 
@@ -110,7 +109,7 @@ export function Result({
                 initial={{ scale: 0.4, rotate: -12 }} animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: 'spring', stiffness: 420, damping: 16 }}>
                 <span className="badge__ring" style={{ width: 40, height: 40 }}><Icon name={a!.icon} size={19} /></span>
-                <span className="badge__t">{a!.title}</span>
+                <span className="badge__t">{achievementText(a!, lang).title}</span>
               </motion.div>
             ))}
           </motion.div>
@@ -124,7 +123,7 @@ export function Result({
 
       <motion.div className="result__action"
         initial={{ opacity: 0, y: 18 }} animate={{ opacity: beat >= 2 ? 1 : 0, y: beat >= 2 ? 0 : 18 }}>
-        <Button block tone="gold" onClick={onDone}>تابِع الصعود</Button>
+        <Button block tone="gold" onClick={onDone}>{t.keepClimbing}</Button>
       </motion.div>
     </div>
   )

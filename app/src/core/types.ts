@@ -4,7 +4,8 @@
    ============================================================ */
 
 import type { SirajIconName } from '../ui/icons/SirajIcons'
-export type { SirajIconName }
+import type { Lang } from './i18n'
+export type { SirajIconName, Lang }
 
 /* ---------------- teaching phase: بطاقات المعرفة ---------------- */
 
@@ -37,6 +38,10 @@ export type Card =
       text: string
       source: string
       note?: string
+      /** a translation's source page (quran.com, sunnah.com) */
+      url?: string
+      /** in a translated lesson: the Arabic wording, shown above the translation */
+      original?: string
     }
   | {
       kind: 'list'
@@ -146,6 +151,8 @@ export interface Unit {
   icon: SirajIconName
   tone: UnitTone
   nodes: PathNode[]
+  /** the English title and subtitle */
+  en: { title: string; subtitle: string }
 }
 
 /* ---------------- progress ---------------- */
@@ -173,13 +180,11 @@ export interface Progress {
   avatar: string | null
   /** one of BANNERS; the profile's cover */
   banner: string
-  language: string
+  language: Lang
   xp: number
   streak: number
   /** YYYY-MM-DD of the last day a lesson was finished */
   lastActiveDay: string | null
-  oil: number
-  oilUpdatedAt: number
   completed: Record<string, NodeResult>
   achievements: string[]
   settings: Settings

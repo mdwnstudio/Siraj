@@ -16,12 +16,14 @@ function Frame({ children }: { children: React.ReactNode }) {
   )
 }
 
+/* Arabic is flown under Palestine's flag: black, white and green bands
+   with the red triangle at the hoist */
 export const FlagAR = () => (
   <Frame>
-    <rect width={W} height={H} fill="#146B3A" />
-    <rect x="6" y="7.5" width="22" height="2.2" rx="1.1" fill="#fff" />
-    <rect x="6" y="11.4" width="16" height="1.7" rx=".85" fill="#fff" />
-    <rect x="7" y="15" width="20" height="1.6" rx=".8" fill="#fff" />
+    <rect width={W} height={H} fill="#fff" />
+    <rect width={W} height={H / 3} fill="#000" />
+    <rect y={(H * 2) / 3} width={W} height={H / 3} fill="#149954" />
+    <path d={`M0 0 L${W / 3} ${H / 2} L0 ${H} Z`} fill="#E4312B" />
   </Frame>
 )
 

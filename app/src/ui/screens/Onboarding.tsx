@@ -1,25 +1,17 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, m as motion } from 'framer-motion'
 import { Siraj } from '../components/Siraj'
 import { Button } from '../components/Button'
 import { Burst, Shockwave } from '../components/Burst'
-import { useApp } from '../state'
+import { useApp, useCalmMotion, useSetLanguage, useT } from '../state'
+import { isLang } from '../../core/i18n'
+import { slideText } from '../textSlide'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
-import { avatarsFor, type Gender } from '../../core/content/avatars'
+import { avatarsFor, pictureLabel, type Gender } from '../../core/content/avatars'
 import { Avatar, avatarSrc } from '../components/Profile'
-import { FlagAR, FlagEN, FlagFR, FlagTR, FlagID, FlagUR, FlagES, FlagDE } from '../icons/Flags'
+import { LANGS } from '../languages'
 
-const LANGS = [
-  { id: 'ar', label: 'العربية', Flag: FlagAR, ready: true },
-  { id: 'en', label: 'English', Flag: FlagEN, ready: false },
-  { id: 'fr', label: 'Français', Flag: FlagFR, ready: false },
-  { id: 'tr', label: 'Türkçe', Flag: FlagTR, ready: false },
-  { id: 'id', label: 'Bahasa Indonesia', Flag: FlagID, ready: false },
-  { id: 'ur', label: 'اردو', Flag: FlagUR, ready: false },
-  { id: 'es', label: 'Español', Flag: FlagES, ready: false },
-  { id: 'de', label: 'Deutsch', Flag: FlagDE, ready: false },
-]
 
 type Step = 'hello' | 'lang' | 'name' | 'gender' | 'avatar' | 'ready'
 
@@ -30,9 +22,15 @@ const slide = {
 }
 
 export function Onboarding({ onDone }: { onDone: () => void }) {
-  const { dispatch } = useApp()
+  const { progress, dispatch } = useApp()
+  const t = useT()
+  const calm = useCalmMotion()
+  const setLanguage = useSetLanguage()
+  // the language is live from the moment it is tapped: the whole app turns
+  // with it, and it is kept (with everything else) when onboarding ends
+  const lang = progress.language
   const [step, setStep] = useState<Step>('hello')
-  const [lang, setLang] = useState('ar')
+  const root = useRef<HTMLDivElement>(null)
   const [name, setName] = useState('')
   const [gender, setGender] = useState<Gender | null>(null)
   const [avatar, setAvatar] = useState<string | null>(null)
@@ -72,12 +70,25 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const finish = (pic: string | null) => {
     sfx.win()
     haptic('win')
-    dispatch({ type: 'onboard', name: (keepName.current && name.trim()) || null, language: lang, gender, avatar: pic })
+    dispatch({ type: 'onboard', name: (keepName.current && name.trim()) || null, gender, avatar: pic })
     setTimeout(onDone, 1450)
   }
 
+  // a new language: its words slide across to the side it reads from
+  const shownLang = useRef(lang)
+  useLayoutEffect(() => {
+    if (shownLang.current === lang) return
+    shownLang.current = lang
+    if (!calm) slideText(root.current, lang)
+  }, [lang, calm])
+
+  const pickLang = (id: string, ready: boolean) => {
+    if (!ready || !isLang(id)) { sfx.wrong(); haptic('wrong'); return }
+    void setLanguage(id)
+  }
+
   return (
-    <div className="ob">
+    <div className="ob" ref={root}>
       <div className="ob__top">
         <div style={{ flex: 1 }}>
           <div className="pbar" style={{ height: 12 }}>
@@ -104,7 +115,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 <Siraj mood="wave" size={190} />
               </div>
               <div className="bubble bubble--up rise">
-                أهلًا بك! أنا <b style={{ color: 'var(--orange)' }}>سراج</b>، ورفيقك في رحلة تعلّم الإسلام، خطوةً خطوة.
+                <span className="slidetext" data-slide>
+                  {t.obHello.before}<b style={{ color: 'var(--orange)' }}>{t.obHello.name}</b>{t.obHello.after}
+                </span>
               </div>
             </motion.div>
           )}
@@ -115,7 +128,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 10 }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
                 <Siraj mood="idle" size={78} />
-                <div className="bubble bubble--side" style={{ flex: 1, fontSize: '1.02rem' }}>بأيّ لغة تحبّ أن نتعلّم؟</div>
+                <div className="bubble bubble--side" style={{ flex: 1, fontSize: '1.02rem' }}>
+                  <span className="slidetext" data-slide>{t.obLang}</span>
+                </div>
               </div>
               <div className="langlist">
                 {LANGS.map((l, i) => (
@@ -123,12 +138,14 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                     key={l.id}
                     className={`lang${lang === l.id ? ' is-on' : ''}`}
                     style={{ animationDelay: `${i * 42}ms` }}
-                    onPointerDown={() => { primeAudio(); sfx.select(); haptic('tap') }}
-                    onClick={() => setLang(l.id)}
+                    aria-disabled={!l.ready}
+                    onPointerDown={() => { primeAudio(); if (l.ready) { sfx.select(); haptic('tap') } }}
+                    onClick={() => pickLang(l.id, l.ready)}
                   >
                     <span className="lang__flag"><l.Flag /></span>
-                    <span>{l.label}</span>
-                    {!l.ready && <span className="lang__soon">قريبًا</span>}
+                    <span lang={l.id} dir="auto">{l.label}</span>
+                    {'beta' in l && l.beta && <span className="lang__beta">{t.beta}</span>}
+                    {!l.ready && <span className="lang__soon">{t.soon}</span>}
                   </button>
                 ))}
               </div>
@@ -141,20 +158,20 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 22 }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
                 <Siraj mood="think" size={90} />
-                <div className="bubble bubble--side" style={{ flex: 1 }}>بماذا أُناديك؟</div>
+                <div className="bubble bubble--side" style={{ flex: 1 }}>{t.obName}</div>
               </div>
               <input
                 className="field"
                 style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 800 }}
                 value={name}
                 onChange={(e) => setName(e.target.value.slice(0, 24))}
-                placeholder="اسمك (اختياري)"
+                placeholder={t.obNamePlaceholder}
                 autoComplete="off"
                 enterKeyHint="done"
                 onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && toGender(true)}
               />
               <p style={{ textAlign: 'center', color: 'var(--ink-3)', fontSize: '.84rem', fontWeight: 600 }}>
-                يبقى على جهازك وحده.
+                {t.obNameLocal}
               </p>
             </motion.div>
           )}
@@ -166,11 +183,11 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
                 <Siraj mood="think" size={90} />
                 <div className="bubble bubble--side" style={{ flex: 1 }}>
-                  {name.trim() ? `${name.trim()}، هل أنت أخٌ أم أخت؟` : 'هل أنت أخٌ أم أخت؟'}
+                  {t.obGender(name.trim())}
                 </div>
               </div>
-              <div className="gpick" role="radiogroup" aria-label="أخ أم أخت">
-                {([['m', 'أخ', 'av-1'], ['f', 'أخت', 'av-8']] as const).map(([g, label, pic], i) => (
+              <div className="gpick" role="radiogroup" aria-label={t.obGenderAria}>
+                {([['m', t.brother, 'av-1'], ['f', t.sister, 'av-8']] as const).map(([g, label, pic], i) => (
                   <button key={g} role="radio" aria-checked={gender === g}
                     className={`gpick__b${gender === g ? ' is-on' : ''}`}
                     style={{ animationDelay: `${i * 60}ms` }}
@@ -191,7 +208,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
                 <Siraj mood="idle" size={78} />
                 <div className="bubble bubble--side" style={{ flex: 1, fontSize: '1.02rem' }}>
-                  {name.trim() ? `اختر صورتك يا ${name.trim()}` : 'اختر صورةً تمثّلك'}
+                  {t.obAvatar(name.trim())}
                 </div>
               </div>
               {/* the choice, large: pops each time a new picture is tapped */}
@@ -201,9 +218,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                   <Avatar id={avatar} name={name.trim() || null} size={132} className="avpreview__img" />
                 </motion.div>
               </div>
-              <div className="avpick avpick--ob" role="radiogroup" aria-label="صورتك">
+              <div className="avpick avpick--ob" role="radiogroup" aria-label={t.yourPicture}>
                 {avatarsFor(gender).map((a, i) => (
-                  <button key={a.id} role="radio" aria-checked={avatar === a.id} aria-label={a.label}
+                  <button key={a.id} role="radio" aria-checked={avatar === a.id} aria-label={pictureLabel(a, lang)}
                     className={`avpick__b${avatar === a.id ? ' is-on' : ''}`}
                     style={{ animationDelay: `${i * 36}ms` }}
                     onPointerDown={() => { primeAudio(); sfx.select(); haptic('tap') }}
@@ -213,7 +230,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 ))}
               </div>
               <p style={{ textAlign: 'center', color: 'var(--ink-3)', fontSize: '.84rem', fontWeight: 600 }}>
-                تستطيع تغييرها لاحقًا من ملفّك.
+                {t.obAvatarLater}
               </p>
             </motion.div>
           )}
@@ -227,10 +244,10 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               <Burst count={30} flavour="gold" spread={230} />
               <Siraj mood="cheer" size={200} />
               <h1 style={{ fontSize: 'var(--t-hero)', color: 'var(--orange)', textAlign: 'center' }}>
-                {name.trim() ? `أهلًا يا ${name.trim()}!` : 'كلّ شيء جاهز!'}
+                {t.obReady(name.trim())}
               </h1>
               <p style={{ textAlign: 'center', color: 'var(--ink-2)', fontWeight: 650, maxWidth: '24ch', lineHeight: 1.7 }}>
-                رحلتك تبدأ الآن، من أوّل درجة وصعودًا.
+                {t.obReadyText}
               </p>
             </motion.div>
           )}
@@ -238,22 +255,22 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="ob__foot">
-        {step === 'hello' && <Button block onClick={() => go('lang')}>هيّا بنا</Button>}
-        {step === 'lang' && <Button block onClick={() => go('name')}>متابعة</Button>}
+        {step === 'hello' && <Button block onClick={() => go('lang')}>{t.letsGo}</Button>}
+        {step === 'lang' && <Button block onClick={() => go('name')}>{t.continue}</Button>}
         {step === 'name' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Button block onClick={() => toGender(true)}>متابعة</Button>
+            <Button block onClick={() => toGender(true)}>{t.continue}</Button>
             <Button block tone="quiet" size="md" onClick={() => toGender(false)}>
-              تخطّي
+              {t.skip}
             </Button>
           </div>
         )}
-        {step === 'gender' && <Button block disabled={!gender} onClick={() => go('avatar')}>متابعة</Button>}
+        {step === 'gender' && <Button block disabled={!gender} onClick={() => go('avatar')}>{t.continue}</Button>}
         {step === 'avatar' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Button block disabled={!avatar} onClick={() => start(true)}>ابدأ الرحلة</Button>
+            <Button block disabled={!avatar} onClick={() => start(true)}>{t.startJourney}</Button>
             <Button block tone="quiet" size="md" onClick={() => start(false)}>
-              تخطّي
+              {t.skip}
             </Button>
           </div>
         )}

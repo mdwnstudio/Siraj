@@ -1,4 +1,4 @@
-import type { Unit } from '../types'
+import type { Lang, Unit } from '../types'
 
 /* ============================================================
    THE STAIR - الدرج
@@ -16,6 +16,7 @@ export const UNITS: Unit[] = [
     subtitle: 'ما هو الإسلام؟',
     icon: 'Sun',
     tone: 'gold',
+    en: { title: 'The Beginning', subtitle: 'What is Islam?' },
     nodes: [
       { id: 'n-intro-1', unitId: 'u-intro', kind: 'lesson', lessonId: 'l-intro-1' },
       { id: 'n-intro-2', unitId: 'u-intro', kind: 'lesson', lessonId: 'l-intro-2' },
@@ -30,6 +31,7 @@ export const UNITS: Unit[] = [
     subtitle: 'الركن الأول',
     icon: 'Star',
     tone: 'ember',
+    en: { title: 'The Shahadah', subtitle: 'The first pillar' },
     nodes: [
       { id: 'n-shahada-1', unitId: 'u-shahada', kind: 'lesson', lessonId: 'l-shahada-1' },
       { id: 'n-shahada-2', unitId: 'u-shahada', kind: 'lesson', lessonId: 'l-shahada-2' },
@@ -43,6 +45,7 @@ export const UNITS: Unit[] = [
     subtitle: 'الركن الثاني',
     icon: 'Sun',
     tone: 'gold',
+    en: { title: 'Establishing Prayer', subtitle: 'The second pillar' },
     nodes: [
       /* الوضوء قبل الصلاة: the wudu lesson comes first on the stair */
       { id: 'n-salah-1', unitId: 'u-salah', kind: 'lesson', lessonId: 'l-salah-2' },
@@ -58,6 +61,7 @@ export const UNITS: Unit[] = [
     subtitle: 'الركن الثالث',
     icon: 'Droplet',
     tone: 'sand',
+    en: { title: 'Zakah', subtitle: 'The third pillar' },
     nodes: [
       { id: 'n-zakah-1', unitId: 'u-zakah', kind: 'lesson', lessonId: 'l-zakah-1' },
       { id: 'n-zakah-2', unitId: 'u-zakah', kind: 'lesson', lessonId: 'l-zakah-2' },
@@ -71,6 +75,7 @@ export const UNITS: Unit[] = [
     subtitle: 'الركن الرابع',
     icon: 'Crescent',
     tone: 'deep',
+    en: { title: 'Fasting', subtitle: 'The fourth pillar' },
     nodes: [
       { id: 'n-sawm-1', unitId: 'u-sawm', kind: 'lesson', lessonId: 'l-sawm-1' },
       { id: 'n-sawm-2', unitId: 'u-sawm', kind: 'lesson', lessonId: 'l-sawm-2' },
@@ -84,6 +89,7 @@ export const UNITS: Unit[] = [
     subtitle: 'الركن الخامس',
     icon: 'Lantern',
     tone: 'ember',
+    en: { title: 'Hajj', subtitle: 'The fifth pillar' },
     nodes: [
       { id: 'n-hajj-1', unitId: 'u-hajj', kind: 'lesson', lessonId: 'l-hajj-1' },
       { id: 'n-hajj-2', unitId: 'u-hajj', kind: 'lesson', lessonId: 'l-hajj-2' },
@@ -101,4 +107,9 @@ export const UNIT_OF = new Map(UNITS.flatMap((u) => u.nodes.map((n) => [n.id, u]
 
 export function unitById(id: string) {
   return UNITS.find((u) => u.id === id)
+}
+
+/** a unit's title and subtitle in the learner's language */
+export function unitText(u: Unit, lang: Lang): { title: string; subtitle: string } {
+  return lang === 'en' ? u.en : { title: u.title, subtitle: u.subtitle }
 }

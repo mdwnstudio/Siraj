@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { m as motion } from 'framer-motion'
+import { useT } from '../state'
 
 const B = import.meta.env.BASE_URL
 const CHARACTER = `${B}img/siraj-splash.webp`
@@ -8,6 +9,7 @@ const WORDMARK = `${B}img/siraj-wordmark-ar.svg`
 /* The brand opening. The artwork and wordmark come directly from the
    visual identity, and the background matches the source image exactly. */
 export function Splash({ onDone }: { onDone: () => void }) {
+  const t = useT()
   useEffect(() => {
     const t = setTimeout(onDone, 1550)
     return () => clearTimeout(t)
@@ -31,7 +33,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
         <img
           className="splash__wordmark"
           src={WORDMARK}
-          alt="سراج"
+          alt={t.appName}
           width="475"
           height="238"
         />

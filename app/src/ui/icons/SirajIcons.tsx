@@ -6,7 +6,7 @@
      الشمس    Sun       home / the path / a new day
      السراج   Lantern   Siraj himself - the AI, the brand mark
      النجمة   Star      XP & mastery  (8-point khatam / رُبع الحزب)
-     القطرة   Droplet   oil for the lamp - your lives
+     القطرة   Droplet   water and giving: wudu, zakah
      الهلال   Crescent  review & return / the cycle
      الشرارة  Sparkle   celebration, "new", the moment of delight
      الشعلة   Flame     streak - the lamp stays lit
@@ -110,8 +110,9 @@ export function Star({ size = 24, ...p }: IconProps) {
   )
 }
 
-/* ---------------- القطرة - Oil droplet ---------------- */
-/* your lives. the lamp runs on it. */
+/* ---------------- القطرة - Droplet ---------------- */
+/* water and giving: wudu, zakah. (It was the lamp's oil, the old lives,
+   until those were retired.) */
 export function Droplet({ size = 24, ...p }: IconProps) {
   return (
     <svg {...base(size)} {...p}>

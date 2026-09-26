@@ -11,6 +11,7 @@
    ============================================================ */
 
 import { ALLOWED_DOMAINS, buildSystemPrompt, stripLinks, type AskContext } from '../app/src/core/ai/systemPrompt'
+import type { Lang } from '../app/src/core/i18n'
 
 /** The OpenAI model id. The API requires a model name on every request,
  *  even when a project only permits one, so this must be a real id.
@@ -46,6 +47,35 @@ export type ChatEvent =
   | ({ t: 'done' } & ChatOk)
   | ({ t: 'error' } & ChatErr)
 
+/* ---------------- what the learner reads when it goes wrong ---------------- */
+
+const MESSAGES: Record<Lang, Record<'noKey' | 'badRequest' | 'empty' | 'tooLong' | 'noContext' | 'network' | 'budget' | 'rateLimited' | 'upstream' | 'noAnswer', string>> = {
+  ar: {
+    noKey: 'خدمة «اسأل سراج» غير مُفعّلة حاليًا.',
+    badRequest: 'طلب غير صالح.',
+    empty: 'اكتب سؤالك أولًا.',
+    tooLong: 'السؤال طويل جدًّا. اختصره قليلًا.',
+    noContext: 'سياق الدرس مفقود.',
+    network: 'تعذّر الاتصال. حاول مرة أخرى.',
+    budget: 'نَفِد رصيد «اسأل سراج» مؤقّتًا. بقيّة التطبيق يعمل كالمعتاد، وسنعيد تشغيل المحادثة قريبًا بإذن الله.',
+    rateLimited: 'أسئلة كثيرة في وقت قصير. امهلني لحظة ثم أعد المحاولة.',
+    upstream: 'حدث خطأ غير متوقّع. حاول مرة أخرى.',
+    noAnswer: 'لم أستطع تكوين إجابة. أعد صياغة سؤالك.',
+  },
+  en: {
+    noKey: 'Ask Siraj is not switched on right now.',
+    badRequest: 'That request was not valid.',
+    empty: 'Write your question first.',
+    tooLong: 'That question is too long. Please shorten it a little.',
+    noContext: 'The lesson context is missing.',
+    network: 'Could not connect. Please try again.',
+    budget: 'Ask Siraj has run out of credit for now. The rest of the app works as usual, and the chat will be back soon, in sha Allah.',
+    rateLimited: 'Lots of questions in a short time. Give me a moment, then try again.',
+    upstream: 'Something unexpected went wrong. Please try again.',
+    noAnswer: 'I could not put an answer together. Try asking in a different way.',
+  },
+}
+
 /* ---------------- CORS ---------------- */
 
 function corsHeaders(req: Request, env: ChatEnv): Record<string, string> {
@@ -73,28 +103,32 @@ export async function handleChat(req: Request, env: ChatEnv): Promise<Response> 
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors })
   if (req.method !== 'POST') return json({ ok: false, code: 'bad_request', message: 'POST only' }, 405, cors)
 
+  let body: ChatRequest | null = null
+  try { body = (await req.json()) as ChatRequest } catch { /* answered below */ }
+  // every message the learner might read comes back in their language
+  const lang: Lang = body?.context?.lang === 'en' ? 'en' : 'ar'
+  const say = MESSAGES[lang]
+
   const key = env.OPENAI_API_KEY
   if (!key) {
     return json({
       ok: false, code: 'no_key',
-      message: 'خدمة «اسأل سراج» غير مُفعّلة حاليًا.',
+      message: say.noKey,
       detail: 'OPENAI_API_KEY is not set on this deployment. A GitHub Actions secret does not ' +
               'reach a running function; set it as a secret on the host that serves this endpoint.',
     }, 503, cors)
   }
 
-  let body: ChatRequest
-  try { body = (await req.json()) as ChatRequest }
-  catch { return json({ ok: false, code: 'bad_request', message: 'طلب غير صالح.' }, 400, cors) }
+  if (!body) return json({ ok: false, code: 'bad_request', message: say.badRequest }, 400, cors)
 
-  const question = (body?.question ?? '').trim()
-  if (!question) return json({ ok: false, code: 'bad_request', message: 'اكتب سؤالك أولًا.' }, 400, cors)
+  const question = (body.question ?? '').trim()
+  if (!question) return json({ ok: false, code: 'bad_request', message: say.empty }, 400, cors)
   if (question.length > MAX_QUESTION)
-    return json({ ok: false, code: 'bad_request', message: 'السؤال طويل جدًّا. اختصره قليلًا.' }, 400, cors)
+    return json({ ok: false, code: 'bad_request', message: say.tooLong }, 400, cors)
 
-  const ctx = body.context
+  const ctx: AskContext = { ...body.context, lang }
   if (!ctx?.unitTitle || !ctx?.lessonTitle)
-    return json({ ok: false, code: 'bad_request', message: 'سياق الدرس مفقود.' }, 400, cors)
+    return json({ ok: false, code: 'bad_request', message: say.noContext }, 400, cors)
 
   const stream = body.stream === true
 
@@ -108,7 +142,7 @@ export async function handleChat(req: Request, env: ChatEnv): Promise<Response> 
       if (/reasoning/i.test(detail)) upstream = await callOpenAI(key, env, ctx, question, stream, false)
     }
   } catch (e) {
-    return json({ ok: false, code: 'network', message: 'تعذّر الاتصال. حاول مرة أخرى.', detail: String(e) }, 502, cors)
+    return json({ ok: false, code: 'network', message: say.network, detail: String(e) }, 502, cors)
   }
 
   if (!upstream.ok) {
@@ -124,25 +158,25 @@ export async function handleChat(req: Request, env: ChatEnv): Promise<Response> 
         'Ask Siraj is down until the limit is raised or the billing period resets.\n' + detail)
       return json({
         ok: false, code: 'budget_exhausted',
-        message: 'نَفِد رصيد «اسأل سراج» مؤقّتًا. بقيّة التطبيق يعمل كالمعتاد، وسنعيد تشغيل المحادثة قريبًا بإذن الله.',
+        message: say.budget,
         detail: 'OpenAI quota exhausted (hard spend limit reached).',
       }, 503, cors)
     }
 
     if (upstream.status === 429)
-      return json({ ok: false, code: 'rate_limited', message: 'أسئلة كثيرة في وقت قصير. امهلني لحظة ثم أعد المحاولة.', detail }, 429, cors)
+      return json({ ok: false, code: 'rate_limited', message: say.rateLimited, detail }, 429, cors)
 
     console.error('[siraj] upstream error', upstream.status, detail)
-    return json({ ok: false, code: 'upstream', message: 'حدث خطأ غير متوقّع. حاول مرة أخرى.', detail }, 502, cors)
+    return json({ ok: false, code: 'upstream', message: say.upstream, detail }, 502, cors)
   }
 
-  if (stream && upstream.body) return relay(upstream.body, cors)
+  if (stream && upstream.body) return relay(upstream.body, cors, lang)
 
   const data = (await upstream.json()) as OpenAIResponse
-  const answer = clean(extractText(data))
+  const answer = clean(extractText(data), lang)
 
   if (!answer)
-    return json({ ok: false, code: 'upstream', message: 'لم أستطع تكوين إجابة. أعد صياغة سؤالك.' }, 502, cors)
+    return json({ ok: false, code: 'upstream', message: say.noAnswer }, 502, cors)
 
   return json({ ok: true, answer, sources: extractSources(data) }, 200, cors)
 }
@@ -175,8 +209,9 @@ function callOpenAI(
 
 // House rule: no em-dashes anywhere in the product, including model output.
 // Links go too: sources are listed under the answer, never inside it.
-function clean(text: string): string {
-  return stripLinks(text).replace(/\s*\u2014\s*/g, '، ').trim()
+/** links out, and the em-dash (house rule 1) replaced by the language's comma */
+function clean(text: string, lang: Lang): string {
+  return stripLinks(text).replace(/\s*\u2014\s*/g, lang === 'en' ? ', ' : '، ').trim()
 }
 
 /* ---------------- streaming ---------------- */
@@ -184,7 +219,7 @@ function clean(text: string): string {
 /** Turns OpenAI's SSE stream into the small NDJSON protocol the app reads
  *  (see ChatEvent). The text reaches the learner as it is written, instead
  *  of after the whole search-and-compose round trip. */
-function relay(src: ReadableStream<Uint8Array>, cors: Record<string, string>): Response {
+function relay(src: ReadableStream<Uint8Array>, cors: Record<string, string>, lang: Lang): Response {
   const enc = new TextEncoder()
   const dec = new TextDecoder()
 
@@ -233,11 +268,11 @@ function relay(src: ReadableStream<Uint8Array>, cors: Record<string, string>): R
         console.error('[siraj] stream broke', String(e))
       }
 
-      const answer = clean(final ? extractText(final) || text : text)
+      const answer = clean(final ? extractText(final) || text : text, lang)
       if (answer && !failed) {
         send({ t: 'done', ok: true, answer, sources: final ? extractSources(final) : [] })
       } else {
-        send({ t: 'error', ok: false, code: 'upstream', message: 'لم أستطع تكوين إجابة. أعد صياغة سؤالك.' })
+        send({ t: 'error', ok: false, code: 'upstream', message: MESSAGES[lang].noAnswer })
       }
       ctrl.close()
     },

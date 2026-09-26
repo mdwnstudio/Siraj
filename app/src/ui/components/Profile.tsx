@@ -1,6 +1,8 @@
 import { useId } from 'react'
 import { m as motion } from 'framer-motion'
-import { BANNERS, avatarsFor, isAvatarId, isBannerId, DEFAULT_BANNER, type BannerId, type Gender } from '../../core/content/avatars'
+import { BANNERS, avatarsFor, isAvatarId, isBannerId, pictureLabel, DEFAULT_BANNER, type BannerId, type Gender } from '../../core/content/avatars'
+import { useLang, useT } from '../state'
+import type { Strings } from '../strings'
 import { Sun, Star, Droplet, Crescent, Sparkle, Flame } from '../icons/SirajIcons'
 import { useLayout } from '../useLayout'
 import { Button } from './Button'
@@ -21,6 +23,7 @@ export function Avatar({ id, name, size = 30, className = '' }: {
   size?: number
   className?: string
 }) {
+  const t = useT()
   if (isAvatarId(id)) {
     return (
       <img className={`avatar ${className}`} src={avatarSrc(id)} alt="" width={size} height={size}
@@ -29,14 +32,14 @@ export function Avatar({ id, name, size = 30, className = '' }: {
   }
   return (
     <span className={`avatar avatar--letter ${className}`} style={{ width: size, height: size, fontSize: size * 0.46 }}>
-      {name?.trim()?.[0] ?? 'س'}
+      {name?.trim()?.[0] ?? t.initialFallback}
     </span>
   )
 }
 
 /** the name the learner goes by in the nav: their own, or ملفي until they give one */
-export function profileLabel(name: string | null): string {
-  return name?.trim() || 'ملفي'
+export function profileLabel(name: string | null, t: Strings): string {
+  return name?.trim() || t.me
 }
 
 /* ---------------- the pencil ----------------
@@ -166,32 +169,34 @@ export function ProfileSheet({ name, gender, avatar, banner, onChange, onClose }
     ? { initial: { y: '100%' }, animate: { y: '0%' }, exit: { y: '100%' }, transition: { type: 'spring' as const, stiffness: 380, damping: 36 } }
     : { initial: { opacity: 0, scale: 0.92, y: 16 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.96, y: 8 }, transition: { type: 'spring' as const, stiffness: 420, damping: 30 } }
   const tap = () => { primeAudio(); sfx.select(); haptic('tap') }
+  const t = useT()
+  const lang = useLang()
 
   return (
     <>
       <motion.div className="scrim" onClick={onClose}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} />
-      <motion.div className="sheet sheet--profile" role="dialog" aria-label="تعديل الملف" {...motionProps}>
+      <motion.div className="sheet sheet--profile" role="dialog" aria-label={t.editProfile} {...motionProps}>
         <span className="sheet__grab" />
-        <h2 className="sheet__title">تعديل الملف</h2>
+        <h2 className="sheet__title">{t.editProfile}</h2>
 
-        <label className="section__label" htmlFor="profile-name">الاسم</label>
-        <input id="profile-name" className="field" value={name ?? ''} placeholder="اسمك"
+        <label className="section__label" htmlFor="profile-name">{t.name}</label>
+        <input id="profile-name" className="field" value={name ?? ''} placeholder={t.namePlaceholder}
           autoComplete="off" enterKeyHint="done"
           onChange={(e) => onChange({ name: e.target.value.slice(0, 24) || null })} />
 
-        <div className="section__label" style={{ marginTop: 16 }}>صورتك</div>
+        <div className="section__label" style={{ marginTop: 16 }}>{t.yourPicture}</div>
         <div className="seg" style={{ marginBottom: 12 }}>
-          {([['m', 'أخ'], ['f', 'أخت']] as const).map(([g, l]) => (
+          {([['m', t.brother], ['f', t.sister]] as const).map(([g, l]) => (
             <button key={g} className={`seg__b${gender === g ? ' is-on' : ''}`} aria-pressed={gender === g}
               onPointerDown={tap} onClick={() => onChange({ gender: g })}>
               {l}
             </button>
           ))}
         </div>
-        <div className="avpick" role="radiogroup" aria-label="صورتك">
+        <div className="avpick" role="radiogroup" aria-label={t.yourPicture}>
           {avatarsFor(gender).map((a) => (
-            <button key={a.id} role="radio" aria-checked={avatar === a.id} aria-label={a.label}
+            <button key={a.id} role="radio" aria-checked={avatar === a.id} aria-label={pictureLabel(a, lang)}
               className={`avpick__b${avatar === a.id ? ' is-on' : ''}`}
               onPointerDown={tap} onClick={() => onChange({ avatar: a.id })}>
               <img src={avatarSrc(a.id)} alt="" width={56} height={56} decoding="async" />
@@ -199,10 +204,10 @@ export function ProfileSheet({ name, gender, avatar, banner, onChange, onClose }
           ))}
         </div>
 
-        <div className="section__label" style={{ marginTop: 16 }}>الغلاف</div>
-        <div className="bnpick" role="radiogroup" aria-label="الغلاف">
+        <div className="section__label" style={{ marginTop: 16 }}>{t.cover}</div>
+        <div className="bnpick" role="radiogroup" aria-label={t.cover}>
           {BANNERS.map((b) => (
-            <button key={b.id} role="radio" aria-checked={banner === b.id} title={b.label} aria-label={b.label}
+            <button key={b.id} role="radio" aria-checked={banner === b.id} title={pictureLabel(b, lang)} aria-label={pictureLabel(b, lang)}
               className={`bnpick__b${banner === b.id ? ' is-on' : ''}`}
               onPointerDown={tap} onClick={() => onChange({ banner: b.id })}>
               <ProfileBanner id={b.id} />
@@ -211,7 +216,7 @@ export function ProfileSheet({ name, gender, avatar, banner, onChange, onClose }
         </div>
 
         <div style={{ marginTop: 20 }}>
-          <Button block onClick={onClose}>تمّ</Button>
+          <Button block onClick={onClose}>{t.done}</Button>
         </div>
       </motion.div>
     </>
