@@ -479,6 +479,18 @@ screen, colour and transition; it only redraws the costly things a cheaper way
 - the islands' inner parallax layers hold still, so each island is one texture
 - no backdrop blur behind sheets, half the burst particles, no SVG glow filter
 
+**Chrome keeps the scroll-linked bodies in step only while its main-thread
+frames are cheap.** Chrome services every scroll-driven animation on the main
+thread each frame too, and when that frame's commit waits on raster, the
+compositor draws the bodies from a stale scroll offset while the road itself
+scrolls on: the road lurches (measured on the Y36, 2026-09-26: bodies updated
+on one frame in three; WebView never showed it). So the treads carry
+`will-change: transform` (no raster at every new size), and the idle loops and
+the sky hold still while the road moves (`.is-moving`). To measure it, put a
+striped bar in the scroller and a second one moved only by a `ScrollTimeline`
+on the same scroller, record the phone with `adb shell screenrecord`, and count
+the frames where the two bars move together.
+
 Rules for anything drawn on the stair, in either tier:
 
 - **No filters, masks or opacity on a layer that moves every frame.** Put them
