@@ -76,6 +76,11 @@ const MESSAGES: Record<Lang, Record<'noKey' | 'badRequest' | 'empty' | 'tooLong'
   },
 }
 
+const REPLY_IN: Record<Lang, string> = {
+  ar: 'أجب بالعربية، أيًّا كانت لغة السؤال.',
+  en: 'Answer in English, whatever language the question was asked in.',
+}
+
 /* ---------------- CORS ---------------- */
 
 function corsHeaders(req: Request, env: ChatEnv): Record<string, string> {
@@ -192,7 +197,14 @@ function callOpenAI(
       instructions: buildSystemPrompt(ctx),
       // The learner's text is data, never instruction. The system prompt
       // tells the model to ignore directives embedded in it.
-      input: [{ role: 'user', content: question }],
+      // The reply language follows the app, not the question: an Arabic
+      // question asked in the English app is still answered in English. Said
+      // last, after the question, because the model otherwise mirrors the
+      // language it was just asked in.
+      input: [
+        { role: 'user', content: question },
+        { role: 'developer', content: REPLY_IN[ctx.lang === 'en' ? 'en' : 'ar'] },
+      ],
       // A beginner's question needs one good page, not a survey: a small
       // search context and low effort cut the wait by several seconds.
       tools: [{
