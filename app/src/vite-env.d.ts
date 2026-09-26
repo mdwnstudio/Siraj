@@ -9,3 +9,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv & { readonly BASE_URL: string }
 }
+
+/** Short commit hash of this build (vite.config.ts). */
+declare const __BUILD__: string

@@ -1,14 +1,24 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
 
 /* GitHub Pages serves a project site from /<repo>/, so the production
    build needs that prefix. Override with SIRAJ_BASE=/ when moving to a
    custom domain or another host. */
 const BASE = process.env.SIRAJ_BASE ?? '/Siraj/'
 
+/* The commit this build came from, shown small in «عن سراج». An installed
+   app only swaps to a new deploy on a later cold launch, so this is how a
+   tester knows which build their phone is actually running. */
+const BUILD = (() => {
+  try { return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() }
+  catch { return 'dev' }
+})()
+
 export default defineConfig(({ command, isPreview }) => ({
   base: command === 'build' || isPreview ? BASE : '/',
+  define: { __BUILD__: JSON.stringify(BUILD) },
   plugins: [
     /* Installable app + offline shell. This manifest is also what Bubblewrap
        reads to generate the Android (TWA) wrapper, so the APK never carries
