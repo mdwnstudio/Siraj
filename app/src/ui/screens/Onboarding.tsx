@@ -6,6 +6,8 @@ import { Burst, Shockwave } from '../components/Burst'
 import { useApp } from '../state'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
+import { avatarsFor, type Gender } from '../../core/content/avatars'
+import { Avatar, avatarSrc } from '../components/Profile'
 import { FlagAR, FlagEN, FlagFR, FlagTR, FlagID, FlagUR, FlagES, FlagDE } from '../icons/Flags'
 
 const LANGS = [
@@ -19,7 +21,7 @@ const LANGS = [
   { id: 'de', label: 'Deutsch', Flag: FlagDE, ready: false },
 ]
 
-type Step = 'hello' | 'lang' | 'name' | 'ready'
+type Step = 'hello' | 'lang' | 'name' | 'gender' | 'avatar' | 'ready'
 
 const slide = {
   initial: (d: number) => ({ x: d * 40, opacity: 0 }),
@@ -32,6 +34,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState<Step>('hello')
   const [lang, setLang] = useState('ar')
   const [name, setName] = useState('')
+  const [gender, setGender] = useState<Gender | null>(null)
+  const [avatar, setAvatar] = useState<string | null>(null)
+  const keepName = useRef(true)
 
   const go = (s: Step) => {
     primeAudio()
@@ -39,21 +44,35 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     setStep(s)
   }
 
-  // the button, the skip link and the keyboard's Enter all end here, once:
-  // Enter used to show the greeting without ever finishing, and stuck there
-  const started = useRef(false)
-  const start = (keepName: boolean) => {
-    if (started.current) return
-    started.current = true
-    if (!keepName) setName('')
-    go('ready')
-    setTimeout(() => finish(keepName), 120)
+  // the name step's button, its skip link and the keyboard's Enter all lead
+  // on to the gender step; skipping forgets whatever was typed
+  const toGender = (keep: boolean) => {
+    keepName.current = keep
+    if (!keep) setName('')
+    go('gender')
   }
 
-  const finish = (keepName: boolean) => {
+  // the gender decides which pictures are offered; a picture from the other
+  // set does not survive a change of mind
+  const pickGender = (g: Gender) => {
+    setGender(g)
+    if (avatar && !avatarsFor(g).some((a) => a.id === avatar)) setAvatar(null)
+  }
+
+  // the avatar step's button and skip link end here, once
+  const started = useRef(false)
+  const start = (withAvatar: boolean) => {
+    if (started.current) return
+    started.current = true
+    const pic = withAvatar ? avatar : null
+    go('ready')
+    setTimeout(() => finish(pic), 120)
+  }
+
+  const finish = (pic: string | null) => {
     sfx.win()
     haptic('win')
-    dispatch({ type: 'onboard', name: (keepName && name.trim()) || null, language: lang })
+    dispatch({ type: 'onboard', name: (keepName.current && name.trim()) || null, language: lang, gender, avatar: pic })
     setTimeout(onDone, 1450)
   }
 
@@ -66,7 +85,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               className="pbar__fill"
               style={{ background: 'var(--orange)' }}
               initial={false}
-              animate={{ width: `${{ hello: 25, lang: 50, name: 75, ready: 100 }[step]}%` }}
+              animate={{ width: `${{ hello: 16, lang: 33, name: 50, gender: 66, avatar: 83, ready: 100 }[step]}%` }}
               transition={{ type: 'spring', stiffness: 240, damping: 26 }}
             >
               <span className="pbar__gloss" />
@@ -132,10 +151,69 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 placeholder="اسمك (اختياري)"
                 autoComplete="off"
                 enterKeyHint="done"
-                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && start(true)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && toGender(true)}
               />
               <p style={{ textAlign: 'center', color: 'var(--ink-3)', fontSize: '.84rem', fontWeight: 600 }}>
                 يبقى على جهازك وحده.
+              </p>
+            </motion.div>
+          )}
+
+          {step === 'gender' && (
+            <motion.div key="gender" custom={1} variants={slide} initial="initial" animate="animate" exit="exit"
+              transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 22 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+                <Siraj mood="think" size={90} />
+                <div className="bubble bubble--side" style={{ flex: 1 }}>
+                  {name.trim() ? `${name.trim()}، هل أنت أخٌ أم أخت؟` : 'هل أنت أخٌ أم أخت؟'}
+                </div>
+              </div>
+              <div className="gpick" role="radiogroup" aria-label="أخ أم أخت">
+                {([['m', 'أخ', 'av-1'], ['f', 'أخت', 'av-8']] as const).map(([g, label, pic], i) => (
+                  <button key={g} role="radio" aria-checked={gender === g}
+                    className={`gpick__b${gender === g ? ' is-on' : ''}`}
+                    style={{ animationDelay: `${i * 60}ms` }}
+                    onPointerDown={() => { primeAudio(); sfx.select(); haptic('tap') }}
+                    onClick={() => pickGender(g)}>
+                    <img src={avatarSrc(pic)} alt="" width={84} height={84} decoding="async" />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {step === 'avatar' && (
+            <motion.div key="avatar" custom={1} variants={slide} initial="initial" animate="animate" exit="exit"
+              transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+              style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 18, paddingTop: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+                <Siraj mood="idle" size={78} />
+                <div className="bubble bubble--side" style={{ flex: 1, fontSize: '1.02rem' }}>
+                  {name.trim() ? `اختر صورتك يا ${name.trim()}` : 'اختر صورةً تمثّلك'}
+                </div>
+              </div>
+              {/* the choice, large: pops each time a new picture is tapped */}
+              <div className="avpreview">
+                <motion.div key={avatar ?? 'none'} initial={{ scale: 0.8, opacity: 0.4 }} animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.36, ease: [0.34, 1.56, 0.64, 1] }}>
+                  <Avatar id={avatar} name={name.trim() || null} size={132} className="avpreview__img" />
+                </motion.div>
+              </div>
+              <div className="avpick avpick--ob" role="radiogroup" aria-label="صورتك">
+                {avatarsFor(gender).map((a, i) => (
+                  <button key={a.id} role="radio" aria-checked={avatar === a.id} aria-label={a.label}
+                    className={`avpick__b${avatar === a.id ? ' is-on' : ''}`}
+                    style={{ animationDelay: `${i * 36}ms` }}
+                    onPointerDown={() => { primeAudio(); sfx.select(); haptic('tap') }}
+                    onClick={() => setAvatar(a.id)}>
+                    <img src={avatarSrc(a.id)} alt="" width={72} height={72} decoding="async" />
+                  </button>
+                ))}
+              </div>
+              <p style={{ textAlign: 'center', color: 'var(--ink-3)', fontSize: '.84rem', fontWeight: 600 }}>
+                تستطيع تغييرها لاحقًا من ملفّك.
               </p>
             </motion.div>
           )}
@@ -164,7 +242,16 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         {step === 'lang' && <Button block onClick={() => go('name')}>متابعة</Button>}
         {step === 'name' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Button block onClick={() => start(true)}>ابدأ الرحلة</Button>
+            <Button block onClick={() => toGender(true)}>متابعة</Button>
+            <Button block tone="quiet" size="md" onClick={() => toGender(false)}>
+              تخطّي
+            </Button>
+          </div>
+        )}
+        {step === 'gender' && <Button block disabled={!gender} onClick={() => go('avatar')}>متابعة</Button>}
+        {step === 'avatar' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <Button block disabled={!avatar} onClick={() => start(true)}>ابدأ الرحلة</Button>
             <Button block tone="quiet" size="md" onClick={() => start(false)}>
               تخطّي
             </Button>

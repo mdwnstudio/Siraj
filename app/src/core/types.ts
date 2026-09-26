@@ -8,7 +8,16 @@ export type { SirajIconName }
 
 /* ---------------- teaching phase: بطاقات المعرفة ---------------- */
 
-export type CardArt = 'siraj' | 'siraj-wave' | { icon: SirajIconName }
+/** the eight postures drawn for صفة الصلاة, in the order they are prayed */
+export type PrayerPose =
+  | 'takbir' | 'qiyam' | 'ruku' | 'itidal' | 'sujud' | 'jalsa' | 'tashahhud' | 'taslim'
+
+export type CardArt =
+  | 'siraj'
+  | 'siraj-wave'
+  | { icon: SirajIconName }
+  /** an illustrated prayer posture: the card is built around the picture */
+  | { pose: PrayerPose }
 
 export type Card =
   | {
@@ -158,6 +167,12 @@ export interface Progress {
   version: 1
   onboarded: boolean
   name: string | null
+  /** 'm' or 'f': picks which avatars are offered (and, later, gendered copy) */
+  gender: 'm' | 'f' | null
+  /** one of AVATARS in content/avatars.ts, or null before one is picked */
+  avatar: string | null
+  /** one of BANNERS; the profile's cover */
+  banner: string
   language: string
   xp: number
   streak: number

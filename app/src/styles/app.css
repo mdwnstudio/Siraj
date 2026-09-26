@@ -595,14 +595,6 @@
 .step--done:not(.step--chest) .slab::before{
   background:repeating-linear-gradient(100deg,var(--top) 0 14px,color-mix(in srgb,var(--top) 55%,#fff) 14px 40px,var(--top) 40px 54px);
 }
-/* open but not yet reached: only the tester name (مدونة) opens steps above the
-   current one. A softer orange than the current step, so that one still leads. */
-.step--open:not(.step--done):not(.step--current) .slab{
-  --face:color-mix(in srgb,var(--orange) 55%,var(--tread-face));
-  --top:color-mix(in srgb,var(--orange-lit) 32%,var(--tread-top));
-  --rim:color-mix(in srgb,var(--orange-deep) 70%,var(--tread-rim));
-  --fg:var(--orange-deep);
-}
 .step--current .slab{--face:var(--orange);--top:color-mix(in srgb,var(--orange-lit) 78%,#fff);--rim:var(--orange-deep);--fg:#fff}
 .step--chest .slab  {--fg:var(--maroon);width:220px;justify-content:flex-start;padding-inline:18px}
 /* a reward is the same neutral tread with a gold disc: gold already means "earned" */
@@ -899,7 +891,18 @@
 
 /* ---- teaching cards ---- */
 
-.cardstage{position:absolute;inset:0;display:flex;flex-direction:column;padding:0 var(--gutter)}
+.cardstage{position:absolute;inset:0;display:flex;flex-direction:column;padding:0 var(--gutter);touch-action:pan-y}
+/* the learn footer: a small square back button, then the big one */
+.learnbar{display:flex;gap:10px;align-items:stretch}
+.learnbar .btn--block{flex:1;min-width:0}
+.backbtn{
+  flex:0 0 auto;display:grid;place-items:center;width:56px;border-radius:var(--r);
+  background:var(--paper);color:var(--ink-2);
+  border:2.5px solid var(--paper-edge);box-shadow:0 var(--depth) 0 var(--paper-edge);
+  transition:transform var(--d-tap) var(--e-out),box-shadow var(--d-tap) var(--e-out),opacity 180ms;
+}
+.backbtn:active:not(:disabled){transform:translateY(var(--depth));box-shadow:0 0 0 var(--paper-edge)}
+.backbtn:disabled{opacity:.4;cursor:default}
 .kcard{
   flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:18px;
   padding:8px 0 20px;
@@ -912,6 +915,13 @@
   padding:6px 13px;border-radius:var(--r-pill);
 }
 .kcard__title{font-size:var(--t-title);line-height:1.25}
+/* a prayer posture: the drawing is its own cream tile, so it reads the same in
+   both themes. Sized by width with a fixed ratio, so nothing shifts as it loads. */
+.pose{
+  display:block;width:min(230px,58vw);height:auto;aspect-ratio:356/410;
+  border-radius:var(--r-lg);box-shadow:0 var(--depth) 0 var(--cream-deep);
+}
+@media (max-height:700px){.pose{width:min(180px,46vw)}}
 
 /* the unit's world in miniature above a teaching card */
 .scene{position:relative;margin:0 calc(-1 * var(--gutter) + 6px)}
@@ -1427,20 +1437,78 @@
   border-radius:var(--r-lg);padding:16px;
 }
 
-.hero{
-  display:flex;align-items:center;gap:16px;
-  background:linear-gradient(140deg,var(--yellow),var(--orange));
-  border-radius:var(--r-xl);padding:20px;color:#fff;
-  box-shadow:0 7px 0 var(--orange-deep);
+.profile{
+  position:relative;overflow:hidden;margin-top:8px;
+  background:var(--paper);border:2px solid var(--paper-edge);
+  border-radius:var(--r-xl);box-shadow:0 5px 0 var(--paper-edge);
 }
-.hero__avatar{
-  display:grid;place-items:center;flex:0 0 auto;
-  width:66px;height:66px;border-radius:50%;
-  background:rgba(255,255,255,.92);color:var(--orange);
-  font-family:var(--font-display);font-size:1.9rem;font-weight:700;
+.profile__cover{height:118px;position:relative}
+.pbanner{display:block;width:100%;height:100%}
+/* name on the start side, picture on the far side, lifted over the cover's edge */
+.profile__row{display:flex;align-items:flex-end;gap:14px;padding:0 18px 18px}
+.profile__who{flex:1;min-width:0;padding-top:12px}
+.profile__name{font-family:var(--font-display);font-size:1.55rem;font-weight:700;line-height:1.15;overflow-wrap:anywhere}
+.profile__lvl{font-size:.85rem;font-weight:800;color:var(--ink-3);margin-top:2px}
+.profile__pic{position:relative;flex:0 0 auto;margin-top:-52px;margin-inline-end:6px}
+.profile__avatar{box-shadow:0 0 0 5px var(--paper),0 9px 0 5px var(--paper-edge)}
+.profile__edit{
+  position:absolute;bottom:0;left:-6px;
+  display:grid;place-items:center;width:38px;height:38px;border-radius:50%;
+  background:var(--orange);color:#fff;
+  box-shadow:0 0 0 4px var(--paper),0 4px 0 4px var(--orange-deep);
+  transition:transform var(--d-tap) var(--e-out);
 }
-.hero__name{font-family:var(--font-display);font-size:1.5rem;font-weight:700;line-height:1.15}
-.hero__lvl{font-size:.85rem;font-weight:700;opacity:.92}
+.profile__edit:active{transform:translateY(3px) scale(.96)}
+@container page (min-width:720px){
+  .profile__cover{height:168px}
+  .profile__pic{margin-top:-62px}
+}
+
+.avatar{display:block;flex:0 0 auto;border-radius:50%;object-fit:cover}
+.avatar--letter{
+  display:grid;place-items:center;
+  background:var(--yellow);color:var(--maroon);
+  font-family:var(--font-display);font-weight:700;line-height:1;
+}
+
+/* choosing a picture: onboarding and the edit sheet share one grid */
+.avpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:10px}
+.avpick--ob{grid-template-columns:repeat(6,1fr);gap:12px 10px;align-content:start;max-width:440px;width:100%;margin:0 auto}
+.avpreview{flex:1;min-height:150px;display:grid;place-items:center}
+.gpick{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.gpick__b{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  padding:20px 12px 16px;border-radius:var(--r-xl);
+  background:var(--paper);border:2.5px solid var(--paper-edge);box-shadow:0 4px 0 var(--paper-edge);
+  font-family:var(--font-display);font-size:1.4rem;font-weight:700;color:var(--ink);
+  transition:transform var(--d-tap) var(--e-out),border-color 180ms,box-shadow var(--d-tap);
+  animation:rise-in .4s var(--e-back) both;
+}
+.gpick__b img{width:84px;height:84px;border-radius:50%}
+.gpick__b:active{transform:translateY(4px);box-shadow:0 0 0 var(--paper-edge)}
+.gpick__b.is-on{border-color:var(--orange);background:var(--orange-soft);color:var(--orange-deep);box-shadow:0 4px 0 var(--orange)}
+.avpreview__img{box-shadow:0 0 0 6px var(--paper),0 10px 0 6px var(--paper-edge)}
+.avpick__b{
+  display:grid;place-items:center;aspect-ratio:1;border-radius:50%;padding:0;
+  box-shadow:0 0 0 2.5px var(--paper-edge);
+  transition:transform var(--d-tap) var(--e-out),box-shadow 180ms var(--e-out);
+  animation:rise-in .4s var(--e-back) both;
+}
+.avpick__b img{width:100%;height:100%;border-radius:50%;display:block}
+.avpick__b:active{transform:scale(.93)}
+.avpick__b.is-on{box-shadow:0 0 0 3px var(--paper),0 0 0 6px var(--orange);transform:scale(1.04)}
+
+.bnpick{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.bnpick__b{
+  height:46px;border-radius:12px;overflow:hidden;padding:0;
+  box-shadow:0 0 0 2px var(--paper-edge);
+  transition:transform var(--d-tap) var(--e-out),box-shadow 180ms var(--e-out);
+}
+.bnpick__b:active{transform:scale(.95)}
+.bnpick__b.is-on{box-shadow:0 0 0 3px var(--paper),0 0 0 6px var(--orange)}
+
+.sheet--profile{max-height:88%;overflow-y:auto;scrollbar-width:none}
+.sheet--profile::-webkit-scrollbar{display:none}
 
 .gridstats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .gstat{
@@ -1568,6 +1636,10 @@
 
 .app{flex:1;min-height:0;display:flex;flex-direction:column}
 .app__main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;position:relative}
+/* sheets open inside the content area and sit above everything in it; the
+   clip keeps one sliding away from ending up on top of the tab bar, where it
+   would linger for a frame and then vanish */
+.app__main > main{overflow:hidden}
 
 /* ---- the sidebar ---- */
 .side{
@@ -1578,6 +1650,7 @@
   border-inline-end:2px solid var(--paper-edge);
 }
 .side__brand{height:48px;display:flex;align-items:center;justify-content:center}
+.side__peek{display:none}
 .side__wordmark{width:60px;height:auto}
 .side__items{display:flex;flex-direction:column;gap:6px}
 .side__item{
@@ -1688,6 +1761,8 @@
   }
   .lesson__foot .btn--block{width:auto;min-width:200px}
   .lesson__foot > p{flex:1}
+  .lesson__foot .learnbar{flex:1;justify-content:flex-end}
+  .learnbar .btn--block{flex:0 0 auto}
   .verdict{
     display:grid;grid-template-columns:1fr auto;column-gap:24px;align-items:center;
     padding-top:22px;padding-bottom:24px;border-radius:0;
@@ -1730,8 +1805,15 @@
 
 @media (min-width:1100px){
   .side{width:260px;padding:26px 16px}
-  .side__brand{justify-content:flex-start;padding-inline:14px}
-  .side__wordmark{width:96px}
+  /* the wordmark, and Siraj's head peeking up beside it, cut off by the
+     line under the brand as if he stands just behind it */
+  .side__brand{
+    height:auto;justify-content:space-between;align-items:flex-end;
+    overflow:hidden;margin-inline:-16px;padding-inline:30px 22px;
+    border-bottom:2px solid var(--paper-edge);
+  }
+  .side__wordmark{width:96px;margin-bottom:12px}
+  .side__peek{display:block;width:83px;height:80px;margin-bottom:-2px}
   .side__item{justify-content:flex-start;padding:0 14px}
   .side__label{display:block}
 }

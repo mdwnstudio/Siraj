@@ -9,7 +9,8 @@ import { setHaptics } from '../platform/haptics'
 
 type Action =
   | { type: 'hydrate'; progress: Progress }
-  | { type: 'onboard'; name: string | null; language: string }
+  | { type: 'onboard'; name: string | null; language: string; gender: Progress['gender']; avatar: string | null }
+  | { type: 'profile'; patch: Partial<Pick<Progress, 'name' | 'gender' | 'avatar' | 'banner'>> }
   | { type: 'finish-lesson'; outcome: LessonOutcome }
   | { type: 'claim-reward'; nodeId: string }
   | { type: 'grant'; id: string }
@@ -23,7 +24,9 @@ function reducer(state: Progress, action: Action): Progress {
     case 'set':
       return action.progress
     case 'onboard':
-      return { ...state, onboarded: true, name: action.name, language: action.language }
+      return { ...state, onboarded: true, name: action.name, language: action.language, gender: action.gender, avatar: action.avatar }
+    case 'profile':
+      return { ...state, ...action.patch }
     case 'finish-lesson':
       return applyLesson(state, action.outcome).progress
     case 'claim-reward':

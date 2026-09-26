@@ -1,5 +1,6 @@
 import type { Progress } from './types'
 import { defaultProgress } from './engine/progress'
+import { isAvatarId, isBannerId, isGender } from './content/avatars'
 
 /** The only thing core/ knows about persistence. Web fulfils this with
  *  localStorage; React Native fulfils it with AsyncStorage or MMKV. */
@@ -24,6 +25,9 @@ export function reviveProgress(raw: string | null): Progress {
       settings: { ...base.settings, ...(parsed.settings ?? {}) },
       completed: parsed.completed ?? {},
       achievements: Array.isArray(parsed.achievements) ? parsed.achievements : [],
+      gender: isGender(parsed.gender) ? parsed.gender : null,
+      avatar: isAvatarId(parsed.avatar) ? parsed.avatar : null,
+      banner: isBannerId(parsed.banner) ? parsed.banner : base.banner,
       version: 1,
     }
   } catch {
