@@ -20,7 +20,7 @@ import type { Lang } from '../app/src/core/i18n'
 /** The OpenAI model id. The API requires a model name on every request,
  *  even when a project only permits one, so this must be a real id.
  *  Override per-deployment with the OPENAI_MODEL env var. */
-export const DEFAULT_MODEL = 'gpt-5.6-luna'
+export const DEFAULT_MODEL = 'gpt-6-luna'
 
 const ENDPOINT = 'https://api.openai.com/v1/responses'
 const MAX_QUESTION = 400
@@ -318,7 +318,9 @@ function callOpenAI(
         filters: { allowed_domains: [...ALLOWED_DOMAINS] },
       }],
       ...(withEffort ? { reasoning: { effort: 'low' } } : {}),
-      max_output_tokens: 700,
+      // The cap counts reasoning tokens too, and 6 Luna reasons more than 5.6
+      // did: at 700 a long Arabic answer risked being cut off.
+      max_output_tokens: 900,
       stream,
     }),
   })

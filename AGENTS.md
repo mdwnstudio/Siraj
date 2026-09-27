@@ -741,7 +741,7 @@ Roughly in priority order.
    and the سجود drawing, then the full sign-off before public release.
 2. **Wire the deployment env vars** (`OPENAI_API_KEY` on the Worker and
    `CHAT_ENDPOINT` in GitHub Actions) and verify the live Ask Siraj path end to
-   end. The default model is `gpt-5.6-luna`; only the canned pills are proven
+   end. The default model is `gpt-6-luna` (moved from 5.6 Luna on 2026-09-27); only the canned pills are proven
    today.
 3. **An English review pass.** English is in beta: its Quran and hadith are
    sourced, the rest is unreviewed. The review sheet (§7) covers Arabic only.
