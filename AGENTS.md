@@ -569,7 +569,11 @@ use quran.com's word-by-word English, pulled by
 node app/scripts/fetch-glosses.mjs
 ```
 
-into `glosses.quran.en.ts` (generated). The hadith are glossed by hand in
+into `glosses.quran.en.ts` (generated). A word-by-word gloss is a dictionary
+entry and sometimes misleads alone (عِندَ as "near" in «إِنَّ الدِّينَ عِندَ اللَّهِ
+الْإِسْلَامُ»): `FIXES` in the script corrects those by name, joining words
+into one phrase where needed, with the meaning taken from the Saheeh
+translation on the card and a reason for each. The hadith are glossed by hand in
 `glosses.en.ts`, phrase by phrase, following the sunnah.com translation.
 `check-lessons.mjs` fails if an Arabic quote has no glosses, if the phrases
 do not spell the card exactly, or if a recite card lacks `tr`. ﷺ in English

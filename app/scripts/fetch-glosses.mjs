@@ -9,7 +9,8 @@
    card to see what it means, the way quran.com does. This reads
    each Arabic ayah card, finds its verse through the English twin's
    quran.com link, lines our words up with the verse's words, and
-   writes src/core/content/glosses.quran.en.ts.
+   writes src/core/content/glosses.quran.en.ts. A few glosses that mislead
+   when read alone are corrected by name in FIXES below.
 
    The hadith glosses are written by hand in glosses.en.ts: there is
    no word-by-word source for them.
@@ -31,6 +32,48 @@ await build({
   bundle: true, format: 'esm', platform: 'node', outfile: tmp, logLevel: 'error',
 })
 const { LESSONS, LESSONS_EN } = await import(pathToFileURL(tmp).href)
+
+/* A word-by-word gloss is a dictionary entry: now and then, read alone
+   under the finger, it says something the verse does not. Each fix names
+   the words (joined into one phrase when they mean one thing together),
+   the meaning to show, taken from the Saheeh International translation
+   the card itself shows, and why. */
+const FIXES = {
+  'l-intro-1:c3': [
+    { ar: 'عِندَ اللَّهِ', en: 'in the sight of Allah', why: '"near" + "Allah" reads as a place; the card says "in the sight of Allah"' },
+  ],
+  'l-zakah-2:c4': [
+    { ar: 'وَالْمُؤَلَّفَةِ قُلُوبُهُمْ', en: 'and for bringing hearts together (for Islam)', why: '"the ones inclined" + "their hearts" means nothing apart' },
+    { ar: 'وَفِي الرِّقَابِ', en: 'and for freeing captives (or slaves)', why: '"the (freeing of) the necks" is literal to the point of confusing' },
+    { ar: 'وَفِي سَبِيلِ اللَّهِ', en: 'and for the cause of Allah', why: 'one phrase, split three ways' },
+    { ar: 'وَابْنِ السَّبِيلِ', en: 'and for the (stranded) traveller', why: 'quran.com gives "and the wayfarer" for both words' },
+  ],
+  'l-hajj-1:c4': [
+    { ar: 'رَبَّنَا', en: '(saying) Our Lord', why: 'drops a quote mark that is never closed' },
+  ],
+  'l-hajj-1:c2': [
+    { ar: 'النَّاسِ', en: 'the people', why: '"the mankind" is not English' },
+  ],
+}
+
+/** replace the pieces that spell a fix's words with one piece carrying its meaning */
+function applyFixes(key, segs) {
+  for (const f of FIXES[key] ?? []) {
+    const at = segs.findIndex((_, i) => {
+      let s = ''
+      for (let j = i; j < segs.length && s.length < f.ar.length; j++) {
+        s = s ? s + ' ' + segs[j].ar : segs[j].ar
+        if (s === f.ar) return true
+      }
+      return false
+    })
+    if (at < 0) throw new Error(`${key}: the fix for "${f.ar}" matches no words (${f.why})`)
+    let n = 0
+    for (let s = ''; s !== f.ar; n++) s = s ? s + ' ' + segs[at + n].ar : segs[at + n].ar
+    segs.splice(at, n, { ar: f.ar, en: f.en })
+  }
+  return segs
+}
 
 /** the letters only: no vowel marks, no pause marks, one form of each letter */
 const skeleton = (w) => w
@@ -98,7 +141,7 @@ for (const [id, lesson] of Object.entries(LESSONS)) {
       if (last && last.n === w.n) last.ar += ' ' + ar
       else segs.push({ ar, en: w.en, n: w.n })
     })
-    out[`${id}:${card.id}`] = segs.map(({ ar, en }) => ({ ar, en }))
+    out[`${id}:${card.id}`] = applyFixes(`${id}:${card.id}`, segs.map(({ ar, en }) => ({ ar, en })))
   }
 }
 
