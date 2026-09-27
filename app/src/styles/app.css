@@ -1433,7 +1433,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
    property it moves is written per frame: transform, opacity, clip-path. */
 .ask__flier{position:absolute;z-index:3;pointer-events:none;transform-origin:0 0;will-change:transform,clip-path}
 .ask__flier img{position:absolute;inset:0;width:100%;height:100%;transform-origin:50% 100%}
-.ask__flier-disc{position:absolute;inset:0;background:var(--orange-soft);opacity:0}
+.ask__flier-disc{position:absolute;border-radius:50%;background:var(--orange-soft);opacity:0}
 .ask__flier-ring{position:absolute;border-radius:50%;border:2px solid var(--paper-edge);opacity:0}
 /* the speech bubble goes as he leaves; the drawing is the flier now */
 .ask__head .ask__say{transition:opacity .2s var(--e-in)}

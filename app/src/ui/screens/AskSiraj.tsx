@@ -84,7 +84,6 @@ export function AskSiraj({
   const [stage, setStage] = useState<Stage>('reading')
   const [used, setUsed] = useState<string[]>(() => (chat?.msgs ?? []).filter((m) => m.who === 'me').map((m) => m.text))
   const [pose, setPose] = useState<Pose>('listen')
-  const [say, setSay] = useState<string | null>(null)
   const [where, setWhere] = useState<Place>(() => (chat?.msgs.length ? 'solo' : 'head'))
   const [flight, setFlight] = useState<Flight | null>(null)
   const thread = useRef<HTMLDivElement>(null)
@@ -271,7 +270,6 @@ export function AskSiraj({
     setStage('reading')
     setBusy(true)
     setPose('think')
-    setSay(t.letMeCheck)
     descend()
   }
 
@@ -333,14 +331,10 @@ export function AskSiraj({
         <div className={`ask__head${flight ? ' is-flying' : ''}`}>
           <div ref={headPose}><SirajPose pose={pose} size={80} /></div>
           <div className="bubble bubble--side ask__say">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span key={say ?? 'intro'} style={{ display: 'block' }}
-                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.18 }}>
-                {say ?? (lesson ? <>{t.askIntro.before}<b style={{ color: 'var(--orange)' }}>{lesson.title}</b>{t.askIntro.after}</>
-                  : t.askIntroGeneral)}
-              </motion.span>
-            </AnimatePresence>
+            {/* the intro stays put until he leaves: a line typed here just
+                before he flies off only reads as a false start */}
+            {lesson ? <>{t.askIntro.before}<b style={{ color: 'var(--orange)' }}>{lesson.title}</b>{t.askIntro.after}</>
+              : t.askIntroGeneral}
           </div>
         </div>
       )}
@@ -441,7 +435,7 @@ const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
 /** Siraj on his way down. The box is the drawing exactly as the face
  *  crops it, so the flight is one transform from the header's size and
  *  place down to scale 1, while a circle closes in around his head and
- *  the face's disc and ring fade up inside it. At the end he is pixel
+ *  the face's disc and ring fade up as it closes. At the end he is pixel
  *  for pixel the face, which takes over in the same frame. */
 function Flier({ f, onLanded }: { f: Flight; onLanded: () => void }) {
   const el = useRef<HTMLDivElement>(null)
@@ -487,10 +481,11 @@ function Flier({ f, onLanded }: { f: Flight; onLanded: () => void }) {
       node.style.clipPath = `circle(${r}px at ${cx}px ${cy}px)`
       const k = 1 - p
       img.style.transform = `matrix(${1 + (m.a - 1) * k},${m.b * k},${m.c * k},${1 + (m.d - 1) * k},${(m.e / s0) * k},${(m.f / s0) * k})`
-      const fade = String(clamp01((t - 0.3) / 0.55))
+      // the avatar's disc and ring are its own size, never bigger, and
+      // only come up as the circle closes in on them
+      const fade = String(clamp01((t - 0.6) / 0.35))
       disc.style.opacity = fade
       ring.style.opacity = fade
-      ring.style.transform = `scale(${r / r1})`
     }
     frame(0)
     const run = animate(0, 1, {
@@ -502,7 +497,7 @@ function Flier({ f, onLanded }: { f: Flight; onLanded: () => void }) {
 
   return (
     <div ref={el} className="ask__flier" aria-hidden style={{ left, top, width: w, height: h }}>
-      <span className="ask__flier-disc" />
+      <span className="ask__flier-disc" style={{ left: cx - r1, top: cy - r1, width: to.d, height: to.d }} />
       <img src={POSE_SRC.think} alt="" width={420} height={490} draggable={false} />
       <span className="ask__flier-ring" style={{ left: cx - r1, top: cy - r1, width: to.d, height: to.d }} />
     </div>
