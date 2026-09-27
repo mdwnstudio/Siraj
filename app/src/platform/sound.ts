@@ -174,6 +174,19 @@ export const sfx = {
     tone({ freq: note(i, 2), dur: 0.05, type: 'sine', gain: 0.45 })
   },
 
+  /** Siraj leaves the chat's header: a soft falling breath as he drops */
+  fly() {
+    tone({ freq: note(4, 1), dur: 0.36, type: 'sine', gain: 0.28, to: note(0, 0) })
+    noise(0, 0.3, 0.07)
+  },
+
+  /** ...and lands in his spot beside the answer: a round thud and a small ding */
+  land() {
+    tone({ freq: 220, dur: 0.12, type: 'sine', gain: 0.8, to: 130 })
+    tone({ freq: note(2, 1), at: 0.03, dur: 0.14, type: 'sine', gain: 0.45 })
+    noise(0, 0.05, 0.1)
+  },
+
   /** page / scene change */
   swoosh() {
     noise(0, 0.22, 0.1)

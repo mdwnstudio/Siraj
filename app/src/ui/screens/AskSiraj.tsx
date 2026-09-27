@@ -165,7 +165,7 @@ export function AskSiraj({
           from: { x: a.left - o.left, y: a.top - o.top, w: a.width, tilt: img ? getComputedStyle(img).transform : 'none' },
           box, face,
         })
-      }, 220)
+      }, 420)
     })
   }
 
@@ -429,6 +429,13 @@ const FACE_BORDER = 2
 const FACE_ZOOM = 1.7
 const FACE_AT = [0.48, 0.55] as const
 
+/* the flight: down to the spot by HIT, with speed left over, then a
+   small dip past it and a pop that settle by the end */
+const FLY_S = 0.68
+const HIT = 0.7
+const DIP = 7
+const POP = 0.08
+
 const ease = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2)
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
 
@@ -466,30 +473,39 @@ function Flier({ f, onLanded }: { f: Flight; onLanded: () => void }) {
     // the rig's tilt at take-off, eased away in flight (its shift is in header pixels)
     const m = new DOMMatrix(f.from.tilt === 'none' ? undefined : f.from.tilt)
     let landed = false
+    let hit = false
     const frame = (t: number) => {
-      const p = ease(t)
+      const u = Math.min(1, t / HIT)
+      // eases in and arrives still moving, so the landing is a hit
+      const p = u * u * (2 - u)
       // a touch of arc: across a little ahead of down
-      const px = ease(Math.min(1, t * 1.15))
-      const s = s0 + (1 - s0) * p
+      const px = ease(Math.min(1, u * 1.15))
+      // after the hit: a damped dip below the spot and a squash-pop
+      const v = clamp01((t - HIT) / (1 - HIT))
+      const bump = Math.sin(Math.PI * v) * (1 - v)
+      const s = s0 + (1 - s0) * p + POP * bump
       // wherever the face is now, relative to where it was at take-off
       const now = t > 0 ? faceSpot(f.box, f.face) : to
-      const x = x0 * (1 - px) + (now.x - to.x) * px
-      const y = y0 * (1 - p) + (now.y - to.y) * p
+      // the pop grows from the face's centre, not the box's corner
+      const x = x0 * (1 - px) + (now.x - to.x) * px + (1 - s) * cx * (t > HIT ? 1 : 0)
+      const y = y0 * (1 - p) + (now.y - to.y) * p + DIP * bump + (1 - s) * cy * (t > HIT ? 1 : 0)
       node.style.transform = `translate(${x}px,${y}px) scale(${s})`
-      const c = ease(clamp01((t - 0.1) / 0.8))
+      if (!hit && t >= HIT) { hit = true; sfx.land(); haptic('tap') }
+      const c = ease(clamp01((u - 0.1) / 0.9))
       const r = r0 + (r1 - r0) * c
       node.style.clipPath = `circle(${r}px at ${cx}px ${cy}px)`
-      const k = 1 - p
+      const k = 1 - Math.min(1, p)
       img.style.transform = `matrix(${1 + (m.a - 1) * k},${m.b * k},${m.c * k},${1 + (m.d - 1) * k},${(m.e / s0) * k},${(m.f / s0) * k})`
       // the avatar's disc and ring are its own size, never bigger, and
       // only come up as the circle closes in on them
-      const fade = String(clamp01((t - 0.6) / 0.35))
+      const fade = String(clamp01((u - 0.55) / 0.45))
       disc.style.opacity = fade
       ring.style.opacity = fade
     }
     frame(0)
+    sfx.fly()
     const run = animate(0, 1, {
-      duration: 0.48, ease: 'linear', onUpdate: frame,
+      duration: FLY_S, ease: 'linear', onUpdate: frame,
       onComplete: () => { if (!landed) { landed = true; onLanded() } },
     })
     return () => run.stop()
