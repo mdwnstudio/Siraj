@@ -22,6 +22,12 @@ import type { Lang } from '../app/src/core/i18n'
  *  Override per-deployment with the OPENAI_MODEL env var. */
 export const DEFAULT_MODEL = 'gpt-6-luna'
 
+/** How hard the model thinks before answering. Override with OPENAI_EFFORT.
+ *  6 Luna at low skipped guardrail rules in English (red-team 2026-09-27:
+ *  it called a fake verse a hadith and wrote the false statements it was
+ *  asked for); medium passed. */
+export const DEFAULT_EFFORT = 'medium'
+
 const ENDPOINT = 'https://api.openai.com/v1/responses'
 const MAX_QUESTION = 400
 /* the conversation sent with a question: the last few turns, each capped.
@@ -45,6 +51,8 @@ const CANNED = new Set(
 export interface ChatEnv {
   OPENAI_API_KEY?: string
   OPENAI_MODEL?: string
+  /** the reasoning effort, when it differs from DEFAULT_EFFORT */
+  OPENAI_EFFORT?: string
   /** comma separated; omit to allow any origin */
   ALLOWED_ORIGINS?: string
   /** signs Siraj's replies so a returned history can be trusted. Optional:
@@ -317,10 +325,11 @@ function callOpenAI(
         search_context_size: 'low',
         filters: { allowed_domains: [...ALLOWED_DOMAINS] },
       }],
-      ...(withEffort ? { reasoning: { effort: 'low' } } : {}),
-      // The cap counts reasoning tokens too, and 6 Luna reasons more than 5.6
-      // did: at 700 a long Arabic answer risked being cut off.
-      max_output_tokens: 900,
+      ...(withEffort ? { reasoning: { effort: env.OPENAI_EFFORT || DEFAULT_EFFORT } } : {}),
+      // The cap counts reasoning tokens too, and 6 Luna at medium effort
+      // reasons far more than 5.6 did at low. The prompt keeps the answer
+      // itself short; this only stops a runaway.
+      max_output_tokens: 1500,
       stream,
     }),
   })

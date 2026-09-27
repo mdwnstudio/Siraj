@@ -352,6 +352,13 @@ in as `VITE_CHAT_ENDPOINT`.
 requires a model name on every request even when a project permits only one, so
 the id string still has to be sent. Override per-deployment with `OPENAI_MODEL`.
 
+**The reasoning effort** is `DEFAULT_EFFORT` beside it (`medium`), overridden
+with `OPENAI_EFFORT`. GPT-6 Luna at `low` failed three of the five red-team
+attacks in English (2026-09-27): it called the fake verse a hadith and wrote
+the false statements it was asked for. At `medium` all ten passed. The extra
+reasoning is why `max_output_tokens` is 1500: the cap counts reasoning too,
+and the prompt, not the cap, keeps the answer short.
+
 **CORS:** the site and the Worker are different origins, so `ALLOWED_ORIGINS` in
 `worker/wrangler.toml` must list the Pages origin. This blocks other browser
 origins from reading responses, but it is not authentication. Keep the OpenAI

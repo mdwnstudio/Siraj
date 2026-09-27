@@ -6,6 +6,7 @@ export default function handler(req: Request): Promise<Response> {
   return handleChat(req, {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL,
+    OPENAI_EFFORT: process.env.OPENAI_EFFORT,
     ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
     HISTORY_SECRET: process.env.HISTORY_SECRET,
   })
