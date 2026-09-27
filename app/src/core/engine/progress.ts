@@ -19,6 +19,7 @@ export function defaultProgress(): Progress {
     lastActiveDay: null,
     completed: {},
     achievements: [],
+    mistakes: [],
     // Light by default. Dark is still available in Settings, and 'auto'
     // follows the OS, but neither is what a first-time visitor gets.
     settings: { sound: true, haptics: true, reduceMotion: false, theme: 'light' },
@@ -180,6 +181,9 @@ export function achievementById(id: string) {
 
 export interface LessonOutcome {
   nodeId: string
+  /** a practice session from أخطائي: earns XP and keeps the streak,
+   *  but finishes no step on the stair */
+  practice?: boolean
   xp: number
   total: number
   correct: number
@@ -194,18 +198,18 @@ export interface ApplyResult {
   leveledUp: boolean
 }
 
+/** today's streak after a finished session: +1 on a new day, reset after a gap */
+function bumpStreak(p: Progress, today: string): { streak: number; streakBumped: boolean } {
+  if (p.lastActiveDay === today) return { streak: p.streak, streakBumped: false }
+  const gap = p.lastActiveDay ? daysBetween(p.lastActiveDay, today) : Infinity
+  return { streak: gap === 1 ? p.streak + 1 : 1, streakBumped: true }
+}
+
 export function applyLesson(p: Progress, o: LessonOutcome): ApplyResult {
+  if (o.practice) return applyPractice(p, o)
   const today = dayKey()
   const beforeLevel = levelFromXp(p.xp).level
-
-  // streak
-  let streak = p.streak
-  let streakBumped = false
-  if (p.lastActiveDay !== today) {
-    const gap = p.lastActiveDay ? daysBetween(p.lastActiveDay, today) : Infinity
-    streak = gap === 1 ? p.streak + 1 : 1
-    streakBumped = true
-  }
+  const { streak, streakBumped } = bumpStreak(p, today)
 
   const accuracy = o.total ? o.correct / o.total : 0
   const stars = accuracy === 1 ? 3 : accuracy >= 0.8 ? 2 : 1
@@ -249,6 +253,23 @@ export function applyLesson(p: Progress, o: LessonOutcome): ApplyResult {
 
   next.achievements = [...next.achievements, ...earned]
 
+  return {
+    progress: next,
+    newAchievements: earned,
+    streakBumped,
+    leveledUp: levelFromXp(next.xp).level > beforeLevel,
+  }
+}
+
+/** A practice session counts for the day, like Duolingo's practice does:
+ *  the XP lands and the streak is kept, but no step is marked done. */
+function applyPractice(p: Progress, o: LessonOutcome): ApplyResult {
+  const today = dayKey()
+  const beforeLevel = levelFromXp(p.xp).level
+  const { streak, streakBumped } = bumpStreak(p, today)
+  const next: Progress = { ...p, xp: p.xp + o.xp, streak, lastActiveDay: today }
+  const earned = streak >= 3 && !p.achievements.includes('streak-3') ? ['streak-3'] : []
+  next.achievements = [...p.achievements, ...earned]
   return {
     progress: next,
     newAchievements: earned,

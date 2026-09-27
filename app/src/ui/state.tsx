@@ -8,6 +8,7 @@ import { webStore } from '../platform/webStorage'
 import { STRINGS, type Strings } from './strings'
 import { loadLessons } from '../core/content/lessons'
 import { applyLesson, claimReward, grantAchievement, type LessonOutcome, type ApplyResult } from '../core/engine/progress'
+import { clearMistake, recordMistake } from '../core/engine/mistakes'
 import { setSound } from '../platform/sound'
 import { setHaptics } from '../platform/haptics'
 
@@ -19,6 +20,8 @@ type Action =
   | { type: 'finish-lesson'; outcome: LessonOutcome }
   | { type: 'claim-reward'; nodeId: string }
   | { type: 'grant'; id: string }
+  /** a question answered: a wrong one is saved to أخطائي, a right one clears it */
+  | { type: 'answered'; lessonId: string; exerciseId: string; nodeId: string; ok: boolean }
   | { type: 'settings'; patch: Partial<Settings> }
   | { type: 'reset' }
   | { type: 'set'; progress: Progress }
@@ -41,6 +44,10 @@ function reducer(state: Progress, action: Action): Progress {
       return claimReward(state, action.nodeId)
     case 'grant':
       return grantAchievement(state, action.id)
+    case 'answered':
+      return action.ok
+        ? clearMistake(state, action.lessonId, action.exerciseId)
+        : recordMistake(state, { lessonId: action.lessonId, exerciseId: action.exerciseId, nodeId: action.nodeId })
     case 'settings':
       return { ...state, settings: { ...state.settings, ...action.patch } }
     case 'reset':

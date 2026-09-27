@@ -169,11 +169,17 @@ export function ProgressBar({ value, tone = 'good' }: { value: number; tone?: 'g
 
 /* ---------------- bottom navigation ---------------- */
 
-export type Tab = 'path' | 'review' | 'ask' | 'wins' | 'me'
+/** how many mistakes wait on the أخطائي tab, the way Duolingo marks it */
+function MistakeCount({ n }: { n: number }) {
+  if (!n) return null
+  return <span className="navcount num" aria-hidden>{n > 99 ? '99+' : n}</span>
+}
+
+export type Tab = 'path' | 'mistakes' | 'ask' | 'wins' | 'me'
 
 const TABS: { id: Exclude<Tab, 'me'>; Icon: typeof Sun }[] = [
   { id: 'path', Icon: Sun },
-  { id: 'review', Icon: Crescent },
+  { id: 'mistakes', Icon: Crescent },
   { id: 'ask', Icon: Lantern },
   { id: 'wins', Icon: Star },
 ]
@@ -206,6 +212,7 @@ export function NavBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
           >
             <Icon size={26} />
           </motion.span>
+          {id === 'mistakes' && <MistakeCount n={p.mistakes.length} />}
         </button>
       ))}
       <button
@@ -231,7 +238,7 @@ export function NavBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
 
 const SIDE_TONES: Record<Tab, string> = {
   path: 'var(--orange)',
-  review: 'var(--info)',
+  mistakes: 'var(--info)',
   ask: 'var(--orange-deep)',
   wins: 'var(--yellow-deep)',
   me: 'var(--maroon)',
@@ -269,6 +276,7 @@ export function SideNav({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
             )}
             <span className="side__ico">
               {Icon ? <Icon size={30} /> : <Avatar id={p.avatar} name={p.name} size={32} className="nav__avatar" />}
+              {id === 'mistakes' && <MistakeCount n={p.mistakes.length} />}
             </span>
             <span className="side__label">{label}</span>
           </button>

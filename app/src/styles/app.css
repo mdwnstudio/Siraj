@@ -277,6 +277,16 @@
   box-shadow:0 2px 0 var(--yellow-deep);
 }
 .nav__item--me.is-on .nav__avatar{box-shadow:0 0 0 3px var(--orange),0 2px 0 var(--yellow-deep)}
+/* the count on أخطائي: a small orange badge on the icon's shoulder.
+   Physical left/top so it lands on the same corner in both languages. */
+.navcount{
+  position:absolute;z-index:2;top:4px;left:calc(50% + 6px);
+  min-width:19px;height:19px;padding:0 5px;border-radius:99px;
+  display:grid;place-items:center;
+  background:var(--orange);color:#fff;border:2px solid var(--paper);
+  font-size:.66rem;font-weight:900;line-height:1;
+}
+.side__ico .navcount{top:-7px;left:auto;right:-9px}
 
 /* =========================================================
    5. SPLASH
@@ -1486,11 +1496,86 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 .ask__send:active:not(:disabled){transform:translateY(4px);box-shadow:0 0 0 var(--orange-deep)}
 .ask__send:disabled{opacity:.4}
 .ask__note{flex:0 0 auto;font-size:.74rem;color:var(--ink-3);text-align:center;font-weight:600;padding-bottom:6px}
+.ask__note.is-warn{color:var(--orange-ink);font-weight:750}
 .ask__finish{
   flex:0 0 auto;
   padding-bottom:calc(14px + var(--safe-b));
   background:var(--bg);
 }
+
+/* the Ask tab's top bar: saved chats, the subject, a new chat.
+   The subject chip is the one big target; the two ends are plain glyphs. */
+.askbar{
+  display:flex;align-items:center;gap:8px;flex:0 0 auto;
+  padding:2px 0 10px;
+}
+.askbar__btn{
+  position:relative;flex:0 0 auto;display:grid;place-items:center;
+  width:44px;height:44px;border-radius:var(--r);
+  color:var(--ink-2);background:var(--paper);box-shadow:inset 0 0 0 2px var(--paper-edge);
+  transition:transform var(--d-tap) var(--e-out),opacity 160ms;
+}
+.askbar__btn:active:not(:disabled){transform:scale(.9)}
+.askbar__btn:disabled{opacity:.35}
+.askbar__dot{position:absolute;top:8px;left:8px;width:8px;height:8px;border-radius:50%;background:var(--orange)}
+.askbar__topic{
+  flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:8px;
+  height:44px;padding:0 14px;border-radius:var(--r-pill);
+  background:var(--orange-soft);color:var(--orange-ink);
+  box-shadow:0 3px 0 color-mix(in srgb,var(--orange) 45%,transparent);
+  font-weight:800;font-size:.95rem;
+  transition:transform var(--d-tap) var(--e-out),box-shadow var(--d-tap) var(--e-out);
+}
+.askbar__topic:active{transform:translateY(3px);box-shadow:0 0 0 transparent}
+.askbar__ico{display:grid;place-items:center;flex:0 0 auto}
+.askbar__title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.askbar__topic svg:last-child{flex:0 0 auto;opacity:.8}
+
+/* the two list sheets of the Ask tab */
+.sheet--list{display:flex;flex-direction:column;max-height:86%}
+.sheet__head{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.sheet__head .sheet__title{flex:1;margin-bottom:0}
+.sheet__x{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;color:var(--ink-3);background:var(--bg-sunk)}
+.sheet__x:active{transform:scale(.9)}
+.sheet__scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:10px 0 4px}
+.sheet__scroll::-webkit-scrollbar{display:none}
+.sheet__note{font-size:.8rem;font-weight:650;color:var(--ink-3);line-height:1.55;margin-bottom:12px}
+.sheet__note--end{margin:14px 0 0;text-align:center}
+.sheet__empty{display:grid;gap:6px;text-align:center;padding:26px 8px 8px;color:var(--ink-2);line-height:1.6}
+
+.tgroup{margin-top:16px}
+.tgroup__rows{display:grid;gap:8px}
+.trow{
+  display:flex;align-items:center;gap:12px;width:100%;
+  padding:12px 14px;border-radius:var(--r-lg);text-align:start;
+  background:var(--paper);box-shadow:inset 0 0 0 2px var(--paper-edge);
+  transition:transform var(--d-tap) var(--e-out),box-shadow 160ms,background 160ms;
+}
+button.trow:active:not(:disabled){transform:scale(.98)}
+.trow:disabled{opacity:.5;cursor:default}
+.trow.is-on{background:var(--orange-soft);box-shadow:inset 0 0 0 2.5px var(--orange)}
+.trow--general{margin-top:2px}
+.trow__ico{
+  flex:0 0 auto;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;
+  background:var(--yellow-soft);color:var(--orange-ink);
+}
+.trow.is-on .trow__ico{background:var(--paper)}
+.trow__main{flex:1;min-width:0;display:grid;gap:2px}
+.trow__title{font-weight:800;font-size:.95rem;line-height:1.35}
+.trow__title--clip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow__note{font-size:.76rem;font-weight:650;color:var(--ink-3)}
+.trow__note.is-done{color:var(--good-ink)}
+.trow__note.is-here{color:var(--orange-ink)}
+.trow__check{flex:0 0 auto;color:var(--orange)}
+/* a saved chat: the row opens it, the X beside it deletes */
+.trow--chat{padding:0;gap:0}
+.trow__hit{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:start;border-radius:var(--r-lg)}
+.trow__hit:active{transform:scale(.98)}
+.trow__del{flex:0 0 auto;display:grid;place-items:center;width:44px;height:44px;margin-inline-end:6px;border-radius:50%;color:var(--ink-3)}
+.trow__del:active{background:var(--bg-sunk)}
+.trow--confirm{background:var(--bad-soft);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--bad) 40%,transparent)}
+.tbtn{flex:0 0 auto;padding:8px 14px;border-radius:var(--r-pill);font-weight:800;font-size:.85rem;background:var(--paper);color:var(--ink-2)}
+.tbtn--bad{background:var(--bad);color:#fff}
 
 /* =========================================================
    10. RESULT - أحسنت
@@ -1697,6 +1782,34 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 .badge.is-won{border-color:var(--yellow)}
 .badge__t{font-size:.82rem;font-weight:800;line-height:1.2}
 .badge__n{font-size:.68rem;color:var(--ink-3);font-weight:600;line-height:1.3}
+
+/* أخطائي: one card per question, grouped under its unit */
+.mlist{display:grid;gap:10px}
+.mcard{
+  background:var(--paper);border:2px solid var(--paper-edge);border-radius:var(--r-lg);
+  padding:14px 16px 12px;
+}
+.mcard__top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.mcard__from{flex:1;min-width:0;font-size:.74rem;font-weight:800;color:var(--info-ink)}
+.mcard__misses{flex:0 0 auto;font-size:.72rem;font-weight:900;color:var(--bad-ink);background:var(--bad-soft);padding:2px 9px;border-radius:var(--r-pill)}
+.mcard__q{font-weight:750;font-size:1rem;line-height:1.6}
+.mcard__a{
+  margin-top:10px;padding:10px 12px;border-radius:var(--r);
+  background:var(--good-soft);color:var(--good-ink);font-weight:700;font-size:.9rem;line-height:1.6;
+}
+.mcard__why{display:block;margin-top:4px;color:var(--ink-2);font-weight:600}
+.mcard__actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.mcard__btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 13px;border-radius:var(--r-pill);font-size:.82rem;font-weight:800;
+  color:var(--ink-2);background:var(--bg-sunk);
+  transition:transform var(--d-tap) var(--e-out);
+}
+.mcard__btn:active{transform:scale(.95)}
+.mcard__btn--ask{color:var(--orange-ink);background:var(--orange-soft)}
+
+/* in a practice session, the lesson a question came from */
+.ex__from{letter-spacing:0;font-weight:750;opacity:.85;padding-inline-start:8px;border-inline-start:1.5px solid currentColor}
 
 .rows{display:flex;flex-direction:column;gap:2px}
 .srow{
@@ -1955,9 +2068,9 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
   .badge__ring{width:64px;height:64px}
   .badge__t{font-size:.92rem}
   .badge__n{font-size:.76rem}
-  .review-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-  .review-grid .srow{border-radius:var(--r-lg)!important;border-top:2px solid var(--paper-edge)!important}
   .page--ask{padding-top:12px;padding-bottom:0}
+  .sheet--list{max-height:min(640px,calc(100% - 48px));width:min(520px,calc(100% - 48px))}
+  .mlist{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 }
 
 @media (min-width:1100px){
@@ -2068,6 +2181,7 @@ html[lang="en"] .quote .quote__text{font-family:var(--font-ui);font-size:1.02rem
 }
 /* a label that heads a card sits where its text starts, icon first */
 html[lang="en"] :is(.kcard__kicker,.ex__kicker){align-self:flex-end;direction:ltr}
+html[lang="en"] :is(.mcard__btn,.askbar__topic){direction:ltr}
 html[lang="en"] .verdict__head{direction:ltr}
 /* the streak flag sits at the reading end: left in Arabic, right in English */
 /* physical, because direction:ltr (icon first) would turn a logical inset too */

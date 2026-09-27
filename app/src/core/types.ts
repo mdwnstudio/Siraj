@@ -170,6 +170,20 @@ export interface NodeResult {
   at: number
 }
 
+/** A question the learner got wrong, kept until they get it right.
+ *  Only ids are stored: the text is read from the lesson in whatever
+ *  language the app is in, so a mistake survives a language switch. */
+export interface Mistake {
+  lessonId: string
+  exerciseId: string
+  /** the step it was missed on, for grouping by unit */
+  nodeId: string
+  /** when it was last missed */
+  at: number
+  /** how many times it has been missed */
+  misses: number
+}
+
 export interface Progress {
   version: 1
   onboarded: boolean
@@ -187,5 +201,7 @@ export interface Progress {
   lastActiveDay: string | null
   completed: Record<string, NodeResult>
   achievements: string[]
+  /** every question answered wrong and not yet put right, newest first */
+  mistakes: Mistake[]
   settings: Settings
 }

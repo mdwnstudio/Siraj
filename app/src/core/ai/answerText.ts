@@ -4,7 +4,12 @@
    1. A link that is already listed under the answer's sources is noise in
       the text, so it is dropped (with the brackets and parens around it).
    2. Any other link is kept, but shown as a short label, e.g.
-      "sunnah.com/bukhari…", never as a raw 120-character URL. */
+      "sunnah.com/bukhari…", never as a raw 120-character URL.
+   3. A trusted site named in the text ("ارجع إلى islamqa.info") becomes a
+      link too: to the page on that site the answer actually cites, or
+      else to the site itself. Only the four trusted domains are linked. */
+
+import { ALLOWED_DOMAINS } from './systemPrompt'
 
 export type Segment =
   | { k: 'text'; v: string }
@@ -52,8 +57,31 @@ function tidy(raw: string): string {
   } catch { return raw }
 }
 
-// [label](url) with optional wrapping parens, or a bare url, or **bold**
-const TOKEN = /\(?\[([^\]\n]*)\]\((https?:\/\/[^\s)]+)\)\)?|(https?:\/\/[^\s<>()"'،؛]+[^\s<>()"'،؛.,:!?])|\*\*([^*\n]+)\*\*/g
+const SITES = ALLOWED_DOMAINS.map((d) => d.replace(/\./g, '\\.')).join('|')
+
+// [label](url) with optional wrapping parens, or a bare url, or **bold**,
+// or a trusted site named without its scheme (islamqa.info, sunnah.com/...)
+const TOKEN = new RegExp(
+  String.raw`\(?\[([^\]\n]*)\]\((https?:\/\/[^\s)]+)\)\)?|(https?:\/\/[^\s<>()"'،؛]+[^\s<>()"'،؛.,:!?])|\*\*([^*\n]+)\*\*` +
+  String.raw`|(?<![\w.@/-])((?:www\.)?(?:${SITES})(?:\/[^\s<>()"'،؛]*[^\s<>()"'،؛.,:!?])?)(?![\w-])`,
+  'gi',
+)
+
+/** The page on this site the answer cites, or the site's front page. A path
+ *  the model wrote is followed only when it is one of the cited pages: a
+ *  written path could be invented, a cited one was really found. */
+function siteLink(named: string, sources: { url: string }[]): string {
+  const bare = named.replace(/^www\./i, '')
+  if (bare.includes('/')) {
+    const exact = sources.find((s) => urlKey(s.url) === urlKey('https://' + bare))
+    if (exact) return tidy(exact.url)
+  }
+  const host = bare.split('/')[0].toLowerCase()
+  const cited = sources.find((s) => {
+    try { return new URL(s.url).hostname.replace(/^www\./, '') === host } catch { return false }
+  })
+  return cited ? tidy(cited.url) : `https://${host}/`
+}
 
 export function parseAnswer(
   text: string,
@@ -82,8 +110,10 @@ export function parseAnswer(
   for (const m of src.matchAll(TOKEN)) {
     pushText(src.slice(at, m.index))
     at = m.index! + m[0].length
-    const [whole, mdLabel, mdUrl, bare, bold] = m
+    const [whole, mdLabel, mdUrl, bare, bold, site] = m
     if (bold !== undefined) { out.push({ k: 'bold', v: bold }); continue }
+    // a named site is the learner's way in, so it stays even when it is also a source
+    if (site !== undefined) { out.push({ k: 'link', label: site, url: siteLink(site, sources) }); continue }
 
     const url = mdUrl ?? bare!
     if (known.has(urlKey(url))) continue

@@ -12,8 +12,33 @@ export interface AskResult {
   ok: boolean
   answer?: string
   sources?: { title: string; url: string }[]
+  /** the server's signature on this reply; sent back in the history */
+  sig?: string
   message?: string
   code?: string
+}
+
+/** One earlier message, sent so Siraj can follow the conversation. */
+export interface AskTurn {
+  role: 'user' | 'assistant'
+  text: string
+  sig?: string
+}
+
+/* How much of the conversation goes with each question: the last few
+   exchanges verbatim, the common production choice. Older turns stay on
+   the device and on screen, they just are not sent. The server enforces
+   the same caps. */
+export const HISTORY_TURNS = 10
+export const HISTORY_CHARS = 1500
+
+export function recentHistory(msgs: { who: 'me' | 'siraj'; text: string; sig?: string }[]): AskTurn[] {
+  return msgs.slice(-HISTORY_TURNS).map((m) => ({
+    role: m.who === 'me' ? 'user' as const : 'assistant' as const,
+    // a reply goes back whole, so its signature still matches; the server trims it
+    text: m.who === 'me' ? m.text.slice(0, HISTORY_CHARS) : m.text,
+    ...(m.sig ? { sig: m.sig } : {}),
+  }))
 }
 
 /* Same-origin by default (Vercel/Netlify). On GitHub Pages the site is
@@ -40,7 +65,7 @@ export interface StreamHandlers {
    endpoint is an older deployment that only speaks plain JSON, or when
    the runtime cannot read a response body incrementally. */
 export async function askSirajStream(
-  question: string, context: AskContext, h: StreamHandlers = {},
+  question: string, context: AskContext, h: StreamHandlers = {}, history: AskTurn[] = [],
 ): Promise<AskResult> {
   const lang = context.lang ?? 'ar'
   let res: Response
@@ -48,7 +73,7 @@ export async function askSirajStream(
     res = await fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ question, context, stream: true }),
+      body: JSON.stringify({ question, context, history, stream: true }),
     })
   } catch {
     return { ok: false, code: 'network', message: OFFLINE[lang] }
@@ -58,7 +83,7 @@ export async function askSirajStream(
   if (!type.includes('ndjson')) {
     const data = await res.json().catch(() => null)
     if (!data) return { ok: false, code: 'network', message: OFFLINE[lang] }
-    if (data.ok) return { ok: true, answer: data.answer, sources: data.sources ?? [] }
+    if (data.ok) return { ok: true, answer: data.answer, sources: data.sources ?? [], sig: data.sig }
     return { ok: false, code: data.code ?? 'upstream', message: data.message ?? FAILED[lang] }
   }
 
@@ -66,11 +91,11 @@ export async function askSirajStream(
   let result: AskResult | null = null
   const handle = (line: string) => {
     if (!line.trim()) return
-    let ev: { t: string; s?: 'searching' | 'writing'; d?: string; answer?: string; sources?: AskResult['sources']; code?: string; message?: string }
+    let ev: { t: string; s?: 'searching' | 'writing'; d?: string; answer?: string; sources?: AskResult['sources']; sig?: string; code?: string; message?: string }
     try { ev = JSON.parse(line) } catch { return }
     if (ev.t === 'status' && ev.s) h.onStatus?.(ev.s)
     else if (ev.t === 'delta' && ev.d) { text += ev.d; h.onText?.(stripLinks(text)) }
-    else if (ev.t === 'done') result = { ok: true, answer: ev.answer, sources: ev.sources ?? [] }
+    else if (ev.t === 'done') result = { ok: true, answer: ev.answer, sources: ev.sources ?? [], sig: ev.sig }
     else if (ev.t === 'error') result = { ok: false, code: ev.code ?? 'upstream', message: ev.message ?? FAILED[lang] }
   }
 

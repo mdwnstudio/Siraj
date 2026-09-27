@@ -31,6 +31,11 @@ export function isCorrect(ex: Exercise, a: Answer | null): boolean {
   }
 }
 
+/** the question as one line of text, for lists such as أخطائي */
+export function exerciseQuestion(ex: Exercise): string {
+  return ex.kind === 'boolean' ? ex.statement : ex.prompt
+}
+
 /** what to show the learner after they answer */
 export function explanationFor(ex: Exercise): string | undefined {
   return 'explain' in ex ? ex.explain : undefined

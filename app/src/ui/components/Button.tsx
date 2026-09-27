@@ -24,6 +24,8 @@ export function Button({
       {...rest}
       className={`btn btn--${tone} btn--${size}${block ? ' btn--block' : ''} ${className}`}
       onPointerDown={(e) => {
+        // a disabled button stays silent: no click, no buzz
+        if (e.currentTarget.disabled) return
         primeAudio()
         if (!silent) sfx.tap()
         haptic('tap')

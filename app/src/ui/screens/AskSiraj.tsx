@@ -1,9 +1,12 @@
-import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, animate, m as motion } from 'framer-motion'
-import type { Lesson } from '../../core/types'
-import { askSirajStream } from '../../core/ai/askSiraj'
+import type { AskSuggestion, Lang, Progress } from '../../core/types'
+import { askSirajStream, recentHistory } from '../../core/ai/askSiraj'
 import { parseAnswer } from '../../core/ai/answerText'
-import { conceptsFromLesson } from '../../core/ai/systemPrompt'
+import { buildAskContext, lessonNodes } from '../../core/ai/context'
+import { GENERAL, chatTitle, newChatId, type ChatMsg, type SavedChat, type SubjectId } from '../../core/ai/chats'
+import { getLesson } from '../../core/content/lessons'
+import { chatStore } from '../chats'
 import { SirajPose, usePreloadPoses, type Pose } from '../components/SirajPose'
 import { Button } from '../components/Button'
 import { useApp, useCalmMotion, useT } from '../state'
@@ -15,6 +18,8 @@ interface Msg {
   who: 'me' | 'siraj' | 'err'
   text: string
   sources?: { title: string; url: string }[]
+  /** the server's signature on a live reply, kept for the history */
+  sig?: string
   /** still being written: hide half-finished markdown, show a caret */
   live?: boolean
   /** the whole reply, known before typing starts, so the bubble takes
@@ -30,30 +35,69 @@ interface Msg {
 type Stage = 'reading' | 'searching' | 'digging' | 'patient' | 'writing'
 
 export function AskSiraj({
-  lesson, unitTitle, onFinish,
+  subject, chat, draft, onFinish, onSaved,
 }: {
-  lesson: Lesson
-  unitTitle: string
+  /** what the chat is about: a lesson id, or GENERAL for the whole course */
+  subject: SubjectId
+  /** a saved chat to pick up where it was left */
+  chat?: SavedChat
+  /** a question to start with, typed in but not sent */
+  draft?: string
   /** only the end-of-lesson chat has a way onward; the home tab's chat
    *  is a place to stay, so it gets no تابع / تخطّي button */
   onFinish?: () => void
+  /** the chat was saved to the device, under this id */
+  onSaved?: (id: string) => void
 }) {
   const { progress, dispatch } = useApp()
   const t = useT()
   const calm = useCalmMotion()
-  const [msgs, setMsgs] = useState<Msg[]>([])
-  const [text, setText] = useState('')
+  const lang = progress.language
+  const lesson = subject === GENERAL ? undefined : getLesson(subject, lang)
+  const [msgs, setMsgs] = useState<Msg[]>(() => (chat?.msgs ?? []).map((m, id) => ({ ...m, id })))
+  const [text, setText] = useState(draft ?? '')
   const [busy, setBusy] = useState(false)
   const [stage, setStage] = useState<Stage>('reading')
-  const [used, setUsed] = useState<string[]>([])
+  const [used, setUsed] = useState<string[]>(() => (chat?.msgs ?? []).filter((m) => m.who === 'me').map((m) => m.text))
   const [pose, setPose] = useState<Pose>('listen')
   const [say, setSay] = useState<string | null>(null)
+  // picked up from the saved chats, rather than started here
+  const [resumed] = useState(!!chat)
   const thread = useRef<HTMLDivElement>(null)
   const thinkBubble = useRef<HTMLDivElement>(null)
-  const seq = useRef(0)
+  const seq = useRef(chat?.msgs.length ?? 0)
   const moodTimer = useRef<number>(0)
 
-  const left = lesson.ask.filter((s) => !used.includes(s.q))
+  // the lesson's own questions, or for the whole course a few from what was learned
+  const suggestions = useMemo(
+    () => lesson?.ask ?? generalSuggestions(progress, lang),
+    // not on every progress change: the pills must not reshuffle mid-chat
+    [lesson, lang],
+  )
+  const left = suggestions.filter((s) => !used.includes(s.q))
+
+  /* ---------- saved to the device ----------
+     Each finished message is written straight away, the way chat apps
+     autosave: nothing to press, and a closed app never loses a reply.
+     A new chat gets its id with its first message. */
+  const chatId = useRef(chat?.id ?? null)
+  const created = useRef(chat?.created ?? 0)
+  const dirty = useRef(false)
+  useEffect(() => {
+    if (!dirty.current || busy || msgs.some((m) => m.live)) return
+    dirty.current = false
+    const keep: ChatMsg[] = []
+    for (const m of msgs) {
+      if (m.who === 'err') continue
+      keep.push({ who: m.who, text: m.text, ...(m.sources?.length ? { sources: m.sources } : {}), ...(m.sig ? { sig: m.sig } : {}) })
+    }
+    if (!keep.length) return
+    const now = Date.now()
+    if (!chatId.current) { chatId.current = newChatId(); created.current = now }
+    const first = keep.find((m) => m.who === 'me') ?? keep[0]
+    chatStore.put({ id: chatId.current, subject, lang, title: chatTitle(first.text), created: created.current, updated: now, msgs: keep })
+    onSaved?.(chatId.current)
+  }, [msgs, busy])
 
   // Scroll before the browser paints, not after: a post-paint smooth scroll
   // shows one frame at the old offset, which reads as the thread lurching.
@@ -119,6 +163,7 @@ export function AskSiraj({
   }
 
   const push = (m: Omit<Msg, 'id'>) => {
+    dirty.current = true
     const id = seq.current++
     setMsgs((prev) => [...prev, { ...m, id }])
     return id
@@ -127,14 +172,14 @@ export function AskSiraj({
   /** Open a live Siraj bubble. It is born at the thinking bubble's size,
    *  in the same spot, springs out to its final size, and only then
    *  does the typewriter start (GrowBubble calls startTyping). */
-  const startReply = (full: string, sources?: Msg['sources']) => {
+  const startReply = (full: string, sources?: Msg['sources'], sig?: string) => {
     if (liveId.current !== null) return
     const r = thinkBubble.current?.getBoundingClientRect()
     target.current = full
     shown.current = 0
     ended.current = false
     liveId.current = push({
-      who: 'siraj', text: '', full, sources, live: true,
+      who: 'siraj', text: '', full, sources, sig, live: true,
       grow: r ? { w: r.width, h: r.height } : { w: 64, h: 46 },
     })
     setBusy(false)
@@ -201,25 +246,22 @@ export function AskSiraj({
     const q = text.trim()
     if (!q || busy || liveId.current !== null) return
     primeAudio(); sfx.tap(); haptic('tap')
+    // the conversation so far goes with the question, so a follow-up makes sense
+    const history = recentHistory(msgs.flatMap((m) => (m.who === 'err' || m.live ? [] : [{ who: m.who, text: m.text, sig: m.sig }])))
     setText('')
     push({ who: 'me', text: q })
     thinking()
 
-    const res = await askSirajStream(q, {
-      unitTitle,
-      lessonTitle: lesson.title,
-      taughtConcepts: conceptsFromLesson(lesson.cards),
-      lang: progress.language,
-    }, {
+    const res = await askSirajStream(q, buildAskContext(subject, lang, (id) => getLesson(id, lang)), {
       // the stream drives what Siraj says he is doing; the text itself
       // is typed once it is complete (it lands within about a second
       // of the first word), so the bubble never grows as it types
       onStatus: (s) => setStage((cur) => (s === 'writing' ? 'writing' : cur === 'reading' ? 'searching' : cur)),
       onText: () => setStage('writing'),
-    })
+    }, history)
 
     if (res.ok && res.answer) {
-      startReply(res.answer, res.sources)
+      startReply(res.answer, res.sources, res.sig)
       await finishReply()
       answered()
     } else {
@@ -232,6 +274,8 @@ export function AskSiraj({
   }
 
   const writing = busy || liveId.current !== null
+  // a typed question is waiting to be sent: moving on now would lose it
+  const drafting = !!text.trim()
 
   return (
     <>
@@ -242,7 +286,9 @@ export function AskSiraj({
             <motion.span key={say ?? 'intro'} style={{ display: 'block' }}
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18 }}>
-              {say ?? <>{t.askIntro.before}<b style={{ color: 'var(--orange)' }}>{lesson.title}</b>{t.askIntro.after}</>}
+              {say ?? (resumed ? t.askResume
+                : lesson ? <>{t.askIntro.before}<b style={{ color: 'var(--orange)' }}>{lesson.title}</b>{t.askIntro.after}</>
+                : t.askIntroGeneral)}
             </motion.span>
           </AnimatePresence>
         </div>
@@ -311,17 +357,40 @@ export function AskSiraj({
         </button>
       </div>
 
-      <p className="ask__note">{t.askNote}</p>
+      <p className={`ask__note${onFinish && drafting ? ' is-warn' : ''}`}>
+        {onFinish && drafting ? t.askDraftNote : t.askNote}
+      </p>
 
       {onFinish && (
         <div className="ask__finish">
-          <Button block tone={msgs.length ? 'primary' : 'quiet'} onClick={onFinish}>
+          {/* greyed out while a question is typed or a reply is on its way:
+              this button ends the lesson, and a learner about to send a
+              question kept pressing it as if it would send */}
+          <Button block tone={msgs.length && !drafting ? 'primary' : 'quiet'}
+            disabled={drafting || writing} onClick={onFinish}>
             {msgs.length ? t.askDone : t.skip}
           </Button>
         </div>
       )}
     </>
   )
+}
+
+/** For the whole course: one question from each of the last few lessons
+ *  learned, so the suggestions follow the learner up the stair. */
+function generalSuggestions(p: Progress, lang: Lang): AskSuggestion[] {
+  const nodes = lessonNodes()
+  const done = nodes.filter((n) => p.completed[n.id])
+  const pick = (done.length ? done.slice(-3) : nodes.slice(0, 1)).reverse()
+  const out: AskSuggestion[] = []
+  for (const n of pick) {
+    const l = getLesson(n.lessonId!, lang)
+    for (const a of l?.ask ?? []) {
+      out.push(a)
+      if (done.length) break
+    }
+  }
+  return out
 }
 
 /** One message. Memoised: while a reply types, only the live row's `m`

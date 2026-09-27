@@ -49,7 +49,7 @@ const ar = {
   streak: 'أيام متتالية',
   xp: 'نقاط الخبرة',
   nav: 'التنقّل',
-  tabs: { path: 'الرحلة', review: 'المراجعة', ask: 'اسأل سراج', wins: 'الإنجازات' },
+  tabs: { path: 'الرحلة', mistakes: 'أخطائي', ask: 'اسأل سراج', wins: 'الإنجازات' },
   me: 'ملفي',
   initialFallback: 'س',
 
@@ -139,13 +139,26 @@ const ar = {
   winsHero: (won: number, all: number) => (won === 0 ? 'أوّل إنجاز ينتظرك' : `${n(won)} من ${n(all)} إنجازات`),
   winsText: 'كل إنجاز علامة على الطريق. أكمل الدروس دون أخطاء، وحافظ على مصباحك مضاءً.',
 
-  /* review */
-  review: 'المراجعة',
-  nothingYet: ['لا شيء لمراجعته بعد.', 'أتمِم درسًا أوّلًا وسيظهر هنا.'],
-  reviewHero: 'التكرار يُثبّت المعلومة',
-  reviewLine: (done: number, weakest: string) => `أتممتَ ${lessonsAr(done)}. ابدأ بالأضعف: ${weakest}.`,
-  reviewWeakest: 'راجع الأضعف',
-  allLearned: 'كل ما تعلّمته',
+  /* أخطائي */
+  mistakes: 'أخطائي',
+  mistakesNone: ['لا أخطاء بعد.', 'أتمِم درسًا، وكلّ سؤال تخطئ فيه يُحفظ هنا لتصحّحه.'],
+  mistakesClear: ['لا أخطاء تنتظرك!', 'صحّحتَ كلّ سؤال أخطأتَ فيه. وما تخطئ فيه لاحقًا يُحفظ هنا.'],
+  mistakesHero: (x: number) => `في قائمتك ${questionsAr(x)}`,
+  mistakesText: 'صحّحها في جلسة قصيرة. كلّ سؤال تجيبه صوابًا يخرج من القائمة.',
+  mistakesStart: 'صحّح أخطائي',
+  mistakesSession: (x: number) => `الجلسة الواحدة ${questionsAr(x)} على الأكثر.`,
+  showAnswer: 'أظهر الجواب',
+  hideAnswer: 'أخفِ الجواب',
+  missedTimes: 'مرّات الخطأ',
+  askAboutIt: 'اسأل سراج عنه',
+  askAboutDraft: (q: string) => `اشرح لي هذا السؤال: ${q}`,
+  fromLesson: (title: string) => `من: ${title}`,
+  practiceTitle: 'تصحيح الأخطاء',
+  finishPractice: 'أنهِ التصحيح',
+  practiceKicker: 'جلسة تصحيح',
+  practiceLine: (a: number, b: number) => `صحّحتَ ${n(a)} من ${n(b)}.`,
+  practicePerfect: 'صحّحتَها كلّها!',
+  backToMistakes: 'عودة إلى أخطائي',
 
   /* me */
   friend: 'صديق سراج',
@@ -167,7 +180,7 @@ const ar = {
   calmNote: 'إيقاف الاحتفالات المتحرّكة',
   look: 'المظهر',
   themes: { auto: 'تلقائي', light: 'فاتح', dark: 'داكن' },
-  resetWarn: 'سيُحذف كل تقدّمك - النقاط والأيام المتتالية والدروج المفتوحة. لا يمكن التراجع.',
+  resetWarn: 'سيُحذف كل تقدّمك: النقاط والأيام المتتالية والدرجات المفتوحة، وأخطاؤك ومحادثاتك المحفوظة. لا يمكن التراجع.',
   resetYes: 'نعم، احذف',
   resetNo: 'تراجع',
   reset: 'إعادة ضبط التقدّم',
@@ -196,6 +209,26 @@ const ar = {
   askFailed: 'تعذّر الحصول على إجابة.',
   askSorry: 'عذرًا، لم أتمكّن هذه المرة.',
   askDone: 'تابع',
+  askDraftNote: 'أرسل سؤالك أو امسحه لتتابع.',
+  askIntroGeneral: 'اسألني عن أيّ شيء في رحلتك: الأركان الخمسة وما تعلّمته فيها.',
+  askResume: 'أهلًا بعودتك! نكمل من حيث توقّفنا.',
+  chooseTopic: 'عمّ نتحدّث؟',
+  topicAria: (title: string) => `الموضوع: ${title}. غيّره`,
+  topicGeneral: 'الرحلة كلّها',
+  topicGeneralNote: 'أيّ سؤال عن الأركان الخمسة',
+  topicDone: 'أتممتَه',
+  topicHere: 'أنت هنا',
+  topicLocked: 'لم تصل إليه بعد',
+  topicNote: 'اختيار موضوع يبدأ محادثة جديدة، والسابقة تبقى محفوظة.',
+  chats: 'محادثاتك',
+  newChat: 'محادثة جديدة',
+  chatsEmpty: ['لا محادثات محفوظة بعد.', 'كلّ محادثة مع سراج تُحفظ هنا تلقائيًّا.'],
+  chatsLocal: 'تُحفظ على هذا الجهاز فقط.',
+  ages: { today: 'اليوم', yesterday: 'أمس', week: 'هذا الأسبوع', older: 'أقدم' },
+  deleteChat: 'حذف المحادثة',
+  deleteSure: 'حذف هذه المحادثة؟',
+  deleteYes: 'احذف',
+  deleteNo: 'إبقاء',
 }
 
 export type Strings = typeof ar
@@ -232,7 +265,7 @@ const en: Strings = {
   streak: 'Day streak',
   xp: 'Experience points',
   nav: 'Navigation',
-  tabs: { path: 'Journey', review: 'Review', ask: 'Ask Siraj', wins: 'Achievements' },
+  tabs: { path: 'Journey', mistakes: 'Mistakes', ask: 'Ask Siraj', wins: 'Achievements' },
   me: 'Me',
   initialFallback: 'S',
 
@@ -315,12 +348,25 @@ const en: Strings = {
   winsHero: (won, all) => (won === 0 ? 'Your first achievement awaits' : `${won} of ${all} achievements`),
   winsText: 'Every achievement is a marker on the road. Finish lessons without mistakes, and keep your lamp lit.',
 
-  review: 'Review',
-  nothingYet: ['Nothing to review yet.', 'Finish a lesson first and it will show up here.'],
-  reviewHero: 'Repetition makes it stick',
-  reviewLine: (done, weakest) => `You have finished ${done === 1 ? 'one lesson' : `${done} lessons`}. Start with the weakest: ${weakest}.`,
-  reviewWeakest: 'Review the weakest',
-  allLearned: 'Everything you have learned',
+  mistakes: 'Mistakes',
+  mistakesNone: ['No mistakes yet.', 'Finish a lesson, and every question you get wrong is saved here for you to put right.'],
+  mistakesClear: ['Nothing to fix!', 'You have put right every question you missed. New ones will be saved here.'],
+  mistakesHero: (x) => `${x} ${x === 1 ? 'question' : 'questions'} to put right`,
+  mistakesText: 'Fix them in a short session. Every one you get right leaves the list.',
+  mistakesStart: 'Fix my mistakes',
+  mistakesSession: (x) => `A session takes up to ${x} questions.`,
+  showAnswer: 'Show the answer',
+  hideAnswer: 'Hide the answer',
+  missedTimes: 'Times missed',
+  askAboutIt: 'Ask Siraj',
+  askAboutDraft: (q) => `Explain this question to me: ${q}`,
+  fromLesson: (title) => `From: ${title}`,
+  practiceTitle: 'Fixing mistakes',
+  finishPractice: 'Finish',
+  practiceKicker: 'Practice session',
+  practiceLine: (a, b) => `You put right ${a} of ${b}.`,
+  practicePerfect: 'You fixed every one!',
+  backToMistakes: 'Back to mistakes',
 
   friend: 'Friend of Siraj',
   editProfile: 'Edit profile',
@@ -341,7 +387,7 @@ const en: Strings = {
   calmNote: 'Turns off the animated celebrations',
   look: 'Appearance',
   themes: { auto: 'Auto', light: 'Light', dark: 'Dark' },
-  resetWarn: 'All your progress will be deleted: points, streak and the steps you opened. This cannot be undone.',
+  resetWarn: 'All your progress will be deleted: points, streak, the steps you opened, and your saved mistakes and chats. This cannot be undone.',
   resetYes: 'Yes, delete',
   resetNo: 'Cancel',
   reset: 'Reset progress',
@@ -368,14 +414,34 @@ const en: Strings = {
   askFailed: 'Could not get an answer.',
   askSorry: 'Sorry, I could not manage it this time.',
   askDone: 'Continue',
+  askDraftNote: 'Send your question, or clear it, to continue.',
+  askIntroGeneral: 'Ask me anything on your journey: the five pillars and what you have learned about them.',
+  askResume: 'Welcome back! Let us carry on where we left off.',
+  chooseTopic: 'What shall we talk about?',
+  topicAria: (title) => `Topic: ${title}. Change it`,
+  topicGeneral: 'The whole journey',
+  topicGeneralNote: 'Any question about the five pillars',
+  topicDone: 'Finished',
+  topicHere: 'You are here',
+  topicLocked: 'Not reached yet',
+  topicNote: 'Picking a topic starts a new chat. The one before stays saved.',
+  chats: 'Your chats',
+  newChat: 'New chat',
+  chatsEmpty: ['No saved chats yet.', 'Every chat with Siraj is saved here on its own.'],
+  chatsLocal: 'Saved on this device only.',
+  ages: { today: 'Today', yesterday: 'Yesterday', week: 'This week', older: 'Earlier' },
+  deleteChat: 'Delete chat',
+  deleteSure: 'Delete this chat?',
+  deleteYes: 'Delete',
+  deleteNo: 'Keep',
 }
 
 export const STRINGS: Record<Lang, Strings> = { ar, en }
 
-/** Arabic number agreement: درسًا واحدًا، درسين، ٣ دروس، ١١ درسًا */
-function lessonsAr(x: number): string {
-  if (x === 1) return 'درسًا واحدًا'
-  if (x === 2) return 'درسين'
-  if (x <= 10) return `${n(x)} دروس`
-  return `${n(x)} درسًا`
+/** Arabic number agreement, nominative: سؤالٌ واحد، سؤالان، ٣ أسئلة، ١١ سؤالًا */
+function questionsAr(x: number): string {
+  if (x === 1) return 'سؤالٌ واحد'
+  if (x === 2) return 'سؤالان'
+  if (x <= 10) return `${n(x)} أسئلة`
+  return `${n(x)} سؤالًا`
 }

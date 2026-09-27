@@ -2,6 +2,8 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useSta
 import { AnimatePresence, LazyMotion, domAnimation, m as motion } from 'framer-motion'
 import type { Lesson as LessonT } from './core/types'
 import type { ApplyResult, LessonOutcome } from './core/engine/progress'
+import type { SubjectId } from './core/ai/chats'
+import type { PracticeItem } from './ui/screens/Lesson'
 import { PATH, UNIT_OF } from './core/content/path'
 import { loadLessons } from './core/content/lessons'
 import { AppProvider, useApp, useCalmMotion } from './ui/state'
@@ -25,7 +27,7 @@ const Onboarding = fromChunk(onboardingChunk, (m) => m.Onboarding)
 const Lesson = fromChunk(lessonChunk, (m) => m.Lesson)
 const Result = fromChunk(resultChunk, (m) => m.Result)
 const WinsPage = fromChunk(pagesChunk, (m) => m.WinsPage)
-const ReviewPage = fromChunk(pagesChunk, (m) => m.ReviewPage)
+const MistakesPage = fromChunk(pagesChunk, (m) => m.MistakesPage)
 const AskPage = fromChunk(pagesChunk, (m) => m.AskPage)
 const MePage = fromChunk(pagesChunk, (m) => m.MePage)
 
@@ -74,7 +76,7 @@ type Scene =
   | { at: 'splash' }
   | { at: 'onboarding' }
   | { at: 'app' }
-  | { at: 'lesson'; nodeId: string; lessonId: string }
+  | { at: 'lesson'; nodeId: string; lessonId: string; practice?: PracticeItem[] }
   | { at: 'result'; outcome: LessonOutcome; applied: ApplyResult }
 
 export default function App() {
@@ -103,6 +105,9 @@ function Shell() {
   const [tab, setTab] = useState<Tab>('path')
   const [celebrate, setCelebrate] = useState<string | null>(null)
   const [crossFrom, setCrossFrom] = useState<string | null>(null)
+  // a question from أخطائي to open the Ask tab with, typed in but not sent
+  const [askSeed, setAskSeed] = useState<{ subject: SubjectId; draft: string } | null>(null)
+  const clearAskSeed = useCallback(() => setAskSeed(null), [])
   const clearCrossFrom = useCallback(() => setCrossFrom(null), [])
 
   // a first visit goes to onboarding straight after the splash: fetch it now
@@ -147,6 +152,17 @@ function Shell() {
     whenLoaded(lessonChunk, () => setScene({ at: 'lesson', nodeId, lessonId }))
   }
 
+  /** a short session of saved mistakes: the lesson screen, exercises only */
+  const startPractice = (items: PracticeItem[]) => {
+    if (!items.length) return
+    whenLoaded(lessonChunk, () => setScene({ at: 'lesson', nodeId: items[0].nodeId, lessonId: items[0].lessonId, practice: items }))
+  }
+
+  const askAbout = (subject: SubjectId, draft: string) => {
+    setAskSeed({ subject, draft })
+    goTab('ask')
+  }
+
   const lessonDone = (o: LessonOutcome, _lesson: LessonT) => {
     const applied = finishLesson(o)
     whenLoaded(resultChunk, () => setScene({ at: 'result', outcome: o, applied }))
@@ -155,6 +171,12 @@ function Shell() {
   const resultDone = () => {
     // light up the step that just opened, one above the one finished
     if (scene.at !== 'result') return
+    // a practice session goes back to the list it came from
+    if (scene.outcome.practice) {
+      setScene({ at: 'app' })
+      setTab('mistakes')
+      return
+    }
     const i = PATH.findIndex((n) => n.id === scene.outcome.nodeId)
     const next = PATH[i + 1]
     setScene({ at: 'app' })
@@ -201,8 +223,8 @@ function Shell() {
                         crossFrom={crossFrom} onCrossFrom={clearCrossFrom} />
                     )}
                     <Suspense fallback={null}>
-                      {tab === 'review' && <ReviewPage onStart={startNode} />}
-                      {tab === 'ask' && <AskPage />}
+                      {tab === 'mistakes' && <MistakesPage onPractice={startPractice} onAsk={askAbout} />}
+                      {tab === 'ask' && <AskPage seed={askSeed} onSeed={clearAskSeed} />}
                       {tab === 'wins' && <WinsPage />}
                       {tab === 'me' && <MePage />}
                     </Suspense>
@@ -226,6 +248,7 @@ function Shell() {
               <Lesson
                 nodeId={scene.nodeId}
                 lessonId={scene.lessonId}
+                practice={scene.practice}
                 onExit={() => setScene({ at: 'app' })}
                 onDone={lessonDone}
               />

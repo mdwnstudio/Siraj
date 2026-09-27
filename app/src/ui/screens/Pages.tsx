@@ -1,13 +1,18 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, m as motion } from 'framer-motion'
-import { useApp, useSetLanguage, useT } from '../state'
+import { useApp, useLang, useSetLanguage, useT } from '../state'
 import type { Settings } from '../../core/types'
 import {
   ACHIEVEMENTS, achievementText, completedCount, currentStreak,
   levelFromXp, totalPlayable,
 } from '../../core/engine/progress'
-import { PATH, UNIT_OF, unitText } from '../../core/content/path'
-import { getLesson } from '../../core/content/lessons'
+import { PATH, unitById, unitText } from '../../core/content/path'
+import { PRACTICE_SIZE, mistakesByUnit, practiceSet, resolveMistakes } from '../../core/engine/mistakes'
+import { correctAnswerText, exerciseQuestion } from '../../core/engine/grading'
+import { GENERAL, type SavedChat, type SubjectId } from '../../core/ai/chats'
+import { chatStore, useChats } from '../chats'
+import { ChatsSheet, DownGlyph, HistoryGlyph, PlusGlyph, TopicSheet, subjectLabel } from '../components/AskSheets'
+import type { PracticeItem } from './Lesson'
 import { isLang } from '../../core/i18n'
 import { LANGS } from '../languages'
 import { Icon, Star, Flame, Sparkle, Sun, Crescent, Lantern } from '../icons/SirajIcons'
@@ -56,24 +61,38 @@ export function WinsPage() {
   )
 }
 
-/* ---------------- المراجعة ---------------- */
+/* ---------------- أخطائي ----------------
+   Every question answered wrong, kept until it is answered right. The
+   pattern is Duolingo's Mistakes review: one button runs a short session
+   drawn from the list, and each right answer takes a question off it.
+   Below, the list itself, grouped by unit the way the stair is, so the
+   learner can look at the right answer or ask Siraj about a question. */
 
-export function ReviewPage({ onStart }: { onStart: (nodeId: string) => void }) {
+export function MistakesPage({ onPractice, onAsk }: {
+  onPractice: (items: PracticeItem[]) => void
+  onAsk: (subject: SubjectId, draft: string) => void
+}) {
   const { progress } = useApp()
   const t = useT()
   const lang = progress.language
-  const done = PATH.filter((n) => n.kind === 'lesson' && progress.completed[n.id] && n.lessonId)
-  // fewest stars first; ties go to the one learned earliest
-  const weakest = done.reduce((a, n) => (progress.completed[n.id].stars < progress.completed[a.id].stars ? n : a), done[0])
+  const items = resolveMistakes(progress, lang)
+  const learned = PATH.some((n) => n.kind === 'lesson' && progress.completed[n.id])
+  const [open, setOpen] = useState<string | null>(null)
+
+  const start = () => {
+    primeAudio(); sfx.tap()
+    onPractice(practiceSet(items).map(({ mistake: m }) => ({ lessonId: m.lessonId, exerciseId: m.exerciseId, nodeId: m.nodeId })))
+  }
 
   return (
     <div className="page">
-      <h1 className="page__title">{t.review}</h1>
-      {done.length === 0 ? (
+      <h1 className="page__title">{t.mistakes}</h1>
+      {!items.length ? (
         <div className="empty">
-          <Siraj mood="think" size={130} />
+          <Siraj mood={learned ? 'cheer' : 'think'} size={130} />
           <p style={{ fontWeight: 700, lineHeight: 1.7 }}>
-            {t.nothingYet[0]}<br />{t.nothingYet[1]}
+            {(learned ? t.mistakesClear : t.mistakesNone)[0]}<br />
+            <span style={{ fontWeight: 600, color: 'var(--ink-3)' }}>{(learned ? t.mistakesClear : t.mistakesNone)[1]}</span>
           </p>
         </div>
       ) : (
@@ -81,52 +100,159 @@ export function ReviewPage({ onStart }: { onStart: (nodeId: string) => void }) {
           <div className="phero phero--info">
             <img className="phero__pose" src={POSE_SRC.think} alt="" width={96} height={112} />
             <div className="phero__main">
-              <div className="phero__title">{t.reviewHero}</div>
+              <div className="phero__title">{t.mistakesHero(items.length)}</div>
               <p className="phero__text">
-                {t.reviewLine(done.length, getLesson(weakest.lessonId!, lang)!.title)}
+                {t.mistakesText}
+                {items.length > PRACTICE_SIZE && <> {t.mistakesSession(PRACTICE_SIZE)}</>}
               </p>
-              <Button size="md" tone="primary" onClick={() => onStart(weakest.id)}>{t.reviewWeakest}</Button>
+              <Button size="md" tone="primary" onClick={start}>{t.mistakesStart}</Button>
             </div>
           </div>
-          <div className="section__label">{t.allLearned}</div>
-          <div className="rows review-grid">
-            {done.map((n) => {
-              const l = getLesson(n.lessonId!, lang)!
-              const r = progress.completed[n.id]
-              return (
-                <button key={n.id} className="srow" onClick={() => { primeAudio(); sfx.tap(); onStart(n.id) }}>
-                  <span className="klist__ico"><Icon name={l.icon} size={19} /></span>
-                  <span className="srow__label" style={{ textAlign: 'start' }}>
-                    {l.title}
-                    <span className="srow__note" style={{ display: 'block' }}>{unitText(UNIT_OF.get(n.id)!, lang).title}</span>
-                  </span>
-                  <span style={{ display: 'flex', gap: 2, color: 'var(--yellow)' }}>
-                    {Array.from({ length: r.stars }, (_, k) => <Star key={k} size={13} />)}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+
+          {mistakesByUnit(items).map((g) => {
+            const unit = unitById(g.unitId)
+            return (
+              <section key={g.unitId} className="section">
+                {unit && <div className="section__label">{t.unitKicker(unit.index + 1, unitText(unit, lang).title)}</div>}
+                <div className="mlist">
+                  {g.items.map(({ mistake: m, exercise: ex, lessonTitle }) => {
+                    const k = `${m.lessonId}:${m.exerciseId}`
+                    const shown = open === k
+                    const q = exerciseQuestion(ex)
+                    return (
+                      <motion.article key={k} className="mcard"
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}>
+                        <div className="mcard__top">
+                          <span className="mcard__from">{lessonTitle}</span>
+                          {m.misses > 1 && (
+                            <span className="mcard__misses" title={t.missedTimes} aria-label={`${t.missedTimes}: ${m.misses}`}>
+                              <span className="num">×{m.misses}</span>
+                            </span>
+                          )}
+                        </div>
+                        <p className="mcard__q">{q}</p>
+                        <AnimatePresence initial={false}>
+                          {shown && (
+                            <motion.div className="mcard__a"
+                              initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                              transition={{ duration: 0.2 }}>
+                              <b>{t.correctIs}</b>{correctAnswerText(ex, lang)}
+                              {'explain' in ex && ex.explain && <span className="mcard__why">{ex.explain}</span>}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        <div className="mcard__actions">
+                          <button className="mcard__btn" aria-expanded={shown}
+                            onClick={() => { primeAudio(); sfx.tap(); setOpen(shown ? null : k) }}>
+                            {shown ? t.hideAnswer : t.showAnswer}
+                          </button>
+                          <button className="mcard__btn mcard__btn--ask"
+                            onClick={() => { primeAudio(); sfx.tap(); onAsk(m.lessonId, t.askAboutDraft(q).slice(0, 400)) }}>
+                            <Lantern size={16} /> {t.askAboutIt}
+                          </button>
+                        </div>
+                      </motion.article>
+                    )
+                  })}
+                </div>
+              </section>
+            )
+          })}
         </>
       )}
     </div>
   )
 }
 
-/* ---------------- اسأل سراج (tab) ---------------- */
+/* ---------------- اسأل سراج (tab) ----------------
+   A chat with a subject. The chip at the top says what the chat is about
+   and opens the chooser; the lines on the right open the saved chats; the
+   plus on the left starts a new one. Each chat saves itself as it goes. */
 
-export function AskPage() {
+export function AskPage({ seed, onSeed }: {
+  /** open a new chat on this subject with this question typed in (from أخطائي) */
+  seed?: { subject: SubjectId; draft: string } | null
+  onSeed?: () => void
+}) {
+  const lang = useLang()
+  // a language switch starts over in the new language
+  return <AskTab key={lang} seed={seed} onSeed={onSeed} />
+}
+
+function AskTab({ seed, onSeed }: { seed?: { subject: SubjectId; draft: string } | null; onSeed?: () => void }) {
   const { progress } = useApp()
+  const t = useT()
   const lang = progress.language
-  const firstOpen = PATH.find((n) => n.lessonId && !progress.completed[n.id]) ?? PATH[0]
-  const lesson = getLesson(firstOpen.lessonId ?? 'l-intro-1', lang)!
-  const unit = UNIT_OF.get(firstOpen.id)
+  const chats = useChats().filter((c) => c.lang === lang)
+  // where the learner stands: the lowest lesson not yet done, or the whole course
+  const here = PATH.find((n) => n.lessonId && !n.soon && !progress.completed[n.id])?.lessonId ?? GENERAL
+
+  const [view, setView] = useState<{ subject: SubjectId; chatId: string | null; draft?: string; n: number }>(() => {
+    if (seed) return { subject: seed.subject, chatId: null, draft: seed.draft, n: 0 }
+    const last = chatStore.open()
+    const c = last ? chatStore.get(last) : undefined
+    if (c && c.lang === lang) return { subject: c.subject, chatId: c.id, n: 0 }
+    return { subject: here, chatId: null, n: 0 }
+  })
+  const [sheet, setSheet] = useState<null | 'topic' | 'chats'>(null)
+  useEffect(() => { if (seed) { chatStore.setOpen(null); onSeed?.() } }, [])
+
+  const chat = view.chatId ? chats.find((c) => c.id === view.chatId) : undefined
+  const label = subjectLabel(view.subject, lang, t.topicGeneral)
+
+  const fresh = (subject: SubjectId) => {
+    chatStore.setOpen(null)
+    setView((v) => ({ subject, chatId: null, n: v.n + 1 }))
+  }
+  const pickTopic = (s: SubjectId) => {
+    setSheet(null)
+    // an empty chat just changes its subject; one with messages is kept and a new one begins
+    if (s !== view.subject || view.chatId) fresh(s)
+  }
+  const openChat = (c: SavedChat) => {
+    setSheet(null)
+    chatStore.setOpen(c.id)
+    setView((v) => ({ subject: c.subject, chatId: c.id, n: v.n + 1 }))
+  }
+  const deleteChat = (c: SavedChat) => {
+    chatStore.remove(c.id)
+    if (c.id === view.chatId) fresh(view.subject)
+  }
+  const onSaved = useCallback((id: string) => {
+    chatStore.setOpen(id)
+    setView((v) => (v.chatId === id ? v : { ...v, chatId: id }))
+  }, [])
+
   return (
     <div className="page page--ask" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div className="ask" style={{ position: 'relative', inset: 'auto', flex: 1, padding: 0 }}>
-        {/* keyed by language: a switch starts a fresh chat in the new language */}
-        <AskSiraj key={lang} lesson={lesson} unitTitle={unit ? unitText(unit, lang).title : ''} />
+      <div className="askbar">
+        <button className="askbar__btn" aria-label={t.chats} title={t.chats}
+          onClick={() => { primeAudio(); sfx.tap(); setSheet('chats') }}>
+          <HistoryGlyph />
+          {!!chats.length && <span className="askbar__dot" aria-hidden />}
+        </button>
+        <button className="askbar__topic" aria-label={t.topicAria(label.title)} aria-haspopup="dialog"
+          onClick={() => { primeAudio(); sfx.tap(); setSheet('topic') }}>
+          <span className="askbar__ico">{label.icon}</span>
+          <span className="askbar__title">{label.title}</span>
+          <DownGlyph />
+        </button>
+        <button className="askbar__btn" aria-label={t.newChat} title={t.newChat} disabled={!view.chatId}
+          onClick={() => { primeAudio(); sfx.tap(); fresh(view.subject) }}>
+          <PlusGlyph />
+        </button>
       </div>
+      <div className="ask" style={{ position: 'relative', inset: 'auto', flex: 1, padding: 0 }}>
+        <AskSiraj key={view.n} subject={view.subject} chat={chat} draft={view.draft} onSaved={onSaved} />
+      </div>
+
+      <AnimatePresence>
+        {sheet === 'topic' && <TopicSheet current={view.subject} onPick={pickTopic} onClose={() => setSheet(null)} />}
+        {sheet === 'chats' && (
+          <ChatsSheet chats={chats} openId={view.chatId} onOpen={openChat} onDelete={deleteChat} onClose={() => setSheet(null)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -244,7 +370,7 @@ export function MePage() {
               {t.resetWarn}
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <Button tone="danger" size="md" block onClick={() => { webStore.clear(); location.reload() }}>
+              <Button tone="danger" size="md" block onClick={() => { webStore.clear(); chatStore.clear(); location.reload() }}>
                 {t.resetYes}
               </Button>
               <Button tone="quiet" size="md" block onClick={() => setConfirm(false)}>{t.resetNo}</Button>

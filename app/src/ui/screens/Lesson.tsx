@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, m as motion } from 'framer-motion'
 import type { Card, CardArt, Lesson as LessonT, PrayerPose } from '../../core/types'
 import type { Answer } from '../../core/engine/grading'
 import { correctAnswerText, isCorrect } from '../../core/engine/grading'
 import { XP_PER_CORRECT, type LessonOutcome } from '../../core/engine/progress'
+import { practiceXp } from '../../core/engine/mistakes'
 import { getLesson } from '../../core/content/lessons'
-import { UNIT_OF, unitText } from '../../core/content/path'
+import { UNIT_OF } from '../../core/content/path'
 import { useApp, useCalmMotion, useT } from '../state'
 import { Icon, Sparkle, Star, Crescent } from '../icons/SirajIcons'
 import { Button, IconButton } from '../components/Button'
@@ -21,18 +22,32 @@ import { haptic } from '../../platform/haptics'
 
 type Phase = 'warmup' | 'learn' | 'practice' | 'ask'
 
+/** one question in a practice session from أخطائي, and where it came from */
+export interface PracticeItem { lessonId: string; exerciseId: string; nodeId: string }
+
 export function Lesson({
-  nodeId, lessonId, onExit, onDone,
+  nodeId, lessonId, practice, onExit, onDone,
 }: {
   nodeId: string
   lessonId: string
+  /** a mistakes session: these questions only, no cards and no chat */
+  practice?: PracticeItem[]
   onExit: () => void
   onDone: (o: LessonOutcome, lesson: LessonT) => void
 }) {
-  const { progress } = useApp()
+  const { progress, dispatch } = useApp()
   const t = useT()
   const lang = progress.language
-  const lesson = getLesson(lessonId, lang)!
+  /* A practice session is a lesson made only of exercises, each drawn from
+     the lesson it was missed in; everything else here works unchanged. */
+  const [session] = useState(() => practice?.flatMap((p) => {
+    const l = getLesson(p.lessonId, lang)
+    const ex = l?.exercises.find((e) => e.id === p.exerciseId)
+    return ex ? [{ ...p, ex, from: l!.title }] : []
+  }))
+  const lesson: LessonT = useMemo(() => session
+    ? { id: 'practice', title: t.practiceTitle, icon: 'Crescent', cards: [], exercises: session.map((x) => x.ex), ask: [], xp: 0 }
+    : getLesson(lessonId, lang)!, [session, lessonId, lang, t])
   const unit = UNIT_OF.get(nodeId)
   const calm = useCalmMotion()
   /* Arabic pages turn to the left, English pages to the right: the next
@@ -66,7 +81,8 @@ export function Lesson({
   }, [lesson])
 
   useEffect(() => {
-    const t = setTimeout(() => { setPhase('learn'); started.current = Date.now() }, 900)
+    // a practice session has nothing to read first: straight to the questions
+    const t = setTimeout(() => { setPhase(session ? 'practice' : 'learn'); started.current = Date.now() }, 900)
     return () => clearTimeout(t)
   }, [])
 
@@ -154,6 +170,14 @@ export function Lesson({
   }
 
   const settle = (ok: boolean) => {
+    // every answer updates أخطائي: a miss is saved, a right answer clears it
+    if (ex) {
+      const from = session?.[exAt]
+      dispatch({
+        type: 'answered', ok, exerciseId: ex.id,
+        lessonId: from?.lessonId ?? lessonId, nodeId: from?.nodeId ?? nodeId,
+      })
+    }
     if (ok) {
       correctCount.current += 1
       const c = combo + 1
@@ -174,6 +198,7 @@ export function Lesson({
     setVerdict(null)
     setAnswer(null)
     if (exAt < total - 1) setExAt(exAt + 1)
+    else if (session) finish()
     else {
       sfx.swoosh()
       setPhase('ask')
@@ -187,7 +212,8 @@ export function Lesson({
     onDone(
       {
         nodeId,
-        xp: lesson.xp + correctCount.current * XP_PER_CORRECT,
+        practice: !!session,
+        xp: session ? practiceXp(correctCount.current) : lesson.xp + correctCount.current * XP_PER_CORRECT,
         total,
         correct: correctCount.current,
         seconds: Math.max(1, Math.round((Date.now() - started.current) / 1000)),
@@ -238,7 +264,9 @@ export function Lesson({
   }, [])
 
   const progressValue =
-    phase === 'learn'
+    session
+      ? phase === 'practice' ? (exAt + (verdict ? 1 : 0)) / total : 0
+      : phase === 'learn'
       ? ((cardAt + 1) / lesson.cards.length) * 0.3
       : phase === 'practice'
         ? 0.3 + ((exAt + (verdict ? 1 : 0)) / total) * 0.65
@@ -250,7 +278,7 @@ export function Lesson({
         {phase === 'warmup' && (
           <motion.div className="warmup" exit={{ opacity: 0, scale: 1.05 }} transition={{ duration: 0.35 }}>
             <div className="warmup__inner">
-              <Siraj mood="wave" size={150} rim />
+              <Siraj mood={session ? 'think' : 'wave'} size={150} rim />
               <div className="warmup__title">{lesson.title}</div>
               <div className="warmup__ring" />
             </div>
@@ -301,6 +329,7 @@ export function Lesson({
               transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}>
               <span className="ex__kicker">
                 <Star size={13} /> {t.exerciseOf(exAt + 1, total)}
+                {session && <span className="ex__from">{t.fromLesson(session[exAt].from)}</span>}
               </span>
               <HostMood.Provider value={hostMood}>
                 <ExerciseView
@@ -320,7 +349,7 @@ export function Lesson({
             <motion.div key="ask" className="ask"
               initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.32, ease: [0.23, 1, 0.32, 1] }}>
-              <AskSiraj lesson={lesson} unitTitle={unit ? unitText(unit, lang).title : ''} onFinish={finish} />
+              <AskSiraj subject={lesson.id} onFinish={finish} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -362,7 +391,7 @@ export function Lesson({
                 {'explain' in ex! && ex!.explain}
               </p>
               <Button block tone={verdict === 'good' ? 'good' : 'danger'} onClick={advance}>
-                {exAt < total - 1 ? t.continue : t.finishExercises}
+                {exAt < total - 1 ? t.continue : session ? t.finishPractice : t.finishExercises}
               </Button>
             </motion.div>
           )}

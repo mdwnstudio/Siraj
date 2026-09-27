@@ -28,6 +28,8 @@ export function Result({
   const [beat, setBeat] = useState(0)
   const accuracy = Math.round((outcome.correct / Math.max(1, outcome.total)) * 100)
   const perfect = accuracy === 100
+  // a practice session from أخطائي opens no step: it says what was put right
+  const practice = !!outcome.practice
 
   useEffect(() => {
     sfx.win()
@@ -63,14 +65,16 @@ export function Result({
               {perfect ? <Sparkle size={56} /> : <Star size={52} />}
             </div>
           </div>
-          <span className="result__kicker">{t.newStep}</span>
+          <span className="result__kicker">{practice ? t.practiceKicker : t.newStep}</span>
           <h1 className="result__title">{perfect ? t.flawless : t.wellDone}</h1>
         </motion.div>
 
         <motion.p className="result__sub"
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: beat >= 1 ? 1 : 0, y: beat >= 1 ? 0 : 12 }}
           transition={{ duration: 0.34, ease: [0.23, 1, 0.32, 1] }}>
-          {perfect ? t.perfectLine : t.scoreLine(outcome.correct, outcome.total)}
+          {practice
+            ? perfect ? t.practicePerfect : t.practiceLine(outcome.correct, outcome.total)
+            : perfect ? t.perfectLine : t.scoreLine(outcome.correct, outcome.total)}
         </motion.p>
 
         <motion.div className="stats"
@@ -123,7 +127,7 @@ export function Result({
 
       <motion.div className="result__action"
         initial={{ opacity: 0, y: 18 }} animate={{ opacity: beat >= 2 ? 1 : 0, y: beat >= 2 ? 0 : 18 }}>
-        <Button block tone="gold" onClick={onDone}>{t.keepClimbing}</Button>
+        <Button block tone="gold" onClick={onDone}>{practice ? t.backToMistakes : t.keepClimbing}</Button>
       </motion.div>
     </div>
   )

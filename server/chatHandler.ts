@@ -11,6 +11,10 @@
    ============================================================ */
 
 import { ALLOWED_DOMAINS, buildSystemPrompt, stripLinks, type AskContext } from '../app/src/core/ai/systemPrompt'
+import { buildAskContext, isSubject, type LessonLookup } from '../app/src/core/ai/context'
+import type { AskTurn } from '../app/src/core/ai/askSiraj'
+import { LESSONS } from '../app/src/core/content/lessons'
+import { LESSONS_EN } from '../app/src/core/content/lessons.en'
 import type { Lang } from '../app/src/core/i18n'
 
 /** The OpenAI model id. The API requires a model name on every request,
@@ -20,20 +24,47 @@ export const DEFAULT_MODEL = 'gpt-5.6-luna'
 
 const ENDPOINT = 'https://api.openai.com/v1/responses'
 const MAX_QUESTION = 400
+/* the conversation sent with a question: the last few turns, each capped.
+   The client sends the same (core/ai/askSiraj.ts); these are the real limits. */
+const MAX_TURNS = 10
+const MAX_TURN_CHARS = 1500
+
+/* The server reads the curriculum itself, so the prompt is built from the
+   lesson id alone and a client can never write into it. */
+const LOOKUP: Record<Lang, LessonLookup> = {
+  ar: (id) => LESSONS[id],
+  en: (id) => LESSONS_EN[id] ?? LESSONS[id],
+}
+
+/* The suggested-question pills answer on the device from bundled text, so
+   those replies carry no signature. They are known here, word for word. */
+const CANNED = new Set(
+  [...Object.values(LESSONS), ...Object.values(LESSONS_EN)].flatMap((l) => l.ask.map((a) => a.a.trim())),
+)
 
 export interface ChatEnv {
   OPENAI_API_KEY?: string
   OPENAI_MODEL?: string
   /** comma separated; omit to allow any origin */
   ALLOWED_ORIGINS?: string
+  /** signs Siraj's replies so a returned history can be trusted. Optional:
+   *  without it a key derived from OPENAI_API_KEY is used. */
+  HISTORY_SECRET?: string
 }
 
 export type ChatErrorCode =
   | 'no_key' | 'budget_exhausted' | 'rate_limited'
   | 'upstream' | 'bad_request' | 'network'
 
-export interface ChatRequest { question: string; context: AskContext; stream?: boolean }
-export interface ChatOk { ok: true; answer: string; sources: { title: string; url: string }[] }
+export interface ChatRequest { question: string; context: AskContext; history?: AskTurn[]; stream?: boolean }
+export interface ChatOk {
+  ok: true
+  answer: string
+  sources: { title: string; url: string }[]
+  /** HMAC of the answer: proof, when it comes back in a history, that
+   *  these are Siraj's own words and not text written on the device */
+  sig?: string
+}
 export interface ChatErr { ok: false; code: ChatErrorCode; message: string; detail?: string }
 export type ChatResponse = ChatOk | ChatErr
 
@@ -131,20 +162,21 @@ export async function handleChat(req: Request, env: ChatEnv): Promise<Response> 
   if (question.length > MAX_QUESTION)
     return json({ ok: false, code: 'bad_request', message: say.tooLong }, 400, cors)
 
-  const ctx: AskContext = { ...body.context, lang }
-  if (!ctx?.unitTitle || !ctx?.lessonTitle)
-    return json({ ok: false, code: 'bad_request', message: say.noContext }, 400, cors)
+  const ctx = contextFor(body.context, lang)
+  if (!ctx) return json({ ok: false, code: 'bad_request', message: say.noContext }, 400, cors)
 
   const stream = body.stream === true
+  const secret = env.HISTORY_SECRET || key
+  const history = await trustedHistory(body.history, secret)
 
   let upstream: Response
   try {
-    upstream = await callOpenAI(key, env, ctx, question, stream, true)
+    upstream = await callOpenAI(key, env, ctx, history, question, stream, true)
     // Not every model takes a reasoning effort. If this one refuses it,
     // ask again without rather than failing the learner.
     if (upstream.status === 400) {
       const detail = await upstream.clone().text().catch(() => '')
-      if (/reasoning/i.test(detail)) upstream = await callOpenAI(key, env, ctx, question, stream, false)
+      if (/reasoning/i.test(detail)) upstream = await callOpenAI(key, env, ctx, history, question, stream, false)
     }
   } catch (e) {
     return json({ ok: false, code: 'network', message: say.network, detail: String(e) }, 502, cors)
@@ -175,7 +207,7 @@ export async function handleChat(req: Request, env: ChatEnv): Promise<Response> 
     return json({ ok: false, code: 'upstream', message: say.upstream, detail }, 502, cors)
   }
 
-  if (stream && upstream.body) return relay(upstream.body, cors, lang)
+  if (stream && upstream.body) return relay(upstream.body, cors, lang, secret)
 
   const data = (await upstream.json()) as OpenAIResponse
   const answer = clean(extractText(data), lang)
@@ -183,11 +215,81 @@ export async function handleChat(req: Request, env: ChatEnv): Promise<Response> 
   if (!answer)
     return json({ ok: false, code: 'upstream', message: say.noAnswer }, 502, cors)
 
-  return json({ ok: true, answer, sources: extractSources(data) }, 200, cors)
+  return json({ ok: true, answer, sources: extractSources(data), sig: await sign(answer, secret) }, 200, cors)
+}
+
+/* ---------------- context and history ---------------- */
+
+/** The prompt's context, rebuilt here from the lesson id. An unknown id
+ *  (an older client) falls back to the titles it sent, trimmed hard. */
+function contextFor(sent: Partial<AskContext> | undefined, lang: Lang): AskContext | null {
+  const look = LOOKUP[lang]
+  if (typeof sent?.lessonId === 'string' && isSubject(sent.lessonId, look)) {
+    return buildAskContext(sent.lessonId, lang, look)
+  }
+  const cut = (v: unknown, n = 80) => (typeof v === 'string' ? v.slice(0, n) : '')
+  const unitTitle = cut(sent?.unitTitle)
+  const lessonTitle = cut(sent?.lessonTitle)
+  if (!unitTitle || !lessonTitle) return null
+  const concepts = Array.isArray(sent?.taughtConcepts) ? sent.taughtConcepts.slice(0, 30).map((c) => cut(c)).filter(Boolean) : []
+  return { unitTitle, lessonTitle, taughtConcepts: concepts, lang }
+}
+
+/** The earlier turns worth trusting. The learner's own words pass as they
+ *  are (they are only ever the learner's words). A reply from Siraj passes
+ *  only if it carries this server's signature or is a bundled pill answer;
+ *  anything else was written on the device and is dropped, so an edited
+ *  history can never put words in Siraj's mouth. */
+async function trustedHistory(raw: unknown, secret: string): Promise<AskTurn[]> {
+  if (!Array.isArray(raw)) return []
+  const out: AskTurn[] = []
+  for (const t of raw.slice(-MAX_TURNS)) {
+    if (!t || typeof t !== 'object') continue
+    const { role, text, sig } = t as Partial<AskTurn>
+    if (typeof text !== 'string' || !text.trim()) continue
+    const body = text.slice(0, MAX_TURN_CHARS)
+    if (role === 'user') out.push({ role, text: body })
+    else if (role === 'assistant' && text.length <= 8000) {
+      const ok = CANNED.has(text.trim()) || (typeof sig === 'string' && (await verify(text, sig, secret)))
+      if (ok) out.push({ role, text: body })
+    }
+  }
+  return out
+}
+
+/* HMAC-SHA256 with Web Crypto, which both Workers and Node 20 have. */
+const enc = new TextEncoder()
+let keyCache: { secret: string; key: Promise<CryptoKey> } | null = null
+function hmacKey(secret: string): Promise<CryptoKey> {
+  if (keyCache?.secret !== secret) {
+    keyCache = {
+      secret,
+      key: crypto.subtle.importKey('raw', enc.encode('siraj-history-v1|' + secret),
+        { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']),
+    }
+  }
+  return keyCache.key
+}
+
+async function sign(text: string, secret: string): Promise<string> {
+  const mac = await crypto.subtle.sign('HMAC', await hmacKey(secret), enc.encode(text))
+  let bin = ''
+  for (const b of new Uint8Array(mac)) bin += String.fromCharCode(b)
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+async function verify(text: string, sig: string, secret: string): Promise<boolean> {
+  try {
+    const b64 = sig.replace(/-/g, '+').replace(/_/g, '/')
+    const bytes = Uint8Array.from(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)), (c) => c.charCodeAt(0))
+    return await crypto.subtle.verify('HMAC', await hmacKey(secret), bytes, enc.encode(text))
+  } catch {
+    return false
+  }
 }
 
 function callOpenAI(
-  key: string, env: ChatEnv, ctx: AskContext, question: string, stream: boolean, withEffort: boolean,
+  key: string, env: ChatEnv, ctx: AskContext, history: AskTurn[], question: string, stream: boolean, withEffort: boolean,
 ): Promise<Response> {
   return fetch(ENDPOINT, {
     method: 'POST',
@@ -201,7 +303,10 @@ function callOpenAI(
       // question asked in the English app is still answered in English. Said
       // last, after the question, because the model otherwise mirrors the
       // language it was just asked in.
+      // The conversation so far comes first, so a follow-up ("and what
+      // about women?") is read against it; see trustedHistory for what is kept.
       input: [
+        ...history.map((t) => ({ role: t.role, content: t.text })),
         { role: 'user', content: question },
         { role: 'developer', content: REPLY_IN[ctx.lang === 'en' ? 'en' : 'ar'] },
       ],
@@ -231,7 +336,7 @@ function clean(text: string, lang: Lang): string {
 /** Turns OpenAI's SSE stream into the small NDJSON protocol the app reads
  *  (see ChatEvent). The text reaches the learner as it is written, instead
  *  of after the whole search-and-compose round trip. */
-function relay(src: ReadableStream<Uint8Array>, cors: Record<string, string>, lang: Lang): Response {
+function relay(src: ReadableStream<Uint8Array>, cors: Record<string, string>, lang: Lang, secret: string): Response {
   const enc = new TextEncoder()
   const dec = new TextDecoder()
 
@@ -282,7 +387,7 @@ function relay(src: ReadableStream<Uint8Array>, cors: Record<string, string>, la
 
       const answer = clean(final ? extractText(final) || text : text, lang)
       if (answer && !failed) {
-        send({ t: 'done', ok: true, answer, sources: final ? extractSources(final) : [] })
+        send({ t: 'done', ok: true, answer, sources: final ? extractSources(final) : [], sig: await sign(answer, secret) })
       } else {
         send({ t: 'error', ok: false, code: 'upstream', message: MESSAGES[lang].noAnswer })
       }
