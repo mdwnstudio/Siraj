@@ -39,6 +39,8 @@ let openerChunk: typeof import('../components/UnitOpener') | undefined
 const loadOpener = () => import('../components/UnitOpener').then((m) => (openerChunk = m))
 let giftChunk: typeof import('../components/Gift') | undefined
 const loadGift = () => import('../components/Gift').then((m) => (giftChunk = m))
+let unitsChunk: typeof import('../components/UnitSheet') | undefined
+const loadUnits = () => import('../components/UnitSheet').then((m) => (unitsChunk = m))
 
 /** Crossing into a new unit: hold on the step just finished, carry the
  *  camera up the road to the new one, then open the gate. */
@@ -215,6 +217,8 @@ export function Home({
 
   const openNodeNow = (n: PathNode) => {
     primeAudio()
+    // a gift still waiting comes first: tapping on used to race past it
+    if (giftHere && !gift) { void loadGift().then(() => setGift({ g: giftHere, unwrapped: false })); return }
     if (n.soon) { sfx.wrong(); return }
     if (!isUnlocked(progress, n.id)) { sfx.wrong(); haptic('wrong'); return }
     if (n.kind !== 'lesson' && isCompleted(progress, n.id)) { sfx.tap(); return }
@@ -243,14 +247,43 @@ export function Home({
   /* A gift waits once its step is done: it comes up when the stair is
      still, after any crossing, lit step or reward has had its moment. */
   const [gift, setGift] = useState<{ g: Gift; unwrapped: boolean } | null>(null)
-  const waiting = giftWaiting(progress)
-  const busy = !!(crossing || landing || celebrate || lit || picked || reward)
+  const [unitsOpen, setUnitsOpen] = useState(false)
+  const giftHere = giftWaiting(progress, current)
+  const busy = !!(crossing || landing || celebrate || lit || picked || reward || unitsOpen)
   useEffect(() => {
-    if (!waiting || gift || busy) return
+    if (!giftHere || gift || busy) return
     let live = true
-    const t = setTimeout(() => void loadGift().then(() => { if (live) setGift({ g: waiting, unwrapped: false }) }), 650)
+    const t = setTimeout(() => void loadGift().then(() => { if (live) setGift({ g: giftHere, unwrapped: false }) }), 650)
     return () => { live = false; clearTimeout(t) }
-  }, [waiting?.id, gift, busy])
+  }, [giftHere?.id, gift, busy])
+
+  /* The unit chooser: pick a unit you have reached and the camera carries
+     you to its first step, on the same crane as a crossing, only quicker.
+     A touch or a wheel on the road mid-trip hands it back to the learner. */
+  const stopTrip = useRef<(() => void) | null>(null)
+  useEffect(() => () => stopTrip.current?.(), [])
+  const openUnits = () => {
+    primeAudio(); sfx.tap(); haptic('tap')
+    void loadUnits().then(() => setUnitsOpen(true))
+  }
+  const goToUnit = (unitId: string) => {
+    setUnitsOpen(false)
+    const root = scroller.current
+    const first = unitById(unitId)?.nodes[0]
+    const el = first ? root?.querySelector<HTMLElement>(`[data-node="${first.id}"]`) ?? null : null
+    if (!root || !el) return
+    stopTrip.current?.()
+    let cancel = () => {}
+    const hands = ['wheel', 'pointerdown', 'touchstart'] as const
+    const off = () => {
+      stopTrip.current = null
+      for (const h of hands) root.removeEventListener(h, stop)
+    }
+    const stop = () => { cancel(); off() }
+    for (const h of hands) root.addEventListener(h, stop, { passive: true })
+    stopTrip.current = stop
+    cancel = glideTo(root, el, calm ? 0 : glideTime(root, el, true), off)
+  }
 
   const unitDone = unit.nodes.filter((n) => isCompleted(progress, n.id)).length
 
@@ -268,6 +301,12 @@ export function Home({
         <div className="unitcard__main">
           <div className="unitcard__kicker">{t.unitKicker(unit.index + 1, unitText(unit, lang).subtitle)}</div>
           <div className="unitcard__title">{unitText(unit, lang).title}</div>
+          <button className="unitcard__pick" onClick={openUnits} aria-haspopup="dialog">
+            {t.unitsOpen}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
+              <path d="M6 9 L12 15 L18 9" />
+            </svg>
+          </button>
         </div>
         <div className="unitcard__side" aria-label={t.outOf(unitDone, unit.nodes.length)}>
           <Icon name={unit.icon} size={24} />
@@ -296,8 +335,11 @@ export function Home({
             node={picked}
             onClose={() => setPicked(null)}
             onStart={() => { const id = picked.id; setPicked(null); onStart(id) }}
-            onGift={(g) => { setPicked(null); void loadGift().then(() => setGift({ g, unwrapped: true })) }}
+            onGift={(g, opened) => { setPicked(null); void loadGift().then(() => setGift({ g, unwrapped: opened })) }}
           />
+        )}
+        {unitsOpen && unitsChunk && (
+          <unitsChunk.UnitSheet key="units" shown={unit.id} onPick={goToUnit} onClose={() => setUnitsOpen(false)} />
         )}
         {gift && giftChunk && (
           <giftChunk.GiftPop key={gift.g.id} gift={gift.g} unwrapped={gift.unwrapped} onClose={() => setGift(null)} />
@@ -429,12 +471,12 @@ const Stair = memo(function Stair({ scroller, currentRef, progress, current, sir
 /* ---------------- the step preview ---------------- */
 
 function StepSheet({ node, onClose, onStart, onGift }: {
-  node: PathNode; onClose: () => void; onStart: () => void; onGift: (g: Gift) => void
+  node: PathNode; onClose: () => void; onStart: () => void; onGift: (g: Gift, opened: boolean) => void
 }) {
   const t = useT()
   const { progress } = useApp()
   // a gift this step unwrapped plays again from here
-  const gift = giftOf(progress, node.id)
+  const earned = giftOf(progress, node.id)
   const lesson = node.lessonId ? getLesson(node.lessonId, progress.language) : undefined
   const unit = UNIT_OF.get(node.id)
   const n = unit?.nodes.findIndex((x) => x.id === node.id) ?? 0
@@ -466,9 +508,9 @@ function StepSheet({ node, onClose, onStart, onGift }: {
           {lesson ? t.lessonShape(lesson.cards.length, lesson.exercises.length) : ''}
         </p>
         <Button block onClick={onStart}>{t.startLesson}</Button>
-        {gift && (
-          <Button block tone="quiet" size="md" onClick={() => onGift(gift)} style={{ marginTop: 10 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Sparkle size={16} /> {t.giftWatch}</span>
+        {earned && (
+          <Button block tone="quiet" size="md" onClick={() => onGift(earned.gift, earned.opened)} style={{ marginTop: 10 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Sparkle size={16} /> {earned.opened ? t.giftWatch : t.giftOpen}</span>
           </Button>
         )}
       </motion.div>

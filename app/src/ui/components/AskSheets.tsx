@@ -17,7 +17,7 @@ import { haptic } from '../../platform/haptics'
 
 const tap = () => { primeAudio(); sfx.select(); haptic('tap') }
 
-function Sheet({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
+export function Sheet({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
   const phone = useLayout() === 'phone'
   const t = useT()
   const motionProps = phone
@@ -202,7 +202,7 @@ export function XGlyph({ size = 20 }: { size?: number }) {
   )
 }
 
-function Check() {
+export function Check() {
   return (
     <svg className="trow__check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
       <path d="M4 12.5 L9.5 18 L20 6.5" />

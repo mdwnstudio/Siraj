@@ -6,6 +6,7 @@
    ============================================================ */
 
 import type { Progress } from '../types'
+import { UNIT_OF } from './path'
 
 export interface Gift {
   id: string
@@ -30,14 +31,19 @@ export const GIFTS: Gift[] = [
   },
 ]
 
-/** a gift the learner has earned and not opened yet, if any */
-export function giftWaiting(p: Progress): Gift | undefined {
-  return GIFTS.find((g) => p.completed[g.afterNode] && !p.gifts.includes(g.id))
+/** A gift the learner has earned and not opened yet, to bring up on the
+ *  stair. Only while they still stand in the unit that earned it: one
+ *  raced past used to pop up units later, out of nowhere, on the next
+ *  visit. Past that unit it waits in its step's sheet instead. */
+export function giftWaiting(p: Progress, currentNode: string): Gift | undefined {
+  const unit = UNIT_OF.get(currentNode)
+  return GIFTS.find((g) => p.completed[g.afterNode] && !p.gifts.includes(g.id) && UNIT_OF.get(g.afterNode) === unit)
 }
 
-/** the gift a step unwrapped, once it has been opened */
-export function giftOf(p: Progress, nodeId: string): Gift | undefined {
-  return GIFTS.find((g) => g.afterNode === nodeId && p.gifts.includes(g.id))
+/** the gift a finished step earned, opened or not */
+export function giftOf(p: Progress, nodeId: string): { gift: Gift; opened: boolean } | undefined {
+  const gift = GIFTS.find((g) => g.afterNode === nodeId && p.completed[nodeId])
+  return gift && { gift, opened: p.gifts.includes(gift.id) }
 }
 
 export function isGiftId(v: unknown): v is string {

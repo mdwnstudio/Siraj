@@ -510,11 +510,24 @@
 }
 .unitcard--gold {--face:var(--yellow);--edge:var(--yellow-deep);color:var(--maroon)}
 .unitcard--ember{--face:var(--orange);--edge:var(--orange-deep)}
-.unitcard--deep {--face:var(--maroon);--edge:#2B0403}
+/* fasting: the violet of the sky at iftar, like its island below */
+.unitcard--dusk {--face:#6B4F95;--edge:#46306B}
 .unitcard--sand {--face:#E8D4B2;--edge:#C9B48C;color:var(--maroon)}
 .unitcard__main{flex:1;min-width:0;padding:13px 16px 14px}
 .unitcard__kicker{font-size:.74rem;font-weight:800;letter-spacing:.03em;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .unitcard__title{font-family:var(--font-display);font-size:1.28rem;font-weight:700;line-height:1.2;margin-top:2px}
+/* under the unit's name: the way to every other unit */
+.unitcard__pick{
+  display:flex;width:fit-content;align-items:center;gap:4px;margin-top:7px;
+  padding:4px 10px 5px;border-radius:var(--r-pill);
+  background:rgba(255,255,255,.2);color:inherit;
+  font-size:.76rem;font-weight:800;line-height:1.2;
+  transition:transform var(--d-tap) var(--e-out);
+}
+.unitcard__pick:active{transform:scale(.94)}
+.unitcard__pick:focus-visible{outline:2.5px solid currentColor;outline-offset:2px}
+.unitcard--gold .unitcard__pick,.unitcard--sand .unitcard__pick{background:rgba(69,7,5,.1)}
+@media(hover:hover){.unitcard__pick:hover{background:rgba(255,255,255,.3)}.unitcard--gold .unitcard__pick:hover,.unitcard--sand .unitcard__pick:hover{background:rgba(69,7,5,.16)}}
 .unitcard__side{
   flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   padding:0 16px;border-inline-start:2.5px solid var(--edge);
@@ -1690,6 +1703,14 @@ button.trow:active:not(:disabled){transform:scale(.98)}
 .trow__note.is-done{color:var(--good-ink)}
 .trow__note.is-here{color:var(--orange-ink)}
 .trow__check{flex:0 0 auto;color:var(--orange)}
+/* the unit chooser: each unit's icon on its banner's colour */
+.urow__ico{background:var(--u-face);color:var(--u-ink,#fff)}
+.urow--gold{--u-face:var(--yellow);--u-ink:var(--maroon)}
+.urow--ember{--u-face:var(--orange)}
+.urow--dusk{--u-face:#6B4F95}
+.urow--sand{--u-face:#E8D4B2;--u-ink:var(--maroon)}
+.trow.is-on .urow__ico{background:var(--u-face)}
+.urow__count{flex:0 0 auto;font-size:.8rem;font-weight:800;color:var(--ink-3)}
 /* a saved chat: the row opens it, the X beside it deletes */
 .trow--chat{padding:0;gap:0}
 .trow__hit{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:start;border-radius:var(--r-lg)}
@@ -2315,6 +2336,8 @@ html[lang="en"] .verdict__head{direction:ltr}
 html[lang="en"] .combo{inset-inline:auto;right:var(--combo-x);direction:ltr}
 /* "0 · The Beginning", number first, as English reads it */
 html[lang="en"] .path-unit__caption{direction:ltr}
+/* the unit chooser button follows the title to the left, chevron after the words */
+html[lang="en"] .unitcard__pick{direction:ltr;margin-left:0;margin-right:auto}
 
 /* =========================================================
    17. NIGHT: what the dark tokens cannot say alone
@@ -2327,8 +2350,8 @@ html[lang="en"] .path-unit__caption{direction:ltr}
 /* a faded orange slab at night reads as mud with grey on it: a plain
    inert slab with legible text says "not yet" more clearly */
 :root[data-theme="dark"] .btn:disabled{--face:var(--inert-mid);--edge:var(--inert);--fg:var(--ink-3);opacity:1;filter:none}
-/* maroon on the night background vanishes: lift it one step */
-:root[data-theme="dark"] .unitcard--deep{--face:var(--maroon-lit);--edge:#3A0605}
+/* the fasting violet, a shade lower so it does not glare at night */
+:root[data-theme="dark"] .unitcard--dusk{--face:#5F4789;--edge:#3A2A5C}
 /* Siraj's plinth is moonlit stone, like the treads around it */
 :root[data-theme="dark"] .step__plinth{background:radial-gradient(90% 100% at 50% 20%,var(--tread-top),var(--tread-face));box-shadow:0 10px 0 var(--tread-rim),0 20px 16px -6px rgba(0,0,0,.4)}
 :root[data-theme="dark"] .landscape__architecture svg{opacity:1;filter:none}
@@ -2351,7 +2374,7 @@ html[lang="en"] .path-unit__caption{direction:ltr}
 :root[data-theme="dark"] .dots__d.is-past{background:#7A3413}
 @media(prefers-color-scheme:dark){
   :root:not([data-theme="light"]) .btn:disabled{--face:var(--inert-mid);--edge:var(--inert);--fg:var(--ink-3);opacity:1;filter:none}
-  :root:not([data-theme="light"]) .unitcard--deep{--face:var(--maroon-lit);--edge:#3A0605}
+  :root:not([data-theme="light"]) .unitcard--dusk{--face:#5F4789;--edge:#3A2A5C}
   :root:not([data-theme="light"]) .step__plinth{background:radial-gradient(90% 100% at 50% 20%,var(--tread-top),var(--tread-face));box-shadow:0 10px 0 var(--tread-rim),0 20px 16px -6px rgba(0,0,0,.4)}
   :root:not([data-theme="light"]) .landscape__architecture svg{opacity:1;filter:none}
   :root:not([data-theme="light"]) .landscape__far svg{opacity:.75}

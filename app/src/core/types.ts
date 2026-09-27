@@ -158,7 +158,7 @@ export interface PathNode {
   soon?: boolean
 }
 
-export type UnitTone = 'gold' | 'ember' | 'deep' | 'sand'
+export type UnitTone = 'gold' | 'ember' | 'dusk' | 'sand'
 
 export interface Unit {
   id: string

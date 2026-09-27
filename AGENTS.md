@@ -115,6 +115,13 @@ cameras follow it), then opens the gate (`components/UnitOpener.tsx`, its own
 lazy chunk). Siraj stays beside the old step until the gate covers the stair,
 so he never jumps on screen.
 
+**The unit chooser.** Under the unit's name on the banner, «كل الوحدات»
+opens a list of every unit (`components/UnitSheet.tsx`, its own lazy chunk,
+built on the Ask tab's sheet). Units not reached yet show but cannot be
+picked. Picking one carries the camera to that unit's first step on the same
+crane as a crossing, only quicker (`glideTime(root, el, true)`); a touch or
+a wheel on the road mid-trip stops it and hands the road back.
+
 **A lesson is two phases, never one.** The brief was explicitly *not* generic
 quizzing: you **learn first**, then the exercises **make it stick**. Every
 exercise draws only on what the cards just taught. In تعلّم the learner can go
@@ -139,7 +146,11 @@ finished, a wrapped box comes up on the stair when it is still, and opening
 it shows what is inside. The only one is after صفة الصلاة: a YouTube video
 (youtube-nocookie) of a four-rak'ah instructional prayer. Opened gifts are
 saved in `progress.gifts`, and the step's sheet offers the video again
-(`components/Gift.tsx`, its own lazy chunk).
+(`components/Gift.tsx`, its own lazy chunk). A step tapped while a gift is
+still due opens the gift instead: a quick learner used to race past it, and
+it then popped up units later on their next visit. It only comes up while the
+learner is still in the unit that earned it (`giftWaiting()`); past that,
+the step's sheet offers it wrapped.
 
 **The profile (ملفي).** Onboarding asks name, then أخ / أخت (answered with
 the ♂ and ♀ signs, not pictures), then a picture

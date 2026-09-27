@@ -74,7 +74,7 @@ export const UNITS: Unit[] = [
     title: 'الصوم',
     subtitle: 'الركن الرابع',
     icon: 'Crescent',
-    tone: 'deep',
+    tone: 'dusk',
     en: { title: 'Fasting', subtitle: 'The fourth pillar' },
     nodes: [
       { id: 'n-sawm-1', unitId: 'u-sawm', kind: 'lesson', lessonId: 'l-sawm-1' },

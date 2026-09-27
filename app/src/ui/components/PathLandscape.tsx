@@ -306,12 +306,16 @@ const crane = (t: number) => {
   return bez(0, 1, s)
 }
 
-/** How long the crane takes to reach a step, so a longer climb takes longer. */
-export function glideTime(root: HTMLElement | null, el: HTMLElement | null): number {
+/** How long the crane takes to reach a step, so a longer climb takes longer.
+ *  `quick` is a trip the learner asked for (the unit chooser): the same
+ *  crane, at about half the time, since they are waiting on it. */
+export function glideTime(root: HTMLElement | null, el: HTMLElement | null, quick = false): number {
   if (!root || !el) return 0
   const top = focusTop(root, el)
   if (top === null) return 0
-  return Math.round(Math.min(2800, Math.max(1700, 1200 + Math.abs(top - root.scrollTop))))
+  const dist = Math.abs(top - root.scrollTop)
+  if (quick) return dist < 2 ? 0 : Math.round(Math.min(1500, Math.max(650, 500 + dist * 0.35)))
+  return Math.round(Math.min(2800, Math.max(1700, 1200 + dist)))
 }
 
 /** Carry the camera up the road to a step. The scroll position is the only
