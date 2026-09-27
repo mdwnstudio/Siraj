@@ -1224,6 +1224,9 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 .slots{
   display:flex;flex-wrap:wrap;gap:9px;
   min-height:120px;align-content:flex-start;
+  /* .ex is a fixed-height flex column: an explicit min-height would let
+     the box shrink under long chips, so it must never shrink */
+  flex-shrink:0;
   padding:13px;margin-bottom:16px;
   border-radius:var(--r-lg);
   background:var(--bg-sunk);
@@ -1232,7 +1235,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 .slots:empty::before{
   content:attr(data-hint);color:var(--ink-3);font-weight:700;font-size:.92rem;
 }
-.pool{display:flex;flex-wrap:wrap;gap:9px}
+.pool{display:flex;flex-wrap:wrap;gap:9px;flex-shrink:0}
 .chip{
   display:inline-flex;align-items:center;gap:7px;
   padding:11px 15px;border-radius:var(--r);
@@ -1323,7 +1326,8 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 
 /* the streak flag that flies in on a run of right answers */
 .combo{
-  position:absolute;top:10px;inset-inline-end:var(--gutter);z-index:12;
+  --combo-x:var(--gutter);
+  position:absolute;top:10px;inset-inline-end:var(--combo-x);z-index:12;
   display:flex;align-items:center;gap:6px;
   padding:6px 14px;border-radius:var(--r-pill);
   background:var(--orange);color:#fff;font-weight:900;font-size:.82rem;
@@ -1920,7 +1924,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
   .verdict__head{grid-column:1}
   .verdict__text{grid-column:1;margin-bottom:0}
   .verdict > .btn{grid-column:2;grid-row:1 / span 2;width:auto;min-width:200px}
-  .combo{inset-inline-end:max(var(--gutter),calc((100% - var(--col-max)) / 2))}
+  .combo{--combo-x:max(var(--gutter),calc((100% - var(--col-max)) / 2))}
   .kcard__body{font-size:1.4rem}
   .quote .quote__text{font-size:1.7rem}
   .quote{padding:34px 32px}
@@ -2065,6 +2069,9 @@ html[lang="en"] .quote .quote__text{font-family:var(--font-ui);font-size:1.02rem
 /* a label that heads a card sits where its text starts, icon first */
 html[lang="en"] :is(.kcard__kicker,.ex__kicker){align-self:flex-end;direction:ltr}
 html[lang="en"] .verdict__head{direction:ltr}
+/* the streak flag sits at the reading end: left in Arabic, right in English */
+/* physical, because direction:ltr (icon first) would turn a logical inset too */
+html[lang="en"] .combo{inset-inline:auto;right:var(--combo-x);direction:ltr}
 /* "0 · The Beginning", number first, as English reads it */
 html[lang="en"] .path-unit__caption{direction:ltr}
 
