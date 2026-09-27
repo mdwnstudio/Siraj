@@ -568,7 +568,10 @@ screen, colour and transition; it only redraws the costly things a cheaper way
   most, and the baked islands animate the `<img>` itself. The JS camera stays
   for wide screens and for browsers without scroll timelines.
 - the scenery islands are pre-baked WebP images (`public/img/path/`), one per
-  unit per theme, instead of live SVG
+  unit per theme, instead of live SVG. They are screenshots of the live
+  islands, so after changing a landmark or a `--land-*` colour, re-bake them
+  with the dev server running: `node app/scripts/bake-islands.mjs
+  http://localhost:5173/` (`--theme=dark` for one theme, `--check` to diff)
 - no mask over the whole moving stair: the camera fades each body by where it
   lands instead (`fog()` in `PathLandscape.tsx`, whose stops must match `.stage`)
 - the islands' inner parallax layers hold still, so each island is one texture
@@ -648,6 +651,24 @@ images; the mood API in `components/Siraj.tsx` will not need to change.
 
 Light theme by default. Dark mode exists and is selectable in Settings, but
 `index.html` ships `data-theme="light"` so a first-time visitor never lands dark.
+
+**Dark mode is mostly tokens** (`tokens.css`, written twice: once for the
+Settings choice, once for "auto" following the OS). Two rules keep it readable:
+
+- **Coloured text uses the `-ink` tokens** (`--orange-ink`, `--good-ink`,
+  `--bad-ink`, `--info-ink`, `--yellow-ink`), never a `-deep`. The `-deep`
+  ramps are the dark under-edges of the chunky slabs and stay dark at night;
+  the `-ink` ones turn light. Likewise `--maroon` is for text on surfaces that
+  stay bright in both themes (yellow slabs, the warmup); on a themed surface
+  use `--ink`.
+- **Every `-soft` fill has a night value.** A pale pill or tile left at its
+  day colour glares on the dark background and its light ink vanishes.
+
+The few component-level night overrides live in app.css section 17. The
+stair has its own night: dusk violet at the bottom, and at Hajj a deep blue
+sky with stars and a crescent moon, which ride on `.sky__high` so they come
+out as the learner climbs. Its islands are moonlit (`.landscape` in app.css),
+while a lesson's scene keeps the warm palette of the lesson around it.
 
 ---
 

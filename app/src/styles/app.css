@@ -45,7 +45,7 @@
 .btn--gold   {--face:var(--yellow);--edge:var(--yellow-deep);--fg:var(--maroon)}
 .btn--good   {--face:var(--good);  --edge:var(--good-deep);  --fg:#fff}
 .btn--danger {--face:var(--bad);   --edge:var(--bad-deep);   --fg:#fff}
-.btn--ghost  {--face:var(--cream); --edge:var(--cream-deep); --fg:var(--maroon)}
+.btn--ghost  {--face:var(--cream); --edge:var(--cream-deep); --fg:var(--ink)}
 .btn--quiet{
   --face:transparent;--edge:transparent;--fg:var(--ink-2);
   box-shadow:inset 0 0 0 2.5px var(--paper-edge);font-weight:700;
@@ -198,7 +198,7 @@
 .stat--flame{color:var(--orange)}
 .stat--star {color:var(--yellow-deep)}
 .stat__val{color:inherit;font-weight:900}
-.stat--star .stat__val{color:color-mix(in srgb,var(--yellow-deep) 80%,var(--maroon))}
+.stat--star .stat__val{color:var(--yellow-ink)}
 /* the language, where the oil drop was: the flag of the one in use */
 .statlang{position:relative;display:flex}
 .stat--lang:active{transform:scale(.94)}
@@ -220,7 +220,7 @@
   transition:background 160ms,border-color 160ms;
 }
 .langpop__item:active{transform:scale(.98)}
-.langpop__item.is-on{background:var(--orange-soft);border-color:var(--orange);color:var(--orange-deep)}
+.langpop__item.is-on{background:var(--orange-soft);border-color:var(--orange);color:var(--orange-ink)}
 .langpop__note{padding:4px 6px 2px;font-size:.74rem;font-weight:650;line-height:1.5;color:var(--ink-3)}
 .stat.is-idle{color:var(--inert-deep)}
 .stat.is-idle .stat__val{color:var(--ink-3)}
@@ -370,7 +370,7 @@
 .lang.is-on{
   border-color:var(--orange);
   background:var(--orange-soft);
-  color:var(--orange-deep);
+  color:var(--orange-ink);
   box-shadow:0 3px 0 var(--orange);
 }
 .lang__flag{flex:0 0 auto;border-radius:5px;overflow:hidden;box-shadow:0 0 0 1.5px rgba(69,7,5,.12)}
@@ -378,7 +378,7 @@
   background:var(--bg-sunk);padding:3px 9px;border-radius:var(--r-pill)}
 /* English is ready but unreviewed */
 .lang__beta{margin-inline-start:auto;font-size:.66rem;font-weight:900;letter-spacing:.08em;
-  color:var(--orange-deep);background:var(--orange-soft);padding:3px 8px;border-radius:var(--r-pill);
+  color:var(--orange-ink);background:var(--orange-soft);padding:3px 8px;border-radius:var(--r-pill);
   direction:ltr;unicode-bidi:isolate}
 .seg__b .lang__beta{margin-inline-start:6px}
 .lang[aria-disabled="true"]{opacity:.62}
@@ -428,17 +428,60 @@
 .sky__clouds--far {opacity:.45}
 .sky__clouds--mid {opacity:.7}
 .sky__clouds--near{opacity:.7}
+/* Night: the climb starts at dusk, violet with the last warm light low in
+   the corner, and ends at Hajj under a deep blue sky with the stars and a
+   crescent moon out. The stars and the moon live on the blue layer, so they
+   come out as the sky cools (paintSky in PathLandscape.tsx), and the dusk
+   glow sits under that layer, so the moon takes the sun's place instead of
+   sharing the sky with it. */
+.sky__stars,.sky__moon{display:none}
+.sky__stars{
+  position:absolute;inset:0;
+  background-image:
+    radial-gradient(1.6px 1.6px at 22px 34px,#fff,transparent),
+    radial-gradient(1.2px 1.2px at 96px 12px,#FFF1D0,transparent),
+    radial-gradient(1px 1px at 150px 88px,#fff,transparent),
+    radial-gradient(1.4px 1.4px at 58px 128px,#DDE6FF,transparent),
+    radial-gradient(1px 1px at 132px 150px,#fff,transparent),
+    radial-gradient(2px 2px at 44px 206px,#fff,transparent),
+    radial-gradient(1px 1px at 180px 226px,#FFF1D0,transparent),
+    radial-gradient(1.3px 1.3px at 110px 262px,#fff,transparent),
+    radial-gradient(1px 1px at 12px 250px,#DDE6FF,transparent),
+    radial-gradient(1.2px 1.2px at 30px 70px,#fff,transparent),
+    radial-gradient(1px 1px at 190px 40px,#fff,transparent),
+    radial-gradient(1.8px 1.8px at 150px 190px,#FFF1D0,transparent),
+    radial-gradient(1px 1px at 84px 170px,#fff,transparent),
+    radial-gradient(1.1px 1.1px at 214px 120px,#DDE6FF,transparent);
+  background-size:200px 280px,200px 280px,200px 280px,200px 280px,200px 280px,200px 280px,200px 280px,200px 280px,200px 280px,
+                  233px 311px,233px 311px,233px 311px,233px 311px,233px 311px;
+  /* thick overhead, thinning toward the land */
+  -webkit-mask-image:linear-gradient(to bottom,#000 10%,rgba(0,0,0,.5) 55%,transparent 88%);
+  mask-image:linear-gradient(to bottom,#000 10%,rgba(0,0,0,.5) 55%,transparent 88%);
+}
+.sky__moon{
+  position:absolute;top:104px;inset-inline-start:30px;
+  width:58px;height:58px;color:#FFE7A6;
+}
+.sky__moon::before{
+  content:'';position:absolute;left:50%;top:50%;width:260px;height:260px;margin:-130px 0 0 -130px;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,231,166,.22),rgba(150,170,255,.08) 55%,transparent);
+}
+.sky__moon svg{position:relative;width:100%;height:100%;transform:rotate(-18deg)}
 :root[data-theme="dark"] .sky{
-  --sky-low-a:#2E120D;--sky-low-b:#1C0806;--sky-high-a:#120F26;--sky-high-b:#20152C;
-  --cloud:rgba(255,236,220,.09);--sun:rgba(255,170,90,.16);
+  --sky-low-a:#1B1533;--sky-low-b:#3A1D38;--sky-high-a:#07102C;--sky-high-b:#19305F;
+  --sun:rgba(255,150,90,.2);
 }
 :root[data-theme="dark"] .sky__clouds{--cloud-img:var(--cloud-night)}
+:root[data-theme="dark"] .sky__sun{z-index:-1}
+:root[data-theme="dark"] :is(.sky__stars,.sky__moon){display:block}
 @media(prefers-color-scheme:dark){
   :root:not([data-theme="light"]) .sky{
-    --sky-low-a:#2E120D;--sky-low-b:#1C0806;--sky-high-a:#120F26;--sky-high-b:#20152C;
-    --cloud:rgba(255,236,220,.09);--sun:rgba(255,170,90,.16);
+    --sky-low-a:#1B1533;--sky-low-b:#3A1D38;--sky-high-a:#07102C;--sky-high-b:#19305F;
+    --sun:rgba(255,150,90,.2);
   }
   :root:not([data-theme="light"]) .sky__clouds{--cloud-img:var(--cloud-night)}
+  :root:not([data-theme="light"]) .sky__sun{z-index:-1}
+  :root:not([data-theme="light"]) :is(.sky__stars,.sky__moon){display:block}
 }
 
 /* ---- the unit banner, floating over the sky ---- */
@@ -458,7 +501,7 @@
 .unitcard--gold {--face:var(--yellow);--edge:var(--yellow-deep);color:var(--maroon)}
 .unitcard--ember{--face:var(--orange);--edge:var(--orange-deep)}
 .unitcard--deep {--face:var(--maroon);--edge:#2B0403}
-.unitcard--sand {--face:var(--cream-deep);--edge:#C9B48C;color:var(--maroon)}
+.unitcard--sand {--face:#E8D4B2;--edge:#C9B48C;color:var(--maroon)}
 .unitcard__main{flex:1;min-width:0;padding:13px 16px 14px}
 .unitcard__kicker{font-size:.74rem;font-weight:800;letter-spacing:.03em;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .unitcard__title{font-family:var(--font-display);font-size:1.28rem;font-weight:700;line-height:1.2;margin-top:2px}
@@ -545,28 +588,54 @@
 .landscape__baked{
   display:block;width:100%;height:100%;object-fit:fill;
 }
-:root[data-theme="dark"] :is(.landscape,.scene){
+/* Night. A lesson's scene keeps the warm palette of the lesson around it;
+   the stair's islands are moonlit, in the colours of the night sky they
+   float in (the phone draws them from public/img/path, so after changing
+   these run scripts/bake-islands.mjs). */
+:root[data-theme="dark"] .scene{
   --land-stone:#76533E;--land-shadow:#51382C;--land-light:#A77D50;
   --land-recess:#35251F;--land-accent:#A87540;--land-leaf:#535C3B;
   --land-glow:#D9A754;--land-hill:#3C2A24;--land-dune:#453026;
   --land-ground:#50382B;--land-cloud:#4A3530;--land-water:#52665A;
   --land-kaaba:#29201D;--land-kaaba-side:#3D3027;--land-kaaba-top:#56432F;
 }
-:root[data-theme="dark"] :is(.landscape,.scene).landscape--u-sawm{
+:root[data-theme="dark"] .scene.landscape--u-sawm{
   --land-stone:#665268;--land-shadow:#46364D;
   --land-recess:#302635;--land-hill:#3A2C40;--land-dune:#423248;--land-ground:#4A394B;
 }
+:root[data-theme="dark"] .landscape{
+  --land-stone:#5A5379;--land-shadow:#3D3759;--land-light:#8A82B0;
+  --land-recess:#28233F;--land-accent:#C28A5C;--land-leaf:#4C6B63;
+  --land-glow:#FFC468;--land-hill:#2D2849;--land-dune:#352F55;
+  --land-ground:#403962;--land-cloud:#4A4476;--land-water:#3D6A8E;
+  --land-kaaba:#15121D;--land-kaaba-side:#211D2E;--land-kaaba-top:#322C47;
+}
+:root[data-theme="dark"] .landscape.landscape--u-sawm{
+  --land-stone:#4E4F7E;--land-shadow:#35365D;
+  --land-recess:#23244A;--land-hill:#272A50;--land-dune:#2E315A;--land-ground:#363A66;
+}
 @media(prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) :is(.landscape,.scene){
+  :root:not([data-theme="light"]) .scene{
     --land-stone:#76533E;--land-shadow:#51382C;--land-light:#A77D50;
     --land-recess:#35251F;--land-accent:#A87540;--land-leaf:#535C3B;
     --land-glow:#D9A754;--land-hill:#3C2A24;--land-dune:#453026;
     --land-ground:#50382B;--land-cloud:#4A3530;--land-water:#52665A;
     --land-kaaba:#29201D;--land-kaaba-side:#3D3027;--land-kaaba-top:#56432F;
   }
-  :root:not([data-theme="light"]) :is(.landscape,.scene).landscape--u-sawm{
+  :root:not([data-theme="light"]) .scene.landscape--u-sawm{
     --land-stone:#665268;--land-shadow:#46364D;
     --land-recess:#302635;--land-hill:#3A2C40;--land-dune:#423248;--land-ground:#4A394B;
+  }
+  :root:not([data-theme="light"]) .landscape{
+    --land-stone:#5A5379;--land-shadow:#3D3759;--land-light:#8A82B0;
+    --land-recess:#28233F;--land-accent:#C28A5C;--land-leaf:#4C6B63;
+    --land-glow:#FFC468;--land-hill:#2D2849;--land-dune:#352F55;
+    --land-ground:#403962;--land-cloud:#4A4476;--land-water:#3D6A8E;
+    --land-kaaba:#15121D;--land-kaaba-side:#211D2E;--land-kaaba-top:#322C47;
+  }
+  :root:not([data-theme="light"]) .landscape.landscape--u-sawm{
+    --land-stone:#4E4F7E;--land-shadow:#35365D;
+    --land-recess:#23244A;--land-hill:#272A50;--land-dune:#2E315A;--land-ground:#363A66;
   }
 }
 @media(prefers-reduced-motion:reduce){
@@ -575,9 +644,9 @@
 .calm .landscape [data-depth],.calm .sky__clouds{transform:none!important}
 
 .stair{--tread-top:#FBFAF8;--tread-face:#DCD8D2;--tread-rim:#C9C3BB;--tread-ink:#ADA59B}
-:root[data-theme="dark"] .stair{--tread-top:#43302C;--tread-face:#2E201D;--tread-rim:#251917;--tread-ink:#8C7770}
+:root[data-theme="dark"] .stair{--tread-top:#4C4669;--tread-face:#342F4E;--tread-rim:#26223B;--tread-ink:#ABA3CF}
 @media(prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .stair{--tread-top:#43302C;--tread-face:#2E201D;--tread-rim:#251917;--tread-ink:#8C7770}
+  :root:not([data-theme="light"]) .stair{--tread-top:#4C4669;--tread-face:#342F4E;--tread-rim:#26223B;--tread-ink:#ABA3CF}
 }
 
 /* ---- a tread ----
@@ -638,14 +707,14 @@
   --fg:var(--orange-ink);
 }
 .step--current .slab{--face:var(--orange);--top:color-mix(in srgb,var(--orange-lit) 78%,#fff);--rim:var(--orange-deep);--fg:#fff}
-.step--chest .slab  {--fg:var(--maroon);width:220px;justify-content:flex-start;padding-inline:18px}
+.step--chest .slab  {--fg:var(--ink);width:220px;justify-content:flex-start;padding-inline:18px}
 /* a reward is the same neutral tread with a gold disc: gold already means "earned" */
 .step--chest .slab__medal{left:auto;inset-inline-end:14px;margin-left:0;background:var(--yellow);color:var(--maroon);box-shadow:0 7px 0 var(--yellow-deep)}
-.step--done.step--chest .slab{--face:var(--yellow);--top:var(--yellow-lit);--rim:var(--yellow-deep)}
+.step--done.step--chest .slab{--face:var(--yellow);--top:var(--yellow-lit);--rim:var(--yellow-deep);--fg:var(--maroon)}
 .step--done.step--chest .slab:disabled{opacity:.8;cursor:default}
 .step--locked{cursor:default}
 .slab__reward{position:relative;z-index:1;font-size:.8rem;font-weight:900;white-space:nowrap}
-.slab__reward b{color:var(--orange-deep);margin-inline-start:3px}
+.slab__reward b{color:var(--orange-ink);margin-inline-start:3px}
 
 .slab__stars{
   position:absolute;top:-22px;inset-inline-start:14px;z-index:2;
@@ -662,7 +731,7 @@
 .step::after{
   content:'';position:absolute;z-index:0;pointer-events:none;
   left:10%;right:10%;bottom:-12px;height:16px;border-radius:50%;
-  background:rgba(69,7,5,.1);
+  background:var(--contact);
 }
 
 .step__cta{
@@ -718,7 +787,7 @@
   width:min(78%,300px);display:flex;flex-direction:column;align-items:center;gap:5px;
   padding:22px 18px 20px;border-radius:var(--r-xl);
   background:var(--paper);border:3px solid var(--yellow);box-shadow:0 9px 0 var(--yellow-deep),var(--lift-3);
-  color:var(--maroon);pointer-events:none;text-align:center;
+  color:var(--ink);pointer-events:none;text-align:center;
 }
 .reward-pop__icon{display:grid;place-items:center;width:68px;height:68px;border-radius:50%;background:var(--yellow);color:var(--maroon);box-shadow:0 6px 0 var(--yellow-deep);margin-bottom:6px}
 .reward-pop strong{font-family:var(--font-display);font-size:1.35rem}
@@ -829,7 +898,7 @@
   transition:transform .6s var(--e-elastic),opacity .3s var(--e-out);
 }
 .is-named .opener__text{opacity:1;transform:none}
-.opener__kicker{font-size:.72rem;font-weight:900;letter-spacing:.08em;color:var(--orange-deep);background:var(--orange-soft);padding:5px 12px;border-radius:var(--r-pill)}
+.opener__kicker{font-size:.72rem;font-weight:900;letter-spacing:.08em;color:var(--orange-ink);background:var(--orange-soft);padding:5px 12px;border-radius:var(--r-pill)}
 .opener__title{font-family:var(--font-display);font-size:var(--t-hero);font-weight:700;line-height:1.1;color:var(--orange)}
 .opener__sub{font-size:.95rem;font-weight:800;color:var(--ink-2)}
 
@@ -918,7 +987,7 @@
 }
 /* the XP this lesson has earned, where the oil drop was */
 .lesson__xp{display:flex;align-items:center;gap:4px;min-width:44px;color:var(--yellow-deep);font-weight:900}
-.lesson__xp .num{color:color-mix(in srgb,var(--yellow-deep) 80%,var(--maroon))}
+.lesson__xp .num{color:var(--yellow-ink)}
 .lesson__xpstar{display:grid}
 @keyframes xp-bump{
   0%{transform:scale(1)}35%{transform:scale(1.5) rotate(-14deg)}100%{transform:scale(1)}
@@ -989,7 +1058,7 @@
 /* tap-to-reveal term */
 .term{
   position:relative;display:inline;
-  font-weight:800;color:var(--orange-deep);
+  font-weight:800;color:var(--orange-ink);
   border-bottom:2.5px dashed var(--orange);
   cursor:help;padding-bottom:1px;
 }
@@ -1000,7 +1069,7 @@
 .termhint{font-size:.8rem;color:var(--ink-3);font-weight:650}
 .termpop{
   display:block;
-  background:var(--orange-soft);color:var(--maroon);
+  background:var(--orange-soft);color:var(--ink);
   border-radius:var(--r);padding:11px 14px;
   font-size:.92rem;font-weight:600;line-height:1.6;
 }
@@ -1011,16 +1080,16 @@
   background:linear-gradient(160deg,var(--cream-lit),var(--cream));
   border-radius:var(--r-lg);
   padding:26px 22px 20px;
-  box-shadow:var(--lift-1),inset 0 0 0 2px var(--cream-deep);
+  box-shadow:var(--lift-1),inset 0 0 0 2px var(--quote-edge);
   text-align:center;
 }
 .quote__text{
   font-family:var(--font-display);
-  font-size:1.3rem;font-weight:700;line-height:2;color:var(--maroon);
+  font-size:1.3rem;font-weight:700;line-height:2;color:var(--ink);
 }
 .quote--ayah .quote__text{font-size:1.24rem;line-height:2.1}
 .quote__src{
-  margin-top:14px;font-size:.82rem;font-weight:800;color:var(--orange-deep);
+  margin-top:14px;font-size:.82rem;font-weight:800;color:var(--orange-ink);
   letter-spacing:.02em;
 }
 .quote__corner{position:absolute;color:var(--yellow-deep);opacity:.5}
@@ -1030,8 +1099,8 @@
 /* a translated quote: the Arabic it translates, above it */
 .quote__original{
   font-family:var(--font-display);font-size:1.02rem;font-weight:700;line-height:2;
-  color:color-mix(in srgb,var(--maroon) 62%,transparent);
-  margin-bottom:10px;padding-bottom:10px;border-bottom:1.5px solid var(--cream-deep);
+  color:color-mix(in srgb,var(--ink) 62%,transparent);
+  margin-bottom:10px;padding-bottom:10px;border-bottom:1.5px solid var(--quote-edge);
 }
 a.quote__src--link{display:inline-block;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
 
@@ -1065,7 +1134,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 .ex__kicker{
   align-self:flex-start;display:inline-flex;align-items:center;gap:7px;
   font-size:.72rem;font-weight:900;letter-spacing:.09em;
-  color:var(--info-deep);background:var(--info-soft);
+  color:var(--info-ink);background:var(--info-soft);
   padding:6px 13px;border-radius:var(--r-pill);margin-bottom:12px;
 }
 .ex__prompt{font-size:var(--t-title);line-height:1.35;margin-bottom:20px}
@@ -1099,10 +1168,10 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 .tile:active:not(:disabled){transform:translateY(4px);box-shadow:0 0 0 var(--paper-edge)}
 .tile.is-on{
   border-color:var(--orange);background:var(--orange-soft);
-  color:var(--orange-deep);box-shadow:0 4px 0 var(--orange)
+  color:var(--orange-ink);box-shadow:0 4px 0 var(--orange)
 }
-.tile.is-right{border-color:var(--good);background:var(--good-soft);color:var(--good-deep);box-shadow:0 4px 0 var(--good)}
-.tile.is-wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad-deep);box-shadow:0 4px 0 var(--bad)}
+.tile.is-right{border-color:var(--good);background:var(--good-soft);color:var(--good-ink);box-shadow:0 4px 0 var(--good)}
+.tile.is-wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad-ink);box-shadow:0 4px 0 var(--bad)}
 .tile.is-gone{opacity:0;transform:scale(.7);pointer-events:none}
 
 .choices{display:flex;flex-direction:column;gap:11px}
@@ -1111,8 +1180,8 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
   display:grid;place-items:center;gap:8px;
   padding:26px 12px;font-size:1.18rem;font-weight:900;
 }
-.bool--yes.is-on{border-color:var(--good);background:var(--good-soft);color:var(--good-deep);box-shadow:0 4px 0 var(--good)}
-.bool--no.is-on {border-color:var(--bad); background:var(--bad-soft); color:var(--bad-deep); box-shadow:0 4px 0 var(--bad)}
+.bool--yes.is-on{border-color:var(--good);background:var(--good-soft);color:var(--good-ink);box-shadow:0 4px 0 var(--good)}
+.bool--no.is-on {border-color:var(--bad); background:var(--bad-soft); color:var(--bad-ink); box-shadow:0 4px 0 var(--bad)}
 
 @keyframes shake{
   0%,100%{transform:translateX(0)}
@@ -1143,7 +1212,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
   transition:transform var(--d-tap) var(--e-out),box-shadow var(--d-tap) var(--e-out),opacity 200ms;
 }
 .chip:active{transform:translateY(4px);box-shadow:0 0 0 var(--paper-edge)}
-.chip--placed{background:var(--orange-soft);border-color:var(--orange);color:var(--orange-deep);box-shadow:0 4px 0 var(--orange)}
+.chip--placed{background:var(--orange-soft);border-color:var(--orange);color:var(--orange-ink);box-shadow:0 4px 0 var(--orange)}
 .chip--ghost{opacity:.28;pointer-events:none}
 .chip__n{
   display:grid;place-items:center;
@@ -1183,7 +1252,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
   padding:18px 12px;min-height:84px;
   border-radius:var(--r-lg);
   background:var(--paper);border:2.5px solid var(--orange);
-  box-shadow:0 5px 0 var(--orange);color:var(--orange-deep);
+  box-shadow:0 5px 0 var(--orange);color:var(--orange-ink);
   font-weight:800;font-size:1rem;text-align:center;line-height:1.35;
   transition:transform var(--d-tap) var(--e-out),box-shadow var(--d-tap) var(--e-out),opacity 200ms;
 }
@@ -1210,16 +1279,16 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 .verdict--bad {background:var(--bad-soft)}
 .verdict__head{display:flex;align-items:center;gap:11px;margin-bottom:6px}
 .verdict__title{font-family:var(--font-display);font-size:1.5rem;font-weight:700}
-.verdict--good .verdict__title{color:var(--good-deep)}
-.verdict--bad  .verdict__title{color:var(--bad-deep)}
+.verdict--good .verdict__title{color:var(--good-ink)}
+.verdict--bad  .verdict__title{color:var(--bad-ink)}
 .verdict__badge{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;color:#fff}
 .verdict--good .verdict__badge{background:var(--good)}
 .verdict--bad  .verdict__badge{background:var(--bad)}
 .verdict--good .verdict__badge{animation:verdict-badge .55s var(--e-elastic) both}
 @keyframes verdict-badge{0%{transform:scale(.2) rotate(-20deg)}55%{transform:scale(1.28) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
 .verdict__text{font-size:.94rem;font-weight:650;line-height:1.6;color:var(--ink-2);margin-bottom:14px}
-.verdict--good .verdict__text{color:var(--good-deep)}
-.verdict--bad  .verdict__text{color:var(--bad-deep)}
+.verdict--good .verdict__text{color:var(--good-ink)}
+.verdict--bad  .verdict__text{color:var(--bad-ink)}
 .verdict__answer{font-weight:800;color:var(--ink)}
 
 /* the streak flag that flies in on a run of right answers */
@@ -1276,13 +1345,13 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
   background:var(--paper);border:2px solid var(--paper-edge);
   border-end-end-radius:6px;box-shadow:var(--lift-1);
 }
-.msg--err{align-self:center;background:var(--bad-soft);color:var(--bad-deep);font-weight:700;text-align:center;max-width:100%}
+.msg--err{align-self:center;background:var(--bad-soft);color:var(--bad-ink);font-weight:700;text-align:center;max-width:100%}
 .msg__src{
   margin-top:10px;padding-top:10px;border-top:1.5px solid var(--paper-edge);
   display:flex;flex-wrap:wrap;gap:7px;
 }
 .msg__srclink{
-  font-size:.74rem;font-weight:800;color:var(--info-deep);
+  font-size:.74rem;font-weight:800;color:var(--info-ink);
   background:var(--info-soft);padding:4px 10px;border-radius:var(--r-pill);
   text-decoration:none;
 }
@@ -1321,7 +1390,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 .msg__ghost{visibility:hidden}
 .msg__src{transition:opacity .3s var(--e-out)}
 .msg__src.is-waiting{opacity:0}
-.msg__link{color:var(--info-deep);font-weight:800;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px;unicode-bidi:isolate}
+.msg__link{color:var(--info-ink);font-weight:800;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px;unicode-bidi:isolate}
 @keyframes caret-blink{0%,100%{opacity:1}50%{opacity:0}}
 .msg__caret{display:inline-block;width:3px;height:1.05em;margin-inline-start:3px;vertical-align:-.15em;
   border-radius:2px;background:var(--orange);animation:caret-blink .9s steps(1) infinite}
@@ -1344,7 +1413,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
   align-self:flex-end;max-width:95%;overflow:hidden;
   padding:11px 16px;border-radius:var(--r-pill);
   background:var(--paper);border:2.5px solid var(--orange);
-  color:var(--orange-deep);font-weight:750;font-size:.92rem;text-align:start;
+  color:var(--orange-ink);font-weight:750;font-size:.92rem;text-align:start;
   box-shadow:0 3px 0 var(--orange);
   transition:transform var(--d-tap) var(--e-out),box-shadow var(--d-tap) var(--e-out);
   animation:pill-float .5s var(--e-back) both;
@@ -1426,7 +1495,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 .result__orbit--c{bottom:4px;right:14px;animation:crest-float-a 2.1s var(--e-in-out) -.5s infinite alternate}
 @keyframes crest-float-a{from{transform:translate3d(0,4px,0) rotate(-8deg) scale(.9)}to{transform:translate3d(4px,-7px,0) rotate(12deg) scale(1.15)}}
 @keyframes crest-float-b{from{transform:translate3d(0,-3px,0) rotate(10deg)}to{transform:translate3d(-6px,8px,0) rotate(-10deg)}}
-.result__kicker{font-size:.72rem;font-weight:900;letter-spacing:.08em;color:var(--orange-deep);background:var(--orange-soft);padding:5px 12px;border-radius:var(--r-pill);margin-bottom:-10px}
+.result__kicker{font-size:.72rem;font-weight:900;letter-spacing:.08em;color:var(--orange-ink);background:var(--orange-soft);padding:5px 12px;border-radius:var(--r-pill);margin-bottom:-10px}
 .result__title{
   font-family:var(--font-display);
   font-size:var(--t-hero);font-weight:700;
@@ -1452,13 +1521,13 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
   display:flex;align-items:center;justify-content:center;gap:5px;
   padding:13px 4px;font-weight:900;font-size:1.12rem;
 }
-.statcard--xp .statcard__body{color:var(--yellow-deep)}
-.statcard--acc .statcard__body{color:var(--good-deep)}
-.statcard--time .statcard__body{color:var(--info-deep)}
+.statcard--xp .statcard__body{color:var(--yellow-ink)}
+.statcard--acc .statcard__body{color:var(--good-ink)}
+.statcard--time .statcard__body{color:var(--info-ink)}
 
 .streakrow{
   display:flex;align-items:center;justify-content:center;gap:10px;
-  background:var(--orange-soft);color:var(--orange-deep);
+  background:var(--orange-soft);color:var(--orange-ink);
   border-radius:var(--r-lg);padding:13px 18px;font-weight:800;width:100%;
 }
 
@@ -1542,7 +1611,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 }
 .gpick__b img{width:84px;height:84px;border-radius:50%}
 .gpick__b:active{transform:translateY(4px);box-shadow:0 0 0 var(--paper-edge)}
-.gpick__b.is-on{border-color:var(--orange);background:var(--orange-soft);color:var(--orange-deep);box-shadow:0 4px 0 var(--orange)}
+.gpick__b.is-on{border-color:var(--orange);background:var(--orange-soft);color:var(--orange-ink);box-shadow:0 4px 0 var(--orange)}
 .avpreview__img{box-shadow:0 0 0 6px var(--paper),0 10px 0 6px var(--paper-edge)}
 .avpick__b{
   display:grid;place-items:center;aspect-ratio:1;border-radius:50%;padding:0;
@@ -1724,16 +1793,11 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 }
 .side__ico{position:relative;z-index:1;display:grid;place-items:center;width:34px;color:var(--tone);transition:transform var(--d-tap) var(--e-out)}
 .side__label{position:relative;z-index:1;display:none;white-space:nowrap}
-.side__item.is-on .side__label{color:var(--orange-deep)}
-/* at night the maroon wordmark would vanish into the dark, and the pale
-   pill would glare: the mark turns cream, the pill a low orange glow */
+.side__item.is-on .side__label{color:var(--orange-ink)}
+/* at night the maroon wordmark would vanish into the dark: it turns cream */
 :root[data-theme="dark"] :is(.side__wordmark,.statbar__wordmark){filter:brightness(0) invert(1) sepia(.25)}
-:root[data-theme="dark"] .side__pill{background:color-mix(in srgb,var(--orange) 16%,transparent)}
-:root[data-theme="dark"] .side__item.is-on .side__label{color:var(--orange-lit)}
 @media(prefers-color-scheme:dark){
   :root:not([data-theme="light"]) :is(.side__wordmark,.statbar__wordmark){filter:brightness(0) invert(1) sepia(.25)}
-  :root:not([data-theme="light"]) .side__pill{background:color-mix(in srgb,var(--orange) 16%,transparent)}
-  :root:not([data-theme="light"]) .side__item.is-on .side__label{color:var(--orange-lit)}
 }
 
 /* ---- the card rail ---- */
@@ -1754,7 +1818,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 .rcard__title{font-size:1.16rem}
 .rcard__aside{font-size:.8rem;font-weight:800;color:var(--ink-3)}
 .rcard__link{font-size:.82rem;font-weight:900;color:var(--orange);border-radius:6px}
-.rcard__link:hover{color:var(--orange-deep);text-decoration:underline;text-underline-offset:3px}
+.rcard__link:hover{color:var(--orange-ink);text-decoration:underline;text-underline-offset:3px}
 .rcard__note{margin-top:8px;font-size:.8rem;font-weight:700;color:var(--ink-3);line-height:1.6}
 .rcard__kicker{font-size:.74rem;font-weight:800;opacity:.85}
 
@@ -1973,3 +2037,38 @@ html[lang="en"] :is(.kcard__kicker,.ex__kicker){align-self:flex-end;direction:lt
 html[lang="en"] .verdict__head{direction:ltr}
 /* "0 · The Beginning", number first, as English reads it */
 html[lang="en"] .path-unit__caption{direction:ltr}
+
+/* =========================================================
+   17. NIGHT: what the dark tokens cannot say alone
+   Most of the dark theme is tokens.css. These are the few places where a
+   component needs a different shape of colour at night, not just a
+   different value. Written twice: once for the Settings choice, once for
+   "auto" following the OS.
+   ========================================================= */
+
+/* a faded orange slab at night reads as mud with grey on it: a plain
+   inert slab with legible text says "not yet" more clearly */
+:root[data-theme="dark"] .btn:disabled{--face:var(--inert-mid);--edge:var(--inert);--fg:var(--ink-3);opacity:1;filter:none}
+/* maroon on the night background vanishes: lift it one step */
+:root[data-theme="dark"] .unitcard--deep{--face:var(--maroon-lit);--edge:#3A0605}
+/* Siraj's plinth is moonlit stone, like the treads around it */
+:root[data-theme="dark"] .step__plinth{background:radial-gradient(90% 100% at 50% 20%,var(--tread-top),var(--tread-face));box-shadow:0 10px 0 var(--tread-rim),0 20px 16px -6px rgba(0,0,0,.4)}
+/* the live islands keep their depth at night instead of a grey haze */
+:root[data-theme="dark"] .landscape__architecture svg{opacity:.9;filter:saturate(.9) contrast(.96)}
+:root[data-theme="dark"] .landscape__far svg{opacity:.4}
+/* the unit names between the islands, in moonlight */
+:root[data-theme="dark"] .path-unit__caption{color:#B7B0DA}
+/* a paper chip on a sunken track is one shade apart at night: say "chosen" in orange */
+:root[data-theme="dark"] .seg__b.is-on{background:var(--orange-soft);color:var(--orange-ink);box-shadow:none}
+/* the cards already read, dimmer than the one open but still there */
+:root[data-theme="dark"] .dots__d.is-past{background:#7A3413}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .btn:disabled{--face:var(--inert-mid);--edge:var(--inert);--fg:var(--ink-3);opacity:1;filter:none}
+  :root:not([data-theme="light"]) .unitcard--deep{--face:var(--maroon-lit);--edge:#3A0605}
+  :root:not([data-theme="light"]) .step__plinth{background:radial-gradient(90% 100% at 50% 20%,var(--tread-top),var(--tread-face));box-shadow:0 10px 0 var(--tread-rim),0 20px 16px -6px rgba(0,0,0,.4)}
+  :root:not([data-theme="light"]) .landscape__architecture svg{opacity:.9;filter:saturate(.9) contrast(.96)}
+  :root:not([data-theme="light"]) .landscape__far svg{opacity:.4}
+  :root:not([data-theme="light"]) .path-unit__caption{color:#B7B0DA}
+  :root:not([data-theme="light"]) .seg__b.is-on{background:var(--orange-soft);color:var(--orange-ink);box-shadow:none}
+  :root:not([data-theme="light"]) .dots__d.is-past{background:#7A3413}
+}

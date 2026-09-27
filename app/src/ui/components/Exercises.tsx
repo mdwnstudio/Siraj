@@ -161,7 +161,7 @@ function OrderEx({ ex, locked, onChange, revealed }: ExProps & { ex: OrderExerci
                 transition={{ type: 'spring', stiffness: 520, damping: 30 }}
                 onClick={() => pull(id)}
                 disabled={locked}
-                style={bad ? { borderColor: 'var(--bad)', background: 'var(--bad-soft)', color: 'var(--bad-deep)', boxShadow: '0 4px 0 var(--bad)' } : undefined}
+                style={bad ? { borderColor: 'var(--bad)', background: 'var(--bad-soft)', color: 'var(--bad-ink)', boxShadow: '0 4px 0 var(--bad)' } : undefined}
               >
                 <span className="chip__n">{i + 1}</span>
                 {label(id)}
@@ -317,7 +317,7 @@ function SortEx({ ex, locked, onAutoSubmit }: ExProps & { ex: SortExercise }) {
             })}
           </AnimatePresence>
           {remaining.length === 0 && (
-            <div style={{ display: 'grid', placeItems: 'center', gap: 8, color: 'var(--good-deep)' }}>
+            <div style={{ display: 'grid', placeItems: 'center', gap: 8, color: 'var(--good-ink)' }}>
               <Sparkle size={34} />
               <b>{t.sorted}</b>
             </div>

@@ -173,8 +173,8 @@ export function MePage() {
         <div className="gridstats">
           <G icon={<Flame size={20} />} bg="var(--orange-soft)" fg="var(--orange)" v={currentStreak(progress)} k={t.statStreak(currentStreak(progress))} />
           <G icon={<Star size={20} />} bg="var(--yellow-soft)" fg="var(--yellow-deep)" v={progress.xp} k={t.statXpKey} />
-          <G icon={<Sun size={20} />} bg="var(--good-soft)" fg="var(--good-deep)" v={completedCount(progress)} k={t.statSteps(totalPlayable())} />
-          <G icon={<Sparkle size={20} />} bg="var(--info-soft)" fg="var(--info-deep)" v={progress.achievements.length} k={t.statWins} />
+          <G icon={<Sun size={20} />} bg="var(--good-soft)" fg="var(--good-ink)" v={completedCount(progress)} k={t.statSteps(totalPlayable())} />
+          <G icon={<Sparkle size={20} />} bg="var(--info-soft)" fg="var(--info-ink)" v={progress.achievements.length} k={t.statWins} />
         </div>
       </div>
 
@@ -240,7 +240,7 @@ export function MePage() {
       <div className="section">
         {confirm ? (
           <div className="card" style={{ display: 'grid', gap: 10, borderColor: 'var(--bad)' }}>
-            <p style={{ fontWeight: 750, color: 'var(--bad-deep)' }}>
+            <p style={{ fontWeight: 750, color: 'var(--bad-ink)' }}>
               {t.resetWarn}
             </p>
             <div style={{ display: 'flex', gap: 8 }}>

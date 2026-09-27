@@ -57,6 +57,21 @@
   --ink-3:         #A78878;
   --ink-on-dark:   #FFF6E6;
 
+  /* ---- coloured text ----
+     A brand colour used as text or an icon on a themed surface reads
+     through these, never through a -deep: the -deep ramps are the dark
+     under-edges of the chunky slabs and stay dark in both themes, while
+     text on a night surface has to go lighter, not darker. */
+  --orange-ink:    var(--orange-deep);
+  --yellow-ink:    #BF7D01;
+  --good-ink:      var(--good-deep);
+  --bad-ink:       var(--bad-deep);
+  --info-ink:      var(--info-deep);
+
+  /* the stair's contact shadow and a quote's frame */
+  --contact:       rgba(69, 7, 5, .1);
+  --quote-edge:    var(--cream-deep);
+
   /* ---- type ---- */
   --font-ui:      'Ping', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-display: 'Norsal', 'Ping', system-ui, sans-serif;
@@ -121,15 +136,24 @@
     --cream-deep:  #2A0F0C;
     --cream-lit:   #4A221C;
     --inert:       #331411;
-    --inert-mid:   #46201B;
-    --inert-deep:  #5A2C25;
+    --inert-mid:   #52271F;
+    --inert-deep:  #80594E;
     --inert-ink:   #8A6257;
     --ink:         #FFF3E0;
     --ink-2:       #D7B4A4;
-    --ink-3:       #A87F70;
+    --ink-3:       #B8917F;
     --good-soft:   #1E3311;
     --bad-soft:    #3B1414;
     --info-soft:   #10283A;
+    --orange-soft: #45190A;
+    --yellow-soft: #36240A;
+    --orange-ink:  #FF9A5E;
+    --yellow-ink:  #FFCB45;
+    --good-ink:    #93D96A;
+    --bad-ink:     #FF8C84;
+    --info-ink:    #85CBF3;
+    --contact:     rgba(0,0,0,.28);
+    --quote-edge:  rgba(254,189,1,.26);
     --lift-1: 0 2px 6px rgba(0,0,0,.4);
     --lift-2: 0 6px 18px rgba(0,0,0,.5);
     --lift-3: 0 16px 40px rgba(0,0,0,.6);
@@ -138,8 +162,11 @@
 :root[data-theme="dark"] {
   --bg:#1C0806; --bg-sunk:#140504; --paper:#2A0F0C; --paper-edge:#3E1A15;
   --cream:#3E1A15; --cream-deep:#2A0F0C; --cream-lit:#4A221C;
-  --inert:#331411; --inert-mid:#46201B; --inert-deep:#5A2C25; --inert-ink:#8A6257;
-  --ink:#FFF3E0; --ink-2:#D7B4A4; --ink-3:#A87F70;
+  --inert:#331411; --inert-mid:#52271F; --inert-deep:#80594E; --inert-ink:#8A6257;
+  --ink:#FFF3E0; --ink-2:#D7B4A4; --ink-3:#B8917F;
   --good-soft:#1E3311; --bad-soft:#3B1414; --info-soft:#10283A;
+  --orange-soft:#45190A; --yellow-soft:#36240A;
+  --orange-ink:#FF9A5E; --yellow-ink:#FFCB45; --good-ink:#93D96A; --bad-ink:#FF8C84; --info-ink:#85CBF3;
+  --contact:rgba(0,0,0,.28); --quote-edge:rgba(254,189,1,.26);
   --lift-1:0 2px 6px rgba(0,0,0,.4); --lift-2:0 6px 18px rgba(0,0,0,.5); --lift-3:0 16px 40px rgba(0,0,0,.6);
 }

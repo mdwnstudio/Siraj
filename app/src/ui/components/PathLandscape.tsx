@@ -213,8 +213,8 @@ export const PathLandscape = memo(function PathLandscape({
 const puff = (x: number, y: number, s: number) =>
   `<g transform='translate(${x} ${y}) scale(${s})'><circle cx='30' cy='26' r='18'/><circle cx='54' cy='17' r='24'/><circle cx='80' cy='27' r='16'/><rect x='10' y='24' width='90' height='20' rx='10'/></g>`
 
-// the fills match the old --cloud values: white by day, a faint warm haze by night
-const CLOUD_FILL = { light: "fill='#FFFFFF'", dark: "fill='rgb(255,236,220)' fill-opacity='.09'" }
+// white by day, a faint moonlit haze by night
+const CLOUD_FILL = { light: "fill='#FFFFFF'", dark: "fill='rgb(214,208,255)' fill-opacity='.1'" }
 type Puffs = [number, number, number][]
 
 const bank = (w: number, h: number, puffs: Puffs, theme: keyof typeof CLOUD_FILL) =>
@@ -234,7 +234,12 @@ const CLOUD_BANKS = ([
 
 export const PathSky = memo(function PathSky({ skyRef }: { skyRef: RefObject<HTMLDivElement | null> }) {
   return <div className="sky" ref={skyRef} aria-hidden="true">
-    <div className="sky__high" />
+    {/* at night the high sky carries the stars and the moon, so they come
+        out as you climb toward Hajj (both are hidden by day, app.css) */}
+    <div className="sky__high">
+      <div className="sky__stars" />
+      <div className="sky__moon"><Crescent size={58} /></div>
+    </div>
     <div className="sky__sun" />
     {CLOUD_BANKS.map(b => (
       <div key={b.id} className={`sky__clouds sky__clouds--${b.id}`}
