@@ -815,8 +815,8 @@ Roughly in priority order.
    and the سجود drawing, then the full sign-off before public release.
    The second reviewer's notes were applied on 2026-09-27 (the الزوال term,
    «على صدرك» removed, «إلى القبلة» in the tashahhud, the Ibrahimi prayer as
-   its own card). Still open from them: the قيام drawing shows the hands high
-   on the chest, which the text no longer says. The hand-written hadith
+   its own card, and the قيام drawing redrawn with the hands lower, on the
+   belly rather than the chest). The hand-written hadith
    glosses (`glosses.en.ts`) and the transliterations need the English review.
 2. **Wire the deployment env vars** (`OPENAI_API_KEY` on the Worker and
    `CHAT_ENDPOINT` in GitHub Actions) and verify the live Ask Siraj path end to
