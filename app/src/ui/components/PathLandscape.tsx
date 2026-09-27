@@ -213,12 +213,14 @@ export const PathLandscape = memo(function PathLandscape({
 const puff = (x: number, y: number, s: number) =>
   `<g transform='translate(${x} ${y}) scale(${s})'><circle cx='30' cy='26' r='18'/><circle cx='54' cy='17' r='24'/><circle cx='80' cy='27' r='16'/><rect x='10' y='24' width='90' height='20' rx='10'/></g>`
 
-// white by day, a faint moonlit haze by night
-const CLOUD_FILL = { light: "fill='#FFFFFF'", dark: "fill='rgb(214,208,255)' fill-opacity='.1'" }
+// White by day, a faint moonlit haze by night. The haze fades the whole
+// group, not each shape: every cloud is overlapping circles, and faded one
+// by one each overlap doubled up and every circle showed its edge.
+const CLOUD_FILL = { light: "fill='#FFFFFF'", dark: "fill='#D6D0FF' opacity='.12'" }
 type Puffs = [number, number, number][]
 
 const bank = (w: number, h: number, puffs: Puffs, theme: keyof typeof CLOUD_FILL) =>
-  `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}' width='${w}' height='${h}' ${CLOUD_FILL[theme]}>${puffs.map(p => puff(...p)).join('')}</svg>`)}")`
+  `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}' width='${w}' height='${h}'><g ${CLOUD_FILL[theme]}>${puffs.map(p => puff(...p)).join('')}</g></svg>`)}")`
 
 const CLOUD_BANKS = ([
   { id: 'far', speed: 0.05, w: 360, h: 560, puffs: [[18, 50, .42], [248, 150, .34], [120, 300, .5], [276, 420, .38], [8, 470, .3]] },

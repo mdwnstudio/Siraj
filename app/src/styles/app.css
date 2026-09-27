@@ -468,16 +468,16 @@
 }
 .sky__moon svg{position:relative;width:100%;height:100%;transform:rotate(-18deg)}
 :root[data-theme="dark"] .sky{
-  --sky-low-a:#1B1533;--sky-low-b:#3A1D38;--sky-high-a:#07102C;--sky-high-b:#19305F;
-  --sun:rgba(255,150,90,.2);
+  --sky-low-a:#2A1428;--sky-low-b:#5A2828;--sky-high-a:#07102C;--sky-high-b:#19305F;
+  --sun:rgba(255,150,90,.28);
 }
 :root[data-theme="dark"] .sky__clouds{--cloud-img:var(--cloud-night)}
 :root[data-theme="dark"] .sky__sun{z-index:-1}
 :root[data-theme="dark"] :is(.sky__stars,.sky__moon){display:block}
 @media(prefers-color-scheme:dark){
   :root:not([data-theme="light"]) .sky{
-    --sky-low-a:#1B1533;--sky-low-b:#3A1D38;--sky-high-a:#07102C;--sky-high-b:#19305F;
-    --sun:rgba(255,150,90,.2);
+    --sky-low-a:#2A1428;--sky-low-b:#5A2828;--sky-high-a:#07102C;--sky-high-b:#19305F;
+    --sun:rgba(255,150,90,.28);
   }
   :root:not([data-theme="light"]) .sky__clouds{--cloud-img:var(--cloud-night)}
   :root:not([data-theme="light"]) .sky__sun{z-index:-1}
@@ -638,15 +638,45 @@
     --land-recess:#23244A;--land-hill:#272A50;--land-dune:#2E315A;--land-ground:#363A66;
   }
 }
+/* The night warms toward the start. The first units sit in the last
+   lamp-lit dusk, and each one up is a shade cooler, until الصوم and الحج
+   stand in the moonlit blue above (the defaults above). The treads and
+   the unit names follow their island. */
+:root[data-theme="dark"] .landscape.landscape--u-intro{--land-stone:#9C6A58;--land-shadow:#6E4646;--land-light:#C99270;--land-recess:#3E2630;--land-accent:#D88E58;--land-leaf:#5A6E4E;--land-hill:#48293A;--land-dune:#57343F;--land-ground:#6A4046;--land-cloud:#5E3C48;--land-water:#3F6A7E;}
+:root[data-theme="dark"] .landscape.landscape--u-shahada{--land-stone:#9C6A58;--land-shadow:#6E4646;--land-light:#C99270;--land-recess:#3E2630;--land-accent:#D88E58;--land-leaf:#5A6E4E;--land-hill:#48293A;--land-dune:#57343F;--land-ground:#6A4046;--land-cloud:#5E3C48;--land-water:#3F6A7E;}
+:root[data-theme="dark"] .landscape.landscape--u-salah{--land-stone:#8E6470;--land-shadow:#624456;--land-light:#BC8F98;--land-recess:#38263C;--land-accent:#D08A5C;--land-leaf:#52695A;--land-hill:#42283F;--land-dune:#4E304C;--land-ground:#5E3A56;--land-cloud:#58405E;--land-water:#3F6A86;}
+:root[data-theme="dark"] .landscape.landscape--u-zakah{--land-stone:#735E84;--land-shadow:#4E4066;--land-light:#A08EBB;--land-recess:#30264A;--land-accent:#C88A5C;--land-leaf:#4C6B60;--land-hill:#352A50;--land-dune:#40325C;--land-ground:#4C3E6C;--land-cloud:#4E4478;--land-water:#3D6A8E;}
+:root[data-theme="dark"] .path-unit[data-unit="u-intro"]{--tread-top:#9A7470;--tread-face:#6A4B4E;--tread-rim:#4A3238;--tread-ink:#FBE3D6}
+:root[data-theme="dark"] .path-unit[data-unit="u-intro"] .path-unit__caption{color:#E6BFAE}
+:root[data-theme="dark"] .path-unit[data-unit="u-shahada"]{--tread-top:#9A7470;--tread-face:#6A4B4E;--tread-rim:#4A3238;--tread-ink:#FBE3D6}
+:root[data-theme="dark"] .path-unit[data-unit="u-shahada"] .path-unit__caption{color:#E6BFAE}
+:root[data-theme="dark"] .path-unit[data-unit="u-salah"]{--tread-top:#8C6E86;--tread-face:#604A62;--tread-rim:#44324A;--tread-ink:#F1DCEA}
+:root[data-theme="dark"] .path-unit[data-unit="u-salah"] .path-unit__caption{color:#D8B8CE}
+:root[data-theme="dark"] .path-unit[data-unit="u-zakah"]{--tread-top:#7C6C9E;--tread-face:#544676;--tread-rim:#3A3056;--tread-ink:#E2DAF6}
+:root[data-theme="dark"] .path-unit[data-unit="u-zakah"] .path-unit__caption{color:#C6BAE0}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .landscape.landscape--u-intro{--land-stone:#9C6A58;--land-shadow:#6E4646;--land-light:#C99270;--land-recess:#3E2630;--land-accent:#D88E58;--land-leaf:#5A6E4E;--land-hill:#48293A;--land-dune:#57343F;--land-ground:#6A4046;--land-cloud:#5E3C48;--land-water:#3F6A7E;}
+  :root:not([data-theme="light"]) .landscape.landscape--u-shahada{--land-stone:#9C6A58;--land-shadow:#6E4646;--land-light:#C99270;--land-recess:#3E2630;--land-accent:#D88E58;--land-leaf:#5A6E4E;--land-hill:#48293A;--land-dune:#57343F;--land-ground:#6A4046;--land-cloud:#5E3C48;--land-water:#3F6A7E;}
+  :root:not([data-theme="light"]) .landscape.landscape--u-salah{--land-stone:#8E6470;--land-shadow:#624456;--land-light:#BC8F98;--land-recess:#38263C;--land-accent:#D08A5C;--land-leaf:#52695A;--land-hill:#42283F;--land-dune:#4E304C;--land-ground:#5E3A56;--land-cloud:#58405E;--land-water:#3F6A86;}
+  :root:not([data-theme="light"]) .landscape.landscape--u-zakah{--land-stone:#735E84;--land-shadow:#4E4066;--land-light:#A08EBB;--land-recess:#30264A;--land-accent:#C88A5C;--land-leaf:#4C6B60;--land-hill:#352A50;--land-dune:#40325C;--land-ground:#4C3E6C;--land-cloud:#4E4478;--land-water:#3D6A8E;}
+  :root:not([data-theme="light"]) .path-unit[data-unit="u-intro"]{--tread-top:#9A7470;--tread-face:#6A4B4E;--tread-rim:#4A3238;--tread-ink:#FBE3D6}
+  :root:not([data-theme="light"]) .path-unit[data-unit="u-intro"] .path-unit__caption{color:#E6BFAE}
+  :root:not([data-theme="light"]) .path-unit[data-unit="u-shahada"]{--tread-top:#9A7470;--tread-face:#6A4B4E;--tread-rim:#4A3238;--tread-ink:#FBE3D6}
+  :root:not([data-theme="light"]) .path-unit[data-unit="u-shahada"] .path-unit__caption{color:#E6BFAE}
+  :root:not([data-theme="light"]) .path-unit[data-unit="u-salah"]{--tread-top:#8C6E86;--tread-face:#604A62;--tread-rim:#44324A;--tread-ink:#F1DCEA}
+  :root:not([data-theme="light"]) .path-unit[data-unit="u-salah"] .path-unit__caption{color:#D8B8CE}
+  :root:not([data-theme="light"]) .path-unit[data-unit="u-zakah"]{--tread-top:#7C6C9E;--tread-face:#544676;--tread-rim:#3A3056;--tread-ink:#E2DAF6}
+  :root:not([data-theme="light"]) .path-unit[data-unit="u-zakah"] .path-unit__caption{color:#C6BAE0}
+}
 @media(prefers-reduced-motion:reduce){
   .landscape [data-depth],.sky__clouds{transform:none!important}
 }
 .calm .landscape [data-depth],.calm .sky__clouds{transform:none!important}
 
 .stair{--tread-top:#FBFAF8;--tread-face:#DCD8D2;--tread-rim:#C9C3BB;--tread-ink:#ADA59B}
-:root[data-theme="dark"] .stair{--tread-top:#4C4669;--tread-face:#342F4E;--tread-rim:#26223B;--tread-ink:#ABA3CF}
+:root[data-theme="dark"] .stair{--tread-top:#6E6697;--tread-face:#4A4470;--tread-rim:#332E52;--tread-ink:#D8D2F6}
 @media(prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .stair{--tread-top:#4C4669;--tread-face:#342F4E;--tread-rim:#26223B;--tread-ink:#ABA3CF}
+  :root:not([data-theme="light"]) .stair{--tread-top:#6E6697;--tread-face:#4A4470;--tread-rim:#332E52;--tread-ink:#D8D2F6}
 }
 
 /* ---- a tread ----
@@ -2053,9 +2083,18 @@ html[lang="en"] .path-unit__caption{direction:ltr}
 :root[data-theme="dark"] .unitcard--deep{--face:var(--maroon-lit);--edge:#3A0605}
 /* Siraj's plinth is moonlit stone, like the treads around it */
 :root[data-theme="dark"] .step__plinth{background:radial-gradient(90% 100% at 50% 20%,var(--tread-top),var(--tread-face));box-shadow:0 10px 0 var(--tread-rim),0 20px 16px -6px rgba(0,0,0,.4)}
-/* the live islands keep their depth at night instead of a grey haze */
-:root[data-theme="dark"] .landscape__architecture svg{opacity:.9;filter:saturate(.9) contrast(.96)}
-:root[data-theme="dark"] .landscape__far svg{opacity:.4}
+:root[data-theme="dark"] .landscape__architecture svg{opacity:1;filter:none}
+:root[data-theme="dark"] .landscape__far svg{opacity:.75}
+/* By day the islands melt into a bright haze, faded through the middle so the
+   road reads over them. On a night sky that fade reads as a ghost with the
+   stars shining through: at night they stand nearly solid, soft at the rim,
+   and the moonlit treads are lifted a shade above them instead. */
+:root[data-theme="dark"] .landscape__view{
+  -webkit-mask-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.8) 22%,#000 50%,#000 calc(100% - 70px),transparent),
+                     linear-gradient(to right,transparent 4%,#000 20%,rgba(0,0,0,.72) 40%,rgba(0,0,0,.72) 60%,#000 80%,transparent 96%);
+  mask-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.8) 22%,#000 50%,#000 calc(100% - 70px),transparent),
+             linear-gradient(to right,transparent 4%,#000 20%,rgba(0,0,0,.72) 40%,rgba(0,0,0,.72) 60%,#000 80%,transparent 96%);
+}
 /* the unit names between the islands, in moonlight */
 :root[data-theme="dark"] .path-unit__caption{color:#B7B0DA}
 /* a paper chip on a sunken track is one shade apart at night: say "chosen" in orange */
@@ -2066,8 +2105,14 @@ html[lang="en"] .path-unit__caption{direction:ltr}
   :root:not([data-theme="light"]) .btn:disabled{--face:var(--inert-mid);--edge:var(--inert);--fg:var(--ink-3);opacity:1;filter:none}
   :root:not([data-theme="light"]) .unitcard--deep{--face:var(--maroon-lit);--edge:#3A0605}
   :root:not([data-theme="light"]) .step__plinth{background:radial-gradient(90% 100% at 50% 20%,var(--tread-top),var(--tread-face));box-shadow:0 10px 0 var(--tread-rim),0 20px 16px -6px rgba(0,0,0,.4)}
-  :root:not([data-theme="light"]) .landscape__architecture svg{opacity:.9;filter:saturate(.9) contrast(.96)}
-  :root:not([data-theme="light"]) .landscape__far svg{opacity:.4}
+  :root:not([data-theme="light"]) .landscape__architecture svg{opacity:1;filter:none}
+  :root:not([data-theme="light"]) .landscape__far svg{opacity:.75}
+  :root:not([data-theme="light"]) .landscape__view{
+    -webkit-mask-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.8) 22%,#000 50%,#000 calc(100% - 70px),transparent),
+                       linear-gradient(to right,transparent 4%,#000 20%,rgba(0,0,0,.72) 40%,rgba(0,0,0,.72) 60%,#000 80%,transparent 96%);
+    mask-image:linear-gradient(to bottom,transparent,rgba(0,0,0,.8) 22%,#000 50%,#000 calc(100% - 70px),transparent),
+               linear-gradient(to right,transparent 4%,#000 20%,rgba(0,0,0,.72) 40%,rgba(0,0,0,.72) 60%,#000 80%,transparent 96%);
+  }
   :root:not([data-theme="light"]) .path-unit__caption{color:#B7B0DA}
   :root:not([data-theme="light"]) .seg__b.is-on{background:var(--orange-soft);color:var(--orange-ink);box-shadow:none}
   :root:not([data-theme="light"]) .dots__d.is-past{background:#7A3413}
