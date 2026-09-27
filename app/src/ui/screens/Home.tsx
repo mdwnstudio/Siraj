@@ -28,9 +28,9 @@ const dx = (i: number) => Math.round(Math.sin(i * 0.82) * 34)
    14), so the road fills the column instead of standing phone-sized in the
    middle of it. The column is fitted to a phone-shaped view of the road:
    the camera works inside the zoom, so its maths is untouched. */
-const ROAD_VIEW_H = 640
-const ROAD_VIEW_W = 600
-const ROAD_ZOOM_MAX = 1.9
+const ROAD_VIEW_H = 740
+const ROAD_VIEW_W = 690
+const ROAD_ZOOM_MAX = 1.6
 
 /* The unit opener is its own chunk. It is fetched the moment a crossing
    starts, and shown only once it has arrived, a few seconds later. */
