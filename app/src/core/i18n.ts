@@ -16,16 +16,6 @@ export function isLang(v: unknown): v is Lang {
   return v === 'ar' || v === 'en'
 }
 
-/** The first language the device lists that we speak, or Arabic.
- *  Only used before onboarding; after that the learner's choice stands. */
-export function detectLang(preferred: readonly string[]): Lang {
-  for (const tag of preferred) {
-    const base = tag.toLowerCase().split('-')[0]
-    if (isLang(base)) return base
-  }
-  return 'ar'
-}
-
 /** Arabic-Indic digits for ordinals in Arabic prose; Western digits in English.
  *  Stats always use Western digits (see .num). */
 export function ordinal(n: number, lang: Lang): string {

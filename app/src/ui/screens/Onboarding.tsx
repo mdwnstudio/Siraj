@@ -13,7 +13,7 @@ import { Avatar, avatarSrc } from '../components/Profile'
 import { LANGS } from '../languages'
 
 
-type Step = 'hello' | 'lang' | 'name' | 'gender' | 'avatar' | 'ready'
+type Step = 'lang' | 'hello' | 'name' | 'gender' | 'avatar' | 'ready'
 
 const slide = {
   initial: (d: number) => ({ x: d * 40, opacity: 0 }),
@@ -29,7 +29,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   // the language is live from the moment it is tapped: the whole app turns
   // with it, and it is kept (with everything else) when onboarding ends
   const lang = progress.language
-  const [step, setStep] = useState<Step>('hello')
+  const [step, setStep] = useState<Step>('lang')
   const root = useRef<HTMLDivElement>(null)
   const [name, setName] = useState('')
   const [gender, setGender] = useState<Gender | null>(null)
@@ -96,7 +96,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               className="pbar__fill"
               style={{ background: 'var(--orange)' }}
               initial={false}
-              animate={{ width: `${{ hello: 16, lang: 33, name: 50, gender: 66, avatar: 83, ready: 100 }[step]}%` }}
+              animate={{ width: `${{ lang: 16, hello: 33, name: 50, gender: 66, avatar: 83, ready: 100 }[step]}%` }}
               transition={{ type: 'spring', stiffness: 240, damping: 26 }}
             >
               <span className="pbar__gloss" />
@@ -255,8 +255,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="ob__foot">
-        {step === 'hello' && <Button block onClick={() => go('lang')}>{t.letsGo}</Button>}
-        {step === 'lang' && <Button block onClick={() => go('name')}>{t.continue}</Button>}
+        {step === 'lang' && <Button block onClick={() => go('hello')}>{t.continue}</Button>}
+        {step === 'hello' && <Button block onClick={() => go('name')}>{t.letsGo}</Button>}
         {step === 'name' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <Button block onClick={() => toGender(true)}>{t.continue}</Button>

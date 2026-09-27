@@ -66,10 +66,9 @@ visible.
 
 ### Two languages: Arabic, and English in beta
 
-The first visit opens in the device's language (`detectLang()` in
-`core/i18n.ts`, fed `navigator.languages`): an English phone gets English,
-everything else Arabic. Onboarding's language step switches the whole app
-live, and the flag in the stat bar (where the oil drop used to be) or the
+The first visit always opens in Arabic, whatever the device speaks, and
+onboarding asks for the language first, before Siraj says hello. That step
+switches the whole app live, and the flag in the stat bar (where the oil drop used to be) or the
 Language row in ملفي switches it any time after. `progress.language` is the
 only thing that changes: XP, streak and every finished step are kept.
 English is marked **BETA** everywhere it is offered, because only its Quran

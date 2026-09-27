@@ -2,8 +2,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useSyncExternalStore, type ReactNode,
 } from 'react'
 import type { Progress, Settings } from '../core/types'
-import { detectLang, type Lang } from '../core/i18n'
-import { STORAGE_KEY } from '../core/storage'
+import type { Lang } from '../core/i18n'
 import { webStore } from '../platform/webStorage'
 import { STRINGS, type Strings } from './strings'
 import { loadLessons } from '../core/content/lessons'
@@ -68,15 +67,11 @@ interface Ctx {
 
 const AppCtx = createContext<Ctx | null>(null)
 
-/** Saved progress, or on a first visit a fresh start in the device's
- *  language: an English phone opens in English, everything else in Arabic.
- *  Only a first visit is detected; after that the learner's choice stands. */
+/** Saved progress, or a fresh start in Arabic. Every first visit opens in
+ *  Arabic, whatever the device speaks; onboarding asks for the language
+ *  before anything else, and after that the learner's choice stands. */
 function boot(): Progress {
-  const p = webStore.load()
-  let saved = false
-  try { saved = localStorage.getItem(STORAGE_KEY) !== null } catch { /* no storage: a first visit every time */ }
-  if (!saved && typeof navigator !== 'undefined') p.language = detectLang(navigator.languages ?? [navigator.language])
-  return p
+  return webStore.load()
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
