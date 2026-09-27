@@ -152,14 +152,48 @@ export function Home({
     // a change of unit only, not the start of the glide
   }, [bannerUnit])
 
-  // Siraj waits beside the step just finished while the camera climbs, and
-  // takes his place on the new step behind the gate, so he never jumps on screen
-  const sirajAt = crossing && crossing.phase !== 'open' ? crossing.fromNode : current
+  // Siraj waits beside the step just finished while the camera climbs and
+  // the gate opens (it fades in, so a move behind it would show). Once the
+  // learner goes on, he rises to the new step and it lights as he lands.
+  const sirajAt = crossing ? crossing.fromNode : current
+  const sirajFrom = useRef<DOMRect | null>(null)
+  const [landing, setLanding] = useState<string | null>(null)
 
   const opened = useCallback(() => {
-    if (crossing) setLit(crossing.node)
+    if (!crossing) return
+    const el = scroller.current?.querySelector<HTMLElement>('.step__siraj')
+    sirajFrom.current = calm ? null : el?.getBoundingClientRect() ?? null
+    setLanding(crossing.node)
     setCrossing(null)
-  }, [crossing])
+  }, [crossing, calm])
+
+  // FLIP: he is already drawn beside the new step; start him where he stood
+  // and let him glide there. Transform only, on his own wrapper, so the
+  // camera moving the step itself is untouched.
+  useLayoutEffect(() => {
+    if (!landing) return
+    const land = () => { sirajFrom.current = null; setLanding(null); setLit(landing) }
+    const root = scroller.current
+    const el = root?.querySelector<HTMLElement>('.step__siraj')
+    const from = sirajFrom.current
+    if (!root || !el || !from || !el.animate) { land(); return }
+    const to = el.getBoundingClientRect()
+    const view = root.getBoundingClientRect()
+    // the old step is usually far below the fold: rise from just under the edge
+    const fromY = Math.min(from.top + from.height / 2, view.bottom + to.height * 0.6)
+    const fromX = Math.min(view.right, Math.max(view.left, from.left + from.width / 2))
+    const dx = fromX - (to.left + to.width / 2)
+    const dy = fromY - (to.top + to.height / 2)
+    const s = Math.min(1.4, Math.max(0.75, from.width / (to.width || 1)))
+    // he waits out the gate's fade (0.2s), so the whole glide is seen
+    const anim = el.animate(
+      [{ transform: `translate(${dx}px,${dy}px) scale(${s})` }, { transform: 'none' }],
+      { duration: 900, delay: 180, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'backwards' },
+    )
+    const whoosh = setTimeout(() => sfx.swoosh(), 180)
+    anim.onfinish = land
+    return () => { clearTimeout(whoosh); anim.onfinish = null; anim.cancel() }
+  }, [landing])
 
   // the new step lights once the gate has closed behind you
   useEffect(() => {
@@ -210,7 +244,7 @@ export function Home({
      still, after any crossing, lit step or reward has had its moment. */
   const [gift, setGift] = useState<{ g: Gift; unwrapped: boolean } | null>(null)
   const waiting = giftWaiting(progress)
-  const busy = !!(crossing || celebrate || lit || picked || reward)
+  const busy = !!(crossing || landing || celebrate || lit || picked || reward)
   useEffect(() => {
     if (!waiting || gift || busy) return
     let live = true
