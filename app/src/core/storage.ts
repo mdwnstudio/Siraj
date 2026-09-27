@@ -1,4 +1,5 @@
 import type { Progress } from './types'
+import { isGiftId } from './content/gifts'
 import { defaultProgress, RETIRED_ACHIEVEMENTS } from './engine/progress'
 import { isAvatarId, isBannerId, isGender } from './content/avatars'
 import { isLang } from './i18n'
@@ -32,6 +33,7 @@ export function reviveProgress(raw: string | null): Progress {
         ? parsed.achievements.filter((a) => !RETIRED_ACHIEVEMENTS.includes(a))
         : [],
       mistakes: reviveMistakes(parsed.mistakes),
+      gifts: Array.isArray(parsed.gifts) ? parsed.gifts.filter(isGiftId) : [],
       language: isLang(parsed.language) ? parsed.language : base.language,
       gender: isGender(parsed.gender) ? parsed.gender : null,
       avatar: isAvatarId(parsed.avatar) ? parsed.avatar : null,

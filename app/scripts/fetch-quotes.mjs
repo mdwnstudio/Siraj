@@ -89,6 +89,12 @@ const HADITH = [
     // the page reads "Peace be on us an on the pious"
     edit: (t) => t.replace('on us an on', 'on us and on'),
   },
+  {
+    id: 'h_ibrahimiyyah', ref: 'bukhari:3370',
+    // the second "Most Glorious." ends the hadith, closing its quote marks
+    from: 'O Allah! Send Your Mercy', to: "the Most Glorious.'",
+    edit: (t) => t.replace(/'$/, ''),
+  },
   { id: 'h_fatiha', ref: 'bukhari:756', from: 'Whoever does not recite', to: 'is invalid.', also: 'Sahih Muslim 394' },
   { id: 'h_istiftah', ref: 'tirmidhi:243', from: 'Glorious You are O Allah', to: 'but You.', also: 'Sunan Abi Dawud 776' },
   { id: 'h_tasbih', ref: 'abudawud:832', from: 'Glory be to Allah, and praise', to: 'but in Allah.' },

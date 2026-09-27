@@ -833,6 +833,38 @@
 .reward-pop strong{font-family:var(--font-display);font-size:1.35rem}
 .reward-pop__xp{font-size:1.05rem;font-weight:900;color:var(--orange)}
 
+/* ---- a gift on the stair (components/Gift.tsx) ---- */
+.giftpop{
+  position:absolute;inset:0;z-index:61;margin:auto;
+  width:min(calc(100% - 2 * var(--gutter)),380px);height:max-content;max-height:calc(100% - 40px);overflow-y:auto;
+  padding:22px 20px 20px;border-radius:var(--r-xl);
+  background:var(--paper);border:3px solid var(--yellow);box-shadow:0 9px 0 var(--yellow-deep),var(--lift-3);
+  color:var(--ink);text-align:center;
+}
+.giftpop--open{width:min(calc(100% - 2 * var(--gutter)),560px)}
+.giftpop__wrap,.giftpop__inside{display:flex;flex-direction:column;align-items:center;gap:12px}
+.giftpop__kicker{
+  display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:var(--r-pill);
+  background:var(--yellow-soft);color:var(--yellow-ink);font-size:.8rem;font-weight:900;
+}
+.giftpop__lead{font-size:var(--t-lead);font-weight:650;line-height:1.6}
+.giftpop__title{font-family:var(--font-display);font-size:1.4rem;line-height:1.3}
+.giftpop__note{font-size:.9rem;font-weight:600;line-height:1.65;color:var(--ink-2)}
+.giftpop__video{position:relative;width:100%;aspect-ratio:16/9;border-radius:var(--r-lg);overflow:hidden;background:#000}
+.giftpop__video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.giftbox{position:relative;display:grid;place-items:center;padding:0;background:none;border:0;cursor:pointer}
+.giftbox__paper{fill:var(--orange)}
+.giftbox__paper--lit{fill:var(--orange-lit,#FF7A2E)}
+.giftbox__shade{fill:rgba(0,0,0,.14)}
+.giftbox__ribbon{fill:var(--yellow)}
+.giftbox__lid{transform-box:fill-box;transform-origin:50% 100%;transition:transform 520ms var(--e-back),opacity 380ms ease-in 140ms}
+.giftbox.is-alive:not(.is-opening){animation:gift-wobble 2.4s var(--e-in-out) .5s infinite}
+.giftbox.is-opening .giftbox__lid{transform:translate(18px,-70px) rotate(24deg);opacity:0}
+@keyframes gift-wobble{
+  0%,70%,100%{transform:rotate(0) scale(1)}
+  76%{transform:rotate(-6deg) scale(1.04)}82%{transform:rotate(5deg) scale(1.04)}88%{transform:rotate(-3deg)}94%{transform:rotate(2deg)}
+}
+
 /* ---- crossing into a new unit (Home.tsx, UnitOpener.tsx) ----
    The camera climbs from the step just finished to the new unit, then a
    gate in the new unit's colour swings open on its name. Every moving
@@ -1061,9 +1093,12 @@
 .backbtn:active:not(:disabled){transform:translateY(var(--depth));box-shadow:0 0 0 var(--paper-edge)}
 .backbtn:disabled{opacity:.4;cursor:default}
 .kcard{
-  flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:18px;
+  flex:1;min-height:0;display:flex;flex-direction:column;justify-content:safe center;gap:18px;
   padding:8px 0 20px;
+  /* a long card (a recite card, a big screen font) scrolls from its top instead of spilling both ways */
+  overflow-y:auto;scrollbar-width:none;
 }
+.kcard::-webkit-scrollbar{display:none}
 .kcard__kicker{
   align-self:flex-start;
   display:inline-flex;align-items:center;gap:7px;
@@ -1143,6 +1178,52 @@
   margin-bottom:10px;padding-bottom:10px;border-bottom:1.5px solid var(--quote-edge);
 }
 a.quote__src--link{display:inline-block;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
+/* read before the quote: what it is, and why it matters */
+.quote__lead{font-size:var(--t-lead);font-weight:600;line-height:1.75;color:var(--ink);text-align:center}
+/* a recite card in English: the Arabic, how to say it, and the meaning behind a tap */
+.quote--recite .quote__original{font-size:1.28rem;color:var(--ink);margin-bottom:12px}
+.quote__say{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--orange-ink);margin-bottom:4px}
+.quote__translit{font-size:1.06rem;font-weight:750;line-height:1.75;color:var(--ink)}
+.quote__meaningbtn{
+  margin-top:14px;display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:999px;
+  background:var(--orange-soft);color:var(--orange-ink);
+  font-size:.86rem;font-weight:800;
+  transition:transform var(--d-tap) var(--e-out);
+}
+.quote__meaningbtn:active{transform:scale(.96)}
+.quote__meaning{margin-top:12px;padding-top:12px;border-top:1.5px solid var(--quote-edge)}
+
+/* an ayah or hadith quoted inside running text */
+.inq{color:var(--quote-ink);font-weight:750}
+
+/* ---- word by word: Arabic in the English app ---- */
+/* The paragraph keeps its dir: under English's plaintext rule a line made
+   only of isolated pieces would find no letter to judge by and turn LTR. */
+.gloss,.gloss .gloss__w{unicode-bidi:isolate}
+.gloss__w{border-radius:6px;cursor:help;outline:none;transition:background-color 120ms var(--e-out)}
+.gloss__w.is-on,.gloss__w:focus-visible{background:var(--gloss-hi)}
+@media (hover:hover){ .gloss__w:hover{background:var(--gloss-hi)} }
+.gloss__w--inline{padding:0 1px}
+.glosspop{
+  position:fixed;left:0;top:0;z-index:200;pointer-events:none;
+  max-width:min(300px,calc(100vw - 20px));width:max-content;
+  padding:8px 12px;border-radius:12px;
+  background:var(--gloss-bg);color:var(--gloss-fg);
+  box-shadow:0 8px 24px rgba(0,0,0,.22);
+  font-family:var(--font-ui);font-size:.9rem;font-weight:700;line-height:1.45;text-align:center;
+  direction:ltr;unicode-bidi:isolate;
+  animation:glosspop-in 140ms var(--e-out) both;
+}
+.glosspop::after{
+  content:'';position:absolute;left:50%;bottom:-6px;width:12px;height:12px;margin-left:-6px;
+  background:var(--gloss-bg);border-radius:2px;transform:translateX(var(--ax,0px)) rotate(45deg);
+}
+.glosspop__tr{display:block;font-size:.78rem;font-weight:650;opacity:.75;margin-bottom:2px}
+@keyframes glosspop-in{from{opacity:0}to{opacity:1}}
+.glosshint{margin-top:10px;font-size:.8rem;font-weight:650;color:var(--ink-3);text-align:center}
+.glosshint__hover{display:none}
+@media (hover:hover) and (pointer:fine){ .glosshint__hover{display:inline} .glosshint__tap{display:none} }
 
 .klist{display:flex;flex-direction:column;gap:9px}
 .klist__row{
@@ -1156,6 +1237,7 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
   width:38px;height:38px;border-radius:12px;
   background:var(--orange-soft);color:var(--orange);
 }
+.klist__text{flex:1;min-width:0}
 .klist__label{font-weight:800;font-size:1rem}
 .klist__note{font-size:.82rem;color:var(--ink-2);font-weight:600;line-height:1.45}
 
@@ -1178,6 +1260,22 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
   padding:6px 13px;border-radius:var(--r-pill);margin-bottom:12px;
 }
 .ex__prompt{font-size:var(--t-title);line-height:1.35;margin-bottom:20px}
+/* a review question says so, in the colour of a mistake being put right */
+.ex__kicker--review{color:var(--orange-ink);background:var(--orange-soft);letter-spacing:.02em;flex-wrap:wrap}
+.ex__left{font-weight:750;opacity:.85;padding-inline-start:8px;border-inline-start:1.5px solid currentColor}
+
+/* review time: Siraj calls the missed questions back */
+.reviewcall{
+  position:absolute;inset:0;padding:0 var(--gutter) 120px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;
+}
+.reviewcall__title{font-family:var(--font-display);font-size:2rem;line-height:1.2;color:var(--orange-ink);margin-top:6px}
+.reviewcall__body{font-size:var(--t-lead);font-weight:600;line-height:1.7;color:var(--ink);max-width:420px}
+.reviewcall__count{
+  display:inline-flex;align-items:center;gap:7px;margin-top:4px;
+  padding:7px 14px;border-radius:var(--r-pill);
+  background:var(--orange-soft);color:var(--orange-ink);font-size:.9rem;font-weight:800;
+}
 
 /* Siraj asks the question from beside a speech bubble */
 .host{display:flex;align-items:flex-end;gap:16px;margin:2px 0 22px}
@@ -1229,6 +1327,13 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
   70%{transform:translateX(-4px)}88%{transform:translateX(2px)}
 }
 .shake{animation:shake .42s var(--e-in-out)}
+/* the same shake under another name, so it can play twice in a row */
+@keyframes shake-b{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-7px)}45%{transform:translateX(6px)}
+  70%{transform:translateX(-4px)}88%{transform:translateX(2px)}
+}
+.shake-b{animation:shake-b .42s var(--e-in-out)}
 
 /* order */
 .slots{
@@ -1301,6 +1406,9 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 }
 .bucket:active:not(:disabled){transform:translateY(5px);box-shadow:0 0 0 var(--orange)}
 .bucket:disabled{opacity:.5}
+/* a wrong bucket refuses the card: a red flash, and the card stays put */
+.bucket.is-wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad-ink);box-shadow:0 5px 0 var(--bad)}
+.sort__retry{color:var(--bad-ink)}
 .sort__buckets.is-waiting .bucket{animation:bucket-nudge 1.6s var(--e-out) .9s infinite}
 .sort__buckets.is-waiting .bucket + .bucket{animation-delay:1.05s}
 @keyframes bucket-nudge{
@@ -1741,7 +1849,9 @@ button.trow:active:not(:disabled){transform:scale(.98)}
   transition:transform var(--d-tap) var(--e-out),border-color 180ms,box-shadow var(--d-tap);
   animation:rise-in .4s var(--e-back) both;
 }
-.gpick__b img{width:84px;height:84px;border-radius:50%}
+.gpick__sym{width:84px;height:84px;border-radius:50%;display:grid;place-items:center}
+.gpick__sym--m{background:var(--info-soft);color:var(--info-ink)}
+.gpick__sym--f{background:var(--yellow-soft);color:var(--yellow-ink)}
 .gpick__b:active{transform:translateY(4px);box-shadow:0 0 0 var(--paper-edge)}
 .gpick__b.is-on{border-color:var(--orange);background:var(--orange-soft);color:var(--orange-ink);box-shadow:0 4px 0 var(--orange)}
 .avpreview__img{box-shadow:0 0 0 6px var(--paper),0 10px 0 6px var(--paper-edge)}
@@ -2022,7 +2132,7 @@ button.trow:active:not(:disabled){transform:scale(.98)}
   .app--tablet .statbar__stats{max-width:520px;margin-inline:auto}
 
   /* reading columns: full-bleed backgrounds, content held to --col-max */
-  .lesson__top,.cardstage,.ex,.lesson .ask,.lesson__foot,.verdict,
+  .lesson__top,.cardstage,.ex,.reviewcall,.lesson .ask,.lesson__foot,.verdict,
   .ob__top,.ob__body,.ob__foot,.result__stage,.result__action,.page{
     padding-inline:max(var(--gutter),calc((100% - var(--col-max)) / 2));
   }
@@ -2195,6 +2305,8 @@ html[lang="en"] .quote .quote__text{font-family:var(--font-ui);font-size:1.02rem
 /* a label that heads a card sits where its text starts, icon first */
 html[lang="en"] :is(.kcard__kicker,.ex__kicker){align-self:flex-end;direction:ltr}
 html[lang="en"] :is(.mcard__btn,.askbar__topic){direction:ltr}
+/* a list row reads like an English list: icon first on the left, the text beside it */
+html[lang="en"] .klist__row{direction:ltr}
 html[lang="en"] .verdict__head{direction:ltr}
 /* the streak flag sits at the reading end: left in Arabic, right in English */
 /* physical, because direction:ltr (icon first) would turn a logical inset too */

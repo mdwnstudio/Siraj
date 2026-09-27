@@ -187,13 +187,13 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 </div>
               </div>
               <div className="gpick" role="radiogroup" aria-label={t.obGenderAria}>
-                {([['m', t.brother, 'av-1'], ['f', t.sister, 'av-8']] as const).map(([g, label, pic], i) => (
+                {([['m', t.brother], ['f', t.sister]] as const).map(([g, label], i) => (
                   <button key={g} role="radio" aria-checked={gender === g}
                     className={`gpick__b${gender === g ? ' is-on' : ''}`}
                     style={{ animationDelay: `${i * 60}ms` }}
                     onPointerDown={() => { primeAudio(); sfx.select(); haptic('tap') }}
                     onClick={() => pickGender(g)}>
-                    <img src={avatarSrc(pic)} alt="" width={84} height={84} decoding="async" />
+                    <span className={`gpick__sym gpick__sym--${g}`}><GenderSymbol g={g} /></span>
                     <span>{label}</span>
                   </button>
                 ))}
@@ -276,5 +276,25 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         )}
       </div>
     </div>
+  )
+}
+
+/* ♂ and ♀, drawn as plain strokes: the answer is the sign, not a face */
+function GenderSymbol({ g }: { g: Gender }) {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="4.5"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
+      {g === 'm' ? (
+        <>
+          <circle cx="20" cy="28" r="11" />
+          <path d="M28 20 L39 9 M29 9 H39 V19" />
+        </>
+      ) : (
+        <>
+          <circle cx="24" cy="18" r="11" />
+          <path d="M24 29 V43 M17 36 H31" />
+        </>
+      )}
+    </svg>
   )
 }

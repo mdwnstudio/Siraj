@@ -17,10 +17,12 @@ import { ExerciseView, HostMood } from '../components/Exercises'
 import { UnitScene } from '../components/PathLandscape'
 import type { Mood } from '../components/Siraj'
 import { AskSiraj } from './AskSiraj'
+import { GlossHint, GlossText, RichText } from '../components/Gloss'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
 
-type Phase = 'warmup' | 'learn' | 'practice' | 'ask'
+/* review: between the exercises and their second round, Siraj says it is review time */
+type Phase = 'warmup' | 'learn' | 'practice' | 'review' | 'ask'
 
 /** one question in a practice session from أخطائي, and where it came from */
 export interface PracticeItem { lessonId: string; exerciseId: string; nodeId: string }
@@ -58,6 +60,11 @@ export function Lesson({
   const [cardAt, setCardAt] = useState(0)
   // which way the last card move went: 1 forward, -1 back. Sets the slide direction.
   const [dir, setDir] = useState(1)
+  /* The exercises in the order they are asked: each one once, then every
+     one missed, again, until it is answered right (Duolingo's review round).
+     A miss in the review goes to the back of the line once more. Positions
+     at or past `total` are the review. */
+  const [queue, setQueue] = useState<number[]>(() => lesson.exercises.map((_, i) => i))
   const [exAt, setExAt] = useState(0)
   const [answer, setAnswer] = useState<Answer | null>(null)
   const [verdict, setVerdict] = useState<null | 'good' | 'bad'>(null)
@@ -72,8 +79,11 @@ export function Lesson({
   // the scene goes on the second fact card: quotes and lists have their own layout
   // (a posture card already is a picture, so it never takes the scene)
   const sceneCard = lesson.cards.map((c, i) => (c.kind === 'fact' && !isPose(c.art) ? i : -1)).filter((i) => i >= 0)[1] ?? -1
-  const ex = lesson.exercises[exAt]
+  const ex = lesson.exercises[queue[exAt]]
   const total = lesson.exercises.length
+  const reviewing = exAt >= total
+  // the questions still to put right in the review, counting this one
+  const reviewLeft = queue.length - Math.max(exAt, total)
 
   // posture drawings are fetched during the warmup, so no card waits on its picture
   useEffect(() => {
@@ -170,20 +180,27 @@ export function Lesson({
   }
 
   const settle = (ok: boolean) => {
-    // every answer updates أخطائي: a miss is saved, a right answer clears it
-    if (ex) {
+    /* every answer updates أخطائي: a miss is saved, a right answer clears it.
+       Not a right answer in the review round: straight after seeing the
+       answer proves little, so the question stays there to practise later. */
+    if (ex && !(ok && reviewing)) {
       const from = session?.[exAt]
       dispatch({
         type: 'answered', ok, exerciseId: ex.id,
         lessonId: from?.lessonId ?? lessonId, nodeId: from?.nodeId ?? nodeId,
       })
     }
+    // a miss comes back in the review round (not in a practice session: that is all review)
+    if (!ok && !session) setQueue((q) => [...q, q[exAt]])
     if (ok) {
-      correctCount.current += 1
       const c = combo + 1
       setCombo(c)
-      setEarned((x) => x + XP_PER_CORRECT)
-      setXpPop((k) => k + 1)
+      // the lesson's XP and accuracy count the first answer only
+      if (!reviewing) {
+        correctCount.current += 1
+        setEarned((x) => x + XP_PER_CORRECT)
+        setXpPop((k) => k + 1)
+      }
       sfx.correct(c - 1)
       haptic('correct')
     } else {
@@ -197,7 +214,11 @@ export function Lesson({
   const advance = () => {
     setVerdict(null)
     setAnswer(null)
-    if (exAt < total - 1) setExAt(exAt + 1)
+    if (exAt === total - 1 && queue.length > total) {
+      // the first round is over and some were missed: review time
+      sfx.swoosh()
+      setPhase('review')
+    } else if (exAt < queue.length - 1) setExAt(exAt + 1)
     else if (session) finish()
     else {
       sfx.swoosh()
@@ -206,6 +227,11 @@ export function Lesson({
       setEarned((x) => x + lesson.xp)
       setXpPop((k) => k + 1)
     }
+  }
+
+  const startReview = () => {
+    setExAt(total)
+    setPhase('practice')
   }
 
   const finish = () => {
@@ -240,6 +266,7 @@ export function Lesson({
   }
   primary.current = () => {
     if (verdict) advance()
+    else if (phase === 'review') startReview()
     else if (phase === 'learn') nextCard()
     else if (phase === 'practice' && canCheck) check()
   }
@@ -263,13 +290,18 @@ export function Lesson({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // the review fills the last stretch of the bar: 95% to 100% as the misses are put right
   const progressValue =
     session
       ? phase === 'practice' ? (exAt + (verdict ? 1 : 0)) / total : 0
       : phase === 'learn'
       ? ((cardAt + 1) / lesson.cards.length) * 0.3
+      : phase === 'review'
+        ? 0.95
       : phase === 'practice'
-        ? 0.3 + ((exAt + (verdict ? 1 : 0)) / total) * 0.65
+        ? reviewing
+          ? 0.95 + 0.05 * (1 - (reviewLeft - (verdict === 'good' ? 1 : 0)) / (queue.length - total))
+          : 0.3 + ((exAt + (verdict ? 1 : 0)) / total) * 0.65
         : 1
 
   return (
@@ -327,10 +359,18 @@ export function Lesson({
             <motion.div key={`e${exAt}`} className="ex"
               initial={{ opacity: 0, x: -34 * side }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 34 * side }}
               transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}>
-              <span className="ex__kicker">
-                <Star size={13} /> {t.exerciseOf(exAt + 1, total)}
-                {session && <span className="ex__from">{t.fromLesson(session[exAt].from)}</span>}
-              </span>
+              {reviewing ? (
+                /* said plainly on every review question, so nobody thinks the lesson is repeating itself */
+                <span className="ex__kicker ex__kicker--review">
+                  <Crescent size={13} /> {t.reviewKicker}
+                  <span className="ex__left">{t.reviewLeft} <span className="num">{reviewLeft}</span></span>
+                </span>
+              ) : (
+                <span className="ex__kicker">
+                  <Star size={13} /> {t.exerciseOf(exAt + 1, total)}
+                  {session && <span className="ex__from">{t.fromLesson(session[exAt].from)}</span>}
+                </span>
+              )}
               <HostMood.Provider value={hostMood}>
                 <ExerciseView
                   ex={ex}
@@ -341,6 +381,18 @@ export function Lesson({
                 />
               </HostMood.Provider>
               <div style={{ height: 140 }} />
+            </motion.div>
+          )}
+
+          {/* ---------------- وقت المراجعة ---------------- */}
+          {phase === 'review' && (
+            <motion.div key="review" className="reviewcall"
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 34 * side }}
+              transition={{ duration: 0.32, ease: [0.23, 1, 0.32, 1] }}>
+              <Siraj mood="cheer" size={132} />
+              <h2 className="reviewcall__title">{t.reviewTitle}</h2>
+              <p className="reviewcall__body">{t.reviewBody}</p>
+              <span className="reviewcall__count"><Crescent size={15} /> {t.reviewCount(queue.length - total)}</span>
             </motion.div>
           )}
 
@@ -388,10 +440,10 @@ export function Lesson({
                 {verdict === 'bad' && (
                   <>{t.correctIs}<span className="verdict__answer">{correctAnswerText(ex!, lang)}</span><br /></>
                 )}
-                {'explain' in ex! && ex!.explain}
+                {'explain' in ex! && ex!.explain && <RichText text={ex!.explain} />}
               </p>
               <Button block tone={verdict === 'good' ? 'good' : 'danger'} onClick={advance}>
-                {exAt < total - 1 ? t.continue : session ? t.finishPractice : t.finishExercises}
+                {exAt < queue.length - 1 ? t.continue : session ? t.finishPractice : t.finishExercises}
               </Button>
             </motion.div>
           )}
@@ -401,7 +453,9 @@ export function Lesson({
       {/* footer action - hidden while a verdict is showing */}
       {!verdict && phase !== 'ask' && phase !== 'warmup' && (
         <div className="lesson__foot">
-          {phase === 'learn' ? (
+          {phase === 'review' ? (
+            <Button block tone="gold" onClick={startReview}>{t.reviewStart}</Button>
+          ) : phase === 'learn' ? (
             <div className="learnbar">
               {/* back: a small square beside the big button, first in RTL so it sits on
                   the right. It is the same in English: the button keeps its place, and
@@ -457,26 +511,58 @@ function CardView({ card, unitId, withScene }: { card: Card; unitId: string; wit
   useEffect(() => setOpen(false), [card.id])
 
   if (card.kind === 'quote') {
+    /* A recite card in a translated lesson is words to learn by heart in
+       Arabic: the Arabic, then how to say it, and the meaning only behind
+       a tap, so the learner meets the words before the translation. */
+    const recite = card.recite && !!card.original && !!card.gloss?.every((g) => g.tr)
+    const src = card.url ? (
+      <a className="quote__src quote__src--link" href={card.url} target="_blank" rel="noreferrer noopener">{card.source}</a>
+    ) : (
+      <p className="quote__src">﴿ {card.source} ﴾</p>
+    )
     return (
       <div className="kcard">
         <span className="kcard__kicker">
           {card.of === 'ayah' ? <><Crescent size={13} /> {t.fromQuran}</> : <><Star size={13} /> {t.fromSunnah}</>}
         </span>
-        <motion.div className={`quote quote--${card.of}`}
+        {card.lead && <p className="quote__lead"><RichText text={card.lead} /></p>}
+        <motion.div className={`quote quote--${card.of}${recite ? ' quote--recite' : ''}`}
           initial={{ opacity: 0, scale: 0.94, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}>
           <span className="quote__corner quote__corner--a"><Sparkle size={17} /></span>
           <span className="quote__corner quote__corner--b"><Sparkle size={17} /></span>
-          {/* a translation shows the Arabic it translates above it, and links its source */}
-          {card.original && <p className="quote__original" lang="ar" dir="rtl">{card.original}</p>}
-          <p className="quote__text">{card.text}</p>
-          {card.url ? (
-            <a className="quote__src quote__src--link" href={card.url} target="_blank" rel="noreferrer noopener">{card.source}</a>
+          {/* a translation shows the Arabic it translates above it, word by word, and links its source */}
+          {card.original && (card.gloss
+            ? <GlossText segs={card.gloss} className="quote__original" />
+            : <p className="quote__original" lang="ar" dir="rtl">{card.original}</p>)}
+          {recite ? (
+            <>
+              <p className="quote__say">{t.sayIt}</p>
+              <GlossText segs={card.gloss!} field="tr" className="quote__translit" />
+              <button className="quote__meaningbtn" aria-expanded={open}
+                onClick={() => { primeAudio(); sfx.select(); setOpen(!open) }}>
+                {open ? t.hideMeaning : t.showMeaning}
+              </button>
+              <AnimatePresence initial={false}>
+                {open && (
+                  <motion.div className="quote__meaning" key="m"
+                    initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}>
+                    <p className="quote__text">{card.text}</p>
+                    {src}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
           ) : (
-            <p className="quote__src">﴿ {card.source} ﴾</p>
+            <>
+              <p className="quote__text">{card.text}</p>
+              {src}
+            </>
           )}
         </motion.div>
-        {card.note && <p className="quote__note" style={{ textAlign: 'center' }}>{card.note}</p>}
+        {card.gloss && <GlossHint />}
+        {card.note && <p className="quote__note" style={{ textAlign: 'center' }}><RichText text={card.note} /></p>}
       </div>
     )
   }
@@ -489,9 +575,9 @@ function CardView({ card, unitId, withScene }: { card: Card; unitId: string; wit
           {card.items.map((it, i) => (
             <div className="klist__row" key={i} style={{ animationDelay: `${i * 70}ms` }}>
               {it.icon && <span className="klist__ico"><Icon name={it.icon} size={20} /></span>}
-              <div>
+              <div className="klist__text">
                 <div className="klist__label">{it.label}</div>
-                {it.note && <div className="klist__note">{it.note}</div>}
+                {it.note && <div className="klist__note"><RichText text={it.note} /></div>}
               </div>
             </div>
           ))}
@@ -536,12 +622,12 @@ function CardView({ card, unitId, withScene }: { card: Card; unitId: string; wit
       <p className="kcard__body">
         {body ? (
           <>
-            {body[0]}
+            <RichText text={body[0]} />
             {termBtn(body[1])}
-            {body[2]}
+            <RichText text={body[2]} />
           </>
         ) : (
-          card.body
+          <RichText text={card.body} />
         )}
       </p>
       {/* a term the body never spells out still gets its word to tap */}

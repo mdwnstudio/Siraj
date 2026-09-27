@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
+import { giftOf, giftWaiting, type Gift } from '../../core/content/gifts'
 import { AnimatePresence, m as motion } from 'framer-motion'
 import { UNIT_OF, unitById, unitText } from '../../core/content/path'
 import { getLesson } from '../../core/content/lessons'
@@ -36,6 +37,8 @@ const ROAD_ZOOM_MAX = 1.6
    starts, and shown only once it has arrived, a few seconds later. */
 let openerChunk: typeof import('../components/UnitOpener') | undefined
 const loadOpener = () => import('../components/UnitOpener').then((m) => (openerChunk = m))
+let giftChunk: typeof import('../components/Gift') | undefined
+const loadGift = () => import('../components/Gift').then((m) => (giftChunk = m))
 
 /** Crossing into a new unit: hold on the step just finished, carry the
  *  camera up the road to the new one, then open the gate. */
@@ -203,6 +206,18 @@ export function Home({
     return () => clearTimeout(t)
   }, [reward])
 
+  /* A gift waits once its step is done: it comes up when the stair is
+     still, after any crossing, lit step or reward has had its moment. */
+  const [gift, setGift] = useState<{ g: Gift; unwrapped: boolean } | null>(null)
+  const waiting = giftWaiting(progress)
+  const busy = !!(crossing || celebrate || lit || picked || reward)
+  useEffect(() => {
+    if (!waiting || gift || busy) return
+    let live = true
+    const t = setTimeout(() => void loadGift().then(() => { if (live) setGift({ g: waiting, unwrapped: false }) }), 650)
+    return () => { live = false; clearTimeout(t) }
+  }, [waiting?.id, gift, busy])
+
   const unitDone = unit.nodes.filter((n) => isCompleted(progress, n.id)).length
 
   return (
@@ -247,7 +262,11 @@ export function Home({
             node={picked}
             onClose={() => setPicked(null)}
             onStart={() => { const id = picked.id; setPicked(null); onStart(id) }}
+            onGift={(g) => { setPicked(null); void loadGift().then(() => setGift({ g, unwrapped: true })) }}
           />
+        )}
+        {gift && giftChunk && (
+          <giftChunk.GiftPop key={gift.g.id} gift={gift.g} unwrapped={gift.unwrapped} onClose={() => setGift(null)} />
         )}
       </AnimatePresence>
     </div>
@@ -375,9 +394,13 @@ const Stair = memo(function Stair({ scroller, currentRef, progress, current, sir
 
 /* ---------------- the step preview ---------------- */
 
-function StepSheet({ node, onClose, onStart }: { node: PathNode; onClose: () => void; onStart: () => void }) {
+function StepSheet({ node, onClose, onStart, onGift }: {
+  node: PathNode; onClose: () => void; onStart: () => void; onGift: (g: Gift) => void
+}) {
   const t = useT()
   const { progress } = useApp()
+  // a gift this step unwrapped plays again from here
+  const gift = giftOf(progress, node.id)
   const lesson = node.lessonId ? getLesson(node.lessonId, progress.language) : undefined
   const unit = UNIT_OF.get(node.id)
   const n = unit?.nodes.findIndex((x) => x.id === node.id) ?? 0
@@ -409,6 +432,11 @@ function StepSheet({ node, onClose, onStart }: { node: PathNode; onClose: () => 
           {lesson ? t.lessonShape(lesson.cards.length, lesson.exercises.length) : ''}
         </p>
         <Button block onClick={onStart}>{t.startLesson}</Button>
+        {gift && (
+          <Button block tone="quiet" size="md" onClick={() => onGift(gift)} style={{ marginTop: 10 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Sparkle size={16} /> {t.giftWatch}</span>
+          </Button>
+        )}
       </motion.div>
     </>
   )

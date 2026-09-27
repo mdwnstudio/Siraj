@@ -20,6 +20,15 @@ export type CardArt =
   /** an illustrated prayer posture: the card is built around the picture */
   | { pose: PrayerPose }
 
+/** one word or phrase of an Arabic text, with its meaning. Phrases are
+ *  kept whole where the words mean little one by one. */
+export interface GlossSeg {
+  ar: string
+  en: string
+  /** how it is said, in plain Latin letters */
+  tr?: string
+}
+
 export type Card =
   | {
       kind: 'fact'
@@ -42,6 +51,14 @@ export type Card =
       url?: string
       /** in a translated lesson: the Arabic wording, shown above the translation */
       original?: string
+      /** read before the quote, when the learner needs to know what it is first */
+      lead?: string
+      /** words to learn by heart in Arabic: a translated lesson shows the
+       *  Arabic and how to say it, and keeps the meaning behind a tap */
+      recite?: boolean
+      /** in a translated lesson: the Arabic cut into words and phrases,
+       *  each with its meaning (and, on a recite card, how it is said) */
+      gloss?: GlossSeg[]
     }
   | {
       kind: 'list'
@@ -203,5 +220,7 @@ export interface Progress {
   achievements: string[]
   /** every question answered wrong and not yet put right, newest first */
   mistakes: Mistake[]
+  /** the gifts (content/gifts.ts) already opened */
+  gifts: string[]
   settings: Settings
 }

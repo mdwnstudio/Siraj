@@ -24,7 +24,7 @@ const out = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'siraj-')), 'lessons
 
 await build({
   stdin: {
-    contents: `export { LESSONS } from './lessons'\nexport { LESSONS_EN } from './lessons.en'`,
+    contents: `export { LESSONS } from './lessons'\nexport { LESSONS_EN, GLOSSES_EN } from './lessons.en'`,
     resolveDir: content,
     loader: 'ts',
   },
@@ -34,7 +34,7 @@ await build({
   outfile: out,
   logLevel: 'error',
 })
-const { LESSONS, LESSONS_EN } = await import(pathToFileURL(out).href)
+const { LESSONS, LESSONS_EN, GLOSSES_EN } = await import(pathToFileURL(out).href)
 
 const problems = []
 const fail = (where, what) => problems.push(`${where}: ${what}`)
@@ -57,6 +57,18 @@ function key(ex) {
 
 same('lessons', Object.keys(LESSONS), Object.keys(LESSONS_EN))
 
+/** every Arabic quote an English learner sees can be read word by word:
+ *  its phrases, joined with spaces, spell the card exactly */
+function checkGloss(key, ar, en) {
+  const g = GLOSSES_EN[key]
+  if (!g) return fail(key, 'the Arabic has no word-by-word meanings (glosses.en.ts)')
+  const spelt = g.map((s) => s.ar).join(' ')
+  const text = ar.text.replace(/\s+/g, ' ').trim()
+  if (spelt !== text) fail(key, `the glossed phrases spell\n    ${spelt}\n  but the card reads\n    ${text}`)
+  if (g.some((s) => !s.en.trim())) fail(key, 'a phrase has no meaning')
+  if (en.recite && g.some((s) => !s.tr)) fail(key, 'a recite card needs how every phrase is said (tr)')
+}
+
 for (const [id, ar] of Object.entries(LESSONS)) {
   const en = LESSONS_EN[id]
   if (!en) continue
@@ -66,7 +78,16 @@ for (const [id, ar] of Object.entries(LESSONS)) {
     const e = en.cards.find((x) => x.id === c.id)
     if (!e) continue
     if (c.kind === 'fact') same(`${id} ${c.id} art`, c.art ?? null, e.art ?? null)
-    if (c.kind === 'quote') same(`${id} ${c.id} of`, c.of, e.of)
+    if (c.kind === 'quote') {
+      same(`${id} ${c.id} of`, c.of, e.of)
+      same(`${id} ${c.id} recite`, !!c.recite, !!e.recite)
+      checkGloss(`${id}:${c.id}`, c, e)
+    }
+    // the Arabic card's term, found the way the card finds it (with or without ال)
+    if (c.kind === 'fact' && c.term && !c.body.includes(c.term.word) &&
+        !(c.term.word.startsWith('ال') && c.body.includes(c.term.word.slice(2)))) {
+      fail(`${id} ${c.id}`, `the Arabic term "${c.term.word}" is not in the card, so it shows as a separate button`)
+    }
     if (c.kind === 'list') same(`${id} ${c.id} items`, c.items.map((i) => i.icon ?? null), e.items.map((i) => i.icon ?? null))
     if (e.kind === 'fact' && e.term && !e.body.includes(e.term.word)) {
       fail(`${id} ${c.id}`, `the term "${e.term.word}" is not in the card, so it shows as a separate button`)
@@ -80,8 +101,9 @@ for (const [id, ar] of Object.entries(LESSONS)) {
   same(`${id} ask`, ar.ask.length, en.ask.length)
 }
 
-const text = JSON.stringify(LESSONS_EN)
+const text = JSON.stringify(LESSONS_EN) + JSON.stringify(GLOSSES_EN)
 if (text.includes('—')) fail('English', 'contains an em-dash (house rule 1)')
+if (JSON.stringify(LESSONS).includes('—')) fail('Arabic', 'contains an em-dash (house rule 1)')
 
 if (problems.length) {
   console.error(`${problems.length} problem(s):\n  ` + problems.join('\n  '))

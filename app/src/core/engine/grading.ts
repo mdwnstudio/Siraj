@@ -20,15 +20,22 @@ export function isCorrect(ex: Exercise, a: Answer | null): boolean {
         a.sequence.length === ex.answer.length &&
         a.sequence.every((id, i) => id === ex.answer[i])
       )
+    /* match and sort cannot be finished wrong: a wrong pair or a wrong
+       bucket is refused on the spot and tried again, so reaching the end
+       is the right answer. A mis-tap on the way is part of learning. */
     case 'match':
-      // matching is graded live; a clean run means no mis-taps
-      return a.kind === 'match' && a.mistakes === 0
+      return a.kind === 'match'
     case 'sort':
       return (
         a.kind === 'sort' &&
         ex.items.every((it) => a.placements[it.id] === it.bucket)
       )
   }
+}
+
+/** match and sort can only end right, so they are never a mistake */
+export function canBeWrong(ex: Exercise): boolean {
+  return ex.kind !== 'match' && ex.kind !== 'sort'
 }
 
 /** the question as one line of text, for lists such as أخطائي */

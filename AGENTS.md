@@ -123,12 +123,32 @@ back: a small square button beside التالي, a sideways swipe on the card, o
 the arrow keys on desktop. Cards turn like pages in an Arabic book: the next
 one waits on the left, so dragging right moves forward and dragging left goes
 back (and the left arrow key is forward). The card follows the finger one to
-one and a flick carries it out from where it was let go.
+one and a flick carries it out from where it was let go. A card taller than
+the screen scrolls from its top (`.kcard`).
 
-**The profile (ملفي).** Onboarding asks name, then أخ / أخت, then a picture
+**The review round.** A lesson cannot be passed with wrong answers. After
+the last exercise, if any were missed, Siraj says «وقت المراجعة!» on a
+screen of its own, and every missed question comes back, one by one, each
+labelled «مراجعة: أخطأتَ في هذا السؤال قبل قليل» with how many are left, so
+nobody thinks the lesson is repeating itself. A miss in the review goes to
+the back of the line again; the lesson ends only when all are right
+(`queue` in `Lesson.tsx`). XP and accuracy count the first answer only.
+A practice session from أخطائي has no review round.
+
+**Gifts.** A step can carry a gift (`core/content/gifts.ts`): once it is
+finished, a wrapped box comes up on the stair when it is still, and opening
+it shows what is inside. The only one is after صفة الصلاة: a YouTube video
+(youtube-nocookie) of a four-rak'ah instructional prayer. Opened gifts are
+saved in `progress.gifts`, and the step's sheet offers the video again
+(`components/Gift.tsx`, its own lazy chunk).
+
+**The profile (ملفي).** Onboarding asks name, then أخ / أخت (answered with
+the ♂ and ♀ signs, not pictures), then a picture
 from that set (`core/content/avatars.ts`, drawings in `public/img/avatars`).
 The faces are blank on purpose: **no eyes, nose or mouth on any person we
-draw**, glasses only. The profile page has a cover banner (five, drawn in SVG
+draw**, glasses only. Most of the pictures are ordinary people with no
+religious dress (av-22 to av-31 were added for that); some wear a hijab,
+a cap or a beard. The profile page has a cover banner (five, drawn in SVG
 by `components/Profile.tsx`) with the picture lifted over its edge and a
 pencil that opens the edit sheet. The last tab carries the learner's picture
 and their own name instead of «ملفي».
@@ -136,8 +156,10 @@ and their own name instead of «ملفي».
 **أخطائي (Mistakes).** The second tab, modelled on Duolingo's Mistakes review.
 Every wrong answer in a lesson is logged the moment it happens
 (`core/engine/mistakes.ts`, stored as ids in `progress.mistakes`, so a
-mistake survives a language switch); a right answer to the same question,
-anywhere, clears it. The tab shows the count as a badge, a button that runs
+mistake survives a language switch); a right answer to the same question
+clears it, except in a lesson's review round: right straight after seeing
+the answer proves little, so it stays here to practise later. `match` and
+`sort` can never be wrong, so they are never logged (old saves drop them). The tab shows the count as a badge, a button that runs
 a practice session (up to `PRACTICE_SIZE` questions, most-missed first) and
 the list grouped by unit, each with its right answer behind a tap and a way
 to ask Siraj about it. A practice session is the lesson screen with
@@ -274,6 +296,17 @@ retired `full-lamp` achievement dropped by `reviveProgress()`.
   the eight prayer postures drawn for صفة الصلاة (`public/img/salah`, faceless
   like every person in the app).
 - `quote`: آية or حديث, in the reverent gold frame. **Always cite the source.**
+  Optional `lead` is read above it (what it is, before the learner meets it).
+  `recite: true` marks words to learn by heart in Arabic (the tashahhud and
+  the Ibrahimi prayer): the English app shows the Arabic, then how to say it
+  ("Say it like this", from the glosses' `tr`), and keeps the English
+  meaning behind a tap.
+- An ayah or hadith quoted **inside running text** is coloured
+  (`--quote-ink`, gold, with a night value). It is found by its form:
+  «…» (Arabic) or “…” (English) followed straight by its reference in
+  brackets. So write every inline quote that way, and never a plain phrase
+  in «» followed by brackets (`core/quoteRuns.ts`, `RichText` in
+  `components/Gloss.tsx`, used for bodies, notes, explanations and answers).
 - `list`: the numbered/iconed list (the five pillars, the five prayers).
 
 ### Exercise kinds (five, all implemented)
@@ -286,7 +319,10 @@ retired `full-lamp` achievement dropped by `reviveProgress()`.
 | `sort` | صنّف | One card at a time, flung into one of two buckets. Self-resolving. |
 
 `match` and `sort` have **no check button**: they resolve as you go. The footer
-shows a hint instead. If you add a sixth kind, wire it in `grading.ts`,
+shows a hint instead. They **cannot end wrong**: a wrong pair shakes and
+comes apart, a wrong bucket flashes red and the card stays until it goes
+where it belongs. So finishing one is always «أحسنت», green, with the right
+sound, never «ليست بعيدة». If you add a sixth kind, wire it in `grading.ts`,
 `Exercises.tsx`, and the `canCheck` logic in `Lesson.tsx`.
 
 ### The English curriculum
@@ -525,6 +561,22 @@ and the few named `edit`s, each with its reason. sunnah.com refuses plain
 HTTP clients, so the script reads it with headless Chrome. The rest of the
 English is an unreviewed translation; that is why the app says BETA.
 
+**Arabic in the English app is readable word by word**, the way quran.com
+does it: hover a word (tap on a phone) and a bubble above it gives its
+meaning; a phrase whose words mean little alone lights up whole. The ayat
+use quran.com's word-by-word English, pulled by
+
+```bash
+node app/scripts/fetch-glosses.mjs
+```
+
+into `glosses.quran.en.ts` (generated). The hadith are glossed by hand in
+`glosses.en.ts`, phrase by phrase, following the sunnah.com translation.
+`check-lessons.mjs` fails if an Arabic quote has no glosses, if the phrases
+do not spell the card exactly, or if a recite card lacks `tr`. ﷺ in English
+text has its own bubble. A hint line teaches it until the learner has
+opened one meaning (`siraj.glossSeen` in localStorage).
+
 ---
 
 ## 8. RTL traps that have already bitten us
@@ -558,6 +610,14 @@ The app is `dir="rtl"`. These cost real debugging time: do not repeat them.
   element `direction: ltr` under `html[lang="en"]` there, as the card labels do.
 - **Inputs need `direction: ltr`**: an empty field has no text to judge by, so
   its placeholder would sit on the right.
+- **A line made only of isolated spans turns LTR.** Under the plaintext rule a
+  paragraph finds its direction from the first letter outside any isolate;
+  if every word is in its own span (the word-by-word Arabic), there is none,
+  and the Arabic comes out in reverse word order. Give such a paragraph
+  `unicode-bidi: isolate` so its `dir` holds (`.gloss`).
+- **List rows** (`.klist__row`, the five pillars, the prayer times) take
+  `direction: ltr` in English, so the icon leads on the left and the text
+  sits beside it.
 - **Swipes and arrows follow the reading direction** (`side` in `Lesson.tsx`):
   +1 in Arabic, -1 in English. Anything new that moves "forward" sideways
   must multiply by it.
@@ -753,6 +813,11 @@ Roughly in priority order.
 1. **A second content review pass** on the lessons rewritten after the first
    one (see section 7), especially the new صفة الصلاة and أيام الحج lessons
    and the سجود drawing, then the full sign-off before public release.
+   The second reviewer's notes were applied on 2026-09-27 (the الزوال term,
+   «على صدرك» removed, «إلى القبلة» in the tashahhud, the Ibrahimi prayer as
+   its own card). Still open from them: the قيام drawing shows the hands high
+   on the chest, which the text no longer says. The hand-written hadith
+   glosses (`glosses.en.ts`) and the transliterations need the English review.
 2. **Wire the deployment env vars** (`OPENAI_API_KEY` on the Worker and
    `CHAT_ENDPOINT` in GitHub Actions) and verify the live Ask Siraj path end to
    end. The default model is `gpt-6-luna` (moved from 5.6 Luna on 2026-09-27); only the canned pills are proven

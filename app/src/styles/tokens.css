@@ -71,6 +71,12 @@
   /* the stair's contact shadow and a quote's frame */
   --contact:       rgba(69, 7, 5, .1);
   --quote-edge:    var(--cream-deep);
+  /* an ayah or hadith quoted inside running text: the gold of the quote frame, deep enough to read */
+  --quote-ink:     #8A5700;
+  /* the word-meaning popup over Arabic in the English app */
+  --gloss-bg:      #450705;
+  --gloss-fg:      #FFF6E6;
+  --gloss-hi:      rgba(254,189,1,.28);
 
   /* ---- type ---- */
   --font-ui:      'Ping', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -154,6 +160,10 @@
     --info-ink:    #85CBF3;
     --contact:     rgba(0,0,0,.28);
     --quote-edge:  rgba(254,189,1,.26);
+    --quote-ink:   #FFCF5C;
+    --gloss-bg:    #FFF3E0;
+    --gloss-fg:    #2A0F0C;
+    --gloss-hi:    rgba(254,189,1,.22);
     --lift-1: 0 2px 6px rgba(0,0,0,.4);
     --lift-2: 0 6px 18px rgba(0,0,0,.5);
     --lift-3: 0 16px 40px rgba(0,0,0,.6);
@@ -168,5 +178,6 @@
   --orange-soft:#45190A; --yellow-soft:#36240A;
   --orange-ink:#FF9A5E; --yellow-ink:#FFCB45; --good-ink:#93D96A; --bad-ink:#FF8C84; --info-ink:#85CBF3;
   --contact:rgba(0,0,0,.28); --quote-edge:rgba(254,189,1,.26);
+  --quote-ink:#FFCF5C; --gloss-bg:#FFF3E0; --gloss-fg:#2A0F0C; --gloss-hi:rgba(254,189,1,.22);
   --lift-1:0 2px 6px rgba(0,0,0,.4); --lift-2:0 6px 18px rgba(0,0,0,.5); --lift-3:0 16px 40px rgba(0,0,0,.6);
 }

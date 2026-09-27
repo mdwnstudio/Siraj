@@ -1,4 +1,4 @@
-import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, animate, m as motion } from 'framer-motion'
 import type { AskSuggestion, Lang, Progress } from '../../core/types'
 import { askSirajStream, recentHistory } from '../../core/ai/askSiraj'
@@ -9,6 +9,7 @@ import { getLesson } from '../../core/content/lessons'
 import { chatStore } from '../chats'
 import { POSE_SRC, SirajPose, usePreloadPoses, type Pose } from '../components/SirajPose'
 import { Button } from '../components/Button'
+import { RichText } from '../components/Gloss'
 import { useApp, useCalmMotion, useT } from '../state'
 import { sfx, primeAudio } from '../../platform/sound'
 import { haptic } from '../../platform/haptics'
@@ -655,7 +656,7 @@ const Segments = memo(function Segments({ text, sources, live }: { text: string;
         ) : p.k === 'bold' ? (
           <b key={i}>{p.v}</b>
         ) : (
-          <Fragment key={i}>{p.v}</Fragment>
+          <RichText key={i} text={p.v} />
         ),
       )}
     </>

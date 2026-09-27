@@ -1,5 +1,6 @@
 import type { Card, Lesson } from '../types'
 import { QUOTES_EN, type QuoteId } from './quotes.en'
+export { GLOSSES_EN } from './glosses.en'
 
 /* ============================================================
    THE CURRICULUM IN ENGLISH (beta).
@@ -962,7 +963,7 @@ const howToPray: Lesson = {
       kind: 'fact',
       id: 'c4',
       title: 'Standing and reciting',
-      body: `You place your right hand over your left on your chest and look at the place where you will prostrate, then recite Al-Fatiha, then whatever you can of the Quran. He ﷺ said: ${cite('h_fatiha')}`,
+      body: `You place your right hand over your left and look at the place where you will prostrate, then recite Al-Fatiha, then whatever you can of the Quran. He ﷺ said: ${cite('h_fatiha')}`,
       art: { pose: 'qiyam' },
     },
     {
@@ -1005,7 +1006,7 @@ const howToPray: Lesson = {
       kind: 'fact',
       id: 'c10',
       title: 'The tashahhud',
-      body: 'You stand for the second rak\'ah and do in it as you did in the first. After every two rak\'ahs you sit for the tashahhud, with your hands on your thighs, pointing with your right index finger.',
+      body: 'You stand for the second rak\'ah and do in it as you did in the first. After every two rak\'ahs you sit for the tashahhud, with your hands on your thighs, pointing with your right index finger toward the qiblah.',
       art: { pose: 'tashahhud' },
     },
     {
@@ -1013,11 +1014,20 @@ const howToPray: Lesson = {
       id: 'c11',
       of: 'hadith',
       ...q('h_tashahhud'),
-      note: 'The Prophet ﷺ taught this tashahhud to Ibn Masud, may Allah be pleased with him. In the final tashahhud you add sending blessings on the Prophet ﷺ.',
+      lead: 'The Prophet ﷺ taught this tashahhud to Ibn Masud, may Allah be pleased with him, so learn it by heart, in Arabic. In the final tashahhud you add the Ibrahimi prayer to it.',
+      recite: true,
+    },
+    {
+      kind: 'quote',
+      id: 'c12',
+      of: 'hadith',
+      ...q('h_ibrahimiyyah'),
+      lead: 'This is the Ibrahimi prayer (as-salah al-Ibrahimiyyah). You say it in the final tashahhud, after the tashahhud, and then end with the taslim. The Prophet ﷺ taught it to his companions when they asked him how to send blessings on him.',
+      recite: true,
     },
     {
       kind: 'fact',
-      id: 'c12',
+      id: 'c13',
       title: 'The taslim',
       body: 'At the end of your prayer you turn to your right and say "As-salamu alaykum wa rahmatullah" (Peace be upon you and the mercy of Allah), then the same to your left. With this your prayer ends.',
       art: { pose: 'taslim' },

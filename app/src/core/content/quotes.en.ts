@@ -193,6 +193,11 @@ export const QUOTES_EN = {
     source: "Sahih al-Bukhari 831; Sahih Muslim 402",
     url: "https://sunnah.com/bukhari:831",
   },
+  h_ibrahimiyyah: {
+    text: "O Allah! Send Your Mercy on Muhammad and on the family of Muhammad, as You sent Your Mercy on Abraham and on the family of Abraham, for You are the Most Praise-worthy, the Most Glorious. O Allah! Send Your Blessings on Muhammad and the family of Muhammad, as You sent your Blessings on Abraham and on the family of Abraham, for You are the Most Praise-worthy, the Most Glorious.",
+    source: "Sahih al-Bukhari 3370",
+    url: "https://sunnah.com/bukhari:3370",
+  },
   h_fatiha: {
     text: "Whoever does not recite Al-Fatiha in his prayer, his prayer is invalid.",
     source: "Sahih al-Bukhari 756; Sahih Muslim 394",

@@ -20,6 +20,7 @@ export function defaultProgress(): Progress {
     completed: {},
     achievements: [],
     mistakes: [],
+    gifts: [],
     // Light by default. Dark is still available in Settings, and 'auto'
     // follows the OS, but neither is what a first-time visitor gets.
     settings: { sound: true, haptics: true, reduceMotion: false, theme: 'light' },

@@ -12,6 +12,7 @@ import type { Exercise, Lang, Mistake, Progress } from '../types'
 import { getLesson } from '../content/lessons'
 import { PATH, UNIT_OF } from '../content/path'
 import { XP_PER_CORRECT } from './progress'
+import { canBeWrong } from './grading'
 
 /** the list is capped so an old save can never grow without bound */
 export const MAX_MISTAKES = 60
@@ -56,7 +57,8 @@ export function resolveMistakes(p: Progress, lang: Lang): MistakeItem[] {
   for (const m of p.mistakes) {
     const lesson = getLesson(m.lessonId, lang)
     const exercise = lesson?.exercises.find((e) => e.id === m.exerciseId)
-    if (lesson && exercise) out.push({ mistake: m, exercise, lessonTitle: lesson.title })
+    // a match or sort missed before they became self-correcting cannot be missed now
+    if (lesson && exercise && canBeWrong(exercise)) out.push({ mistake: m, exercise, lessonTitle: lesson.title })
   }
   return out
 }
@@ -97,6 +99,9 @@ export function reviveMistakes(raw: unknown): Mistake[] {
     if (!m || typeof m !== 'object') continue
     const { lessonId, exerciseId, nodeId, at, misses } = m as Record<string, unknown>
     if (typeof lessonId !== 'string' || typeof exerciseId !== 'string' || typeof nodeId !== 'string') continue
+    // match and sort were once logged when a pair was mis-tapped; they are never wrong now
+    const ex = getLesson(lessonId)?.exercises.find((e) => e.id === exerciseId)
+    if (ex && !canBeWrong(ex)) continue
     out.push({
       lessonId, exerciseId, nodeId,
       at: typeof at === 'number' ? at : 0,

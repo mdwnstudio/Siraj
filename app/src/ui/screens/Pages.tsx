@@ -24,6 +24,8 @@ import { AskSiraj } from './AskSiraj'
 import { POSE_SRC } from '../components/SirajPose'
 import { webStore } from '../../platform/webStorage'
 import { sfx, primeAudio } from '../../platform/sound'
+import { RichText } from '../components/Gloss'
+
 
 /* ---------------- الإنجازات ---------------- */
 
@@ -138,7 +140,7 @@ export function MistakesPage({ onPractice, onAsk }: {
                               initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                               transition={{ duration: 0.2 }}>
                               <b>{t.correctIs}</b>{correctAnswerText(ex, lang)}
-                              {'explain' in ex && ex.explain && <span className="mcard__why">{ex.explain}</span>}
+                              {'explain' in ex && ex.explain && <span className="mcard__why"><RichText text={ex.explain} /></span>}
                             </motion.div>
                           )}
                         </AnimatePresence>

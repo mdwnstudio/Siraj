@@ -120,7 +120,29 @@ const ar = {
   rightOrder: 'الترتيب الصحيح: ',
   orderArrow: ' ← ',
   sorted: 'تمّ التصنيف',
-  sortCue: { card: 'البطاقة', of: 'من', tap: 'اضغط على الجواب' },
+  sortCue: { card: 'البطاقة', of: 'من', tap: 'اضغط على الجواب', retry: 'ليس هنا، جرّب الجواب الآخر' },
+
+  /* the review round: the questions missed in this lesson, until each is right */
+  reviewTitle: 'وقت المراجعة!',
+  reviewBody: 'هذه أسئلةٌ أخطأتَ فيها قبل قليل. أجب عنها إجابةً صحيحة لتُكمل الدرس.',
+  reviewCount: (c: number) => (c === 1 ? 'سؤالٌ واحد' : c === 2 ? 'سؤالان' : c <= 10 ? `${c} أسئلة` : `${c} سؤالًا`),
+  reviewStart: 'لنصحّحها',
+  reviewKicker: 'مراجعة: أخطأتَ في هذا السؤال قبل قليل',
+  reviewLeft: 'بقي',
+
+  /* Arabic in the translated app: what a word means, and how to say it */
+  glossHintHover: 'مرّر المؤشّر على أيّ كلمة عربية لترى معناها',
+  glossHintTap: 'اضغط على أيّ كلمة عربية لترى معناها',
+  sayIt: 'كيف تُقال',
+  showMeaning: 'اعرض المعنى',
+  hideMeaning: 'أخفِ المعنى',
+  sallallahu: { tr: 'صلّى الله عليه وسلّم', en: 'صلّى الله عليه وسلّم' },
+
+  /* a gift on the stair */
+  giftKicker: 'هديّةٌ لك!',
+  giftEarned: 'أتممتَ الدرس كاملًا، وهذه هديّتك.',
+  giftOpen: 'افتح الهديّة',
+  giftWatch: 'شاهد هديّتك: الصلاة كاملة',
 
   /* result */
   newStep: 'أضاءت درجة جديدة',
@@ -326,7 +348,26 @@ const en: Strings = {
   rightOrder: 'The right order: ',
   orderArrow: ' → ',
   sorted: 'All sorted',
-  sortCue: { card: 'Card', of: 'of', tap: 'tap the answer' },
+  sortCue: { card: 'Card', of: 'of', tap: 'tap the answer', retry: 'Not that one, try the other answer' },
+
+  reviewTitle: 'Review time!',
+  reviewBody: 'These are questions you got wrong a moment ago. Answer them right to finish the lesson.',
+  reviewCount: (c) => (c === 1 ? '1 question' : `${c} questions`),
+  reviewStart: "Let's fix them",
+  reviewKicker: 'Review: you got this one wrong earlier',
+  reviewLeft: 'Left',
+
+  glossHintHover: 'Hover over any Arabic word to see what it means',
+  glossHintTap: 'Tap any Arabic word to see what it means',
+  sayIt: 'Say it like this',
+  showMeaning: 'Show the meaning',
+  hideMeaning: 'Hide the meaning',
+  sallallahu: { tr: "sallallahu 'alayhi wa sallam", en: 'Peace and blessings of Allah be upon him' },
+
+  giftKicker: 'A gift for you!',
+  giftEarned: 'You finished the whole lesson, and this is your gift.',
+  giftOpen: 'Open the gift',
+  giftWatch: 'Watch your gift: the whole prayer',
 
   newStep: 'A new step is lit',
   flawless: 'Flawless!',

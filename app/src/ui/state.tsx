@@ -20,6 +20,8 @@ type Action =
   | { type: 'finish-lesson'; outcome: LessonOutcome }
   | { type: 'claim-reward'; nodeId: string }
   | { type: 'grant'; id: string }
+  /** a gift on the stair unwrapped */
+  | { type: 'open-gift'; id: string }
   /** a question answered: a wrong one is saved to أخطائي, a right one clears it */
   | { type: 'answered'; lessonId: string; exerciseId: string; nodeId: string; ok: boolean }
   | { type: 'settings'; patch: Partial<Settings> }
@@ -44,6 +46,8 @@ function reducer(state: Progress, action: Action): Progress {
       return claimReward(state, action.nodeId)
     case 'grant':
       return grantAchievement(state, action.id)
+    case 'open-gift':
+      return state.gifts.includes(action.id) ? state : { ...state, gifts: [...state.gifts, action.id] }
     case 'answered':
       return action.ok
         ? clearMistake(state, action.lessonId, action.exerciseId)

@@ -265,18 +265,36 @@ function SortEx({ ex, locked, onAutoSubmit }: ExProps & { ex: SortExercise }) {
   const [at, setAt] = useState(0)
   const [placements, setPlacements] = useState<Record<string, string>>({})
   const [fly, setFly] = useState<-1 | 1 | 0>(0)
+  // the bucket just refused: it flashes and the card shakes, then both settle
+  const [miss, setMiss] = useState<string | null>(null)
+  // counts the refusals: the shake alternates between two identical animations,
+  // so a second wrong tap in a row shakes again
+  const [misses, setMisses] = useState(0)
+  const missTimer = useRef(0)
 
-  useEffect(() => { setAt(0); setPlacements({}); setFly(0) }, [ex.id])
+  useEffect(() => { setAt(0); setPlacements({}); setFly(0); setMiss(null) }, [ex.id])
+  useEffect(() => () => clearTimeout(missTimer.current), [])
 
   const item = (id: string) => ex.items.find((i) => i.id === id)!
   const remaining = order.slice(at)
 
+  /* A wrong bucket is refused on the spot: the card stays until it goes
+     where it belongs, so a sort always ends right. */
   const assign = (bucketId: string, dir: -1 | 1) => {
-    if (locked || at >= order.length) return
+    if (locked || fly || at >= order.length) return
     const id = order[at]
-    const right = item(id).bucket === bucketId
-    right ? sfx.snap() : sfx.wrong()
-    haptic(right ? 'correct' : 'wrong')
+    if (item(id).bucket !== bucketId) {
+      sfx.wrong()
+      haptic('wrong')
+      clearTimeout(missTimer.current)
+      setMiss(bucketId)
+      setMisses((n) => n + 1)
+      missTimer.current = window.setTimeout(() => setMiss(null), 900)
+      return
+    }
+    sfx.snap()
+    haptic('correct')
+    setMiss(null)
     setFly(dir)
     const next = { ...placements, [id]: bucketId }
     setPlacements(next)
@@ -294,7 +312,7 @@ function SortEx({ ex, locked, onAutoSubmit }: ExProps & { ex: SortExercise }) {
     <>
       <Prompt>{ex.prompt}</Prompt>
       <div className="sort">
-        <div className="sort__stage">
+        <div className={`sort__stage${miss ? (misses % 2 ? ' shake' : ' shake-b') : ''}`}>
           <AnimatePresence initial={false}>
             {remaining.slice(0, 3).reverse().map((id, revIdx) => {
               const depth = Math.min(2, remaining.length - 1 - revIdx)
@@ -326,7 +344,9 @@ function SortEx({ ex, locked, onAutoSubmit }: ExProps & { ex: SortExercise }) {
 
         {/* say, in words a child reads at a glance, what to do with the card */}
         <p className="sort__cue" aria-live="polite">
-          {remaining.length ? (
+          {miss ? (
+            <span className="sort__retry">{t.sortCue.retry}</span>
+          ) : remaining.length ? (
             <>
               {t.sortCue.card} <span className="num">{at + 1}</span> {t.sortCue.of} <span className="num">{order.length}</span>:
               {' '}{t.sortCue.tap}
@@ -337,7 +357,7 @@ function SortEx({ ex, locked, onAutoSubmit }: ExProps & { ex: SortExercise }) {
         {/* the two answers nudge until the first tap, so it is clear they are buttons */}
         <div className={`sort__buckets${at === 0 && !fly ? ' is-waiting' : ''}`}>
           {ex.buckets.map((b, i) => (
-            <button key={b.id} className="bucket" disabled={locked || !remaining.length}
+            <button key={b.id} className={`bucket${miss === b.id ? ` is-wrong ${misses % 2 ? 'shake' : 'shake-b'}` : ''}`} disabled={locked || !remaining.length}
               onClick={() => assign(b.id, i === 0 ? 1 : -1)}>
               {b.label}
             </button>

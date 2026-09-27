@@ -1,6 +1,6 @@
 /* ============================================================
    THE PROFILE: who the learner is on the stair.
-   Ten avatars and five banners, addressed by id so progress
+   The avatars and five banners, addressed by id so progress
    stores a word, not a picture. The drawings themselves live in
    public/img/avatars; the banners are drawn by the UI.
    The faces are left blank on purpose: no eyes, nose or mouth.
@@ -17,6 +17,11 @@ export const AVATARS = [
   { id: 'av-11', gender: 'm', label: 'شابّ أشقر بكنزة رمادية', en: 'Fair-haired young man in a grey sweater' },
   { id: 'av-12', gender: 'm', label: 'شابّ بنظّارة وقميصٍ خردلي', en: 'Young man with glasses and a mustard shirt' },
   { id: 'av-13', gender: 'm', label: 'شابّ بسترة جينز', en: 'Young man in a denim jacket' },
+  { id: 'av-22', gender: 'm', label: 'شابّ بقميصٍ كحلي', en: 'Young man in a navy t-shirt' },
+  { id: 'av-23', gender: 'm', label: 'رجلٌ أشيب بسترة بنّية', en: 'Grey-haired man in a brown cardigan' },
+  { id: 'av-24', gender: 'm', label: 'شابّ بكنزة حمراء', en: 'Young man in a red hoodie' },
+  { id: 'av-25', gender: 'm', label: 'رجلٌ بشعرٍ مموّج وقميصٍ زيتي', en: 'Man with wavy hair and an olive shirt' },
+  { id: 'av-26', gender: 'm', label: 'شابّ أحمر الشعر بنظّارة', en: 'Red-haired young man with glasses' },
   { id: 'av-4', gender: 'm', label: 'فتى بشعرٍ مجعّد', en: 'Boy with curly hair' },
   { id: 'av-18', gender: 'm', label: 'فتى بحقيبة ظهر', en: 'Boy with a backpack' },
   { id: 'av-17', gender: 'm', label: 'ولدٌ بطاقية بيضاء', en: 'Boy in a white cap' },
@@ -28,6 +33,11 @@ export const AVATARS = [
   { id: 'av-10', gender: 'f', label: 'امرأة بنقاب', en: 'Woman in a niqab' },
   { id: 'av-14', gender: 'f', label: 'فتاة بذيل حصانٍ أشقر', en: 'Girl with a fair ponytail' },
   { id: 'av-15', gender: 'f', label: 'فتاة بشعرٍ قصير', en: 'Girl with short hair' },
+  { id: 'av-27', gender: 'f', label: 'امرأة بشعرٍ أسود قصير', en: 'Woman with a black bob' },
+  { id: 'av-28', gender: 'f', label: 'امرأة شيباء بقرطين', en: 'Silver-haired woman with pearl earrings' },
+  { id: 'av-29', gender: 'f', label: 'امرأة بشعرٍ كثيف مجعّد', en: 'Woman with big curly hair' },
+  { id: 'av-30', gender: 'f', label: 'امرأة بضفيرة جانبية', en: 'Woman with a side braid' },
+  { id: 'av-31', gender: 'f', label: 'امرأة شقراء بقميصٍ مخطّط', en: 'Blonde woman in a striped shirt' },
   { id: 'av-21', gender: 'f', label: 'فتاة بحجابٍ بنفسجي', en: 'Girl in a violet hijab' },
   { id: 'av-20', gender: 'f', label: 'بنتٌ بضفيرتين', en: 'Girl with two braids' },
   { id: 'av-19', gender: 'f', label: 'طفلةٌ صغيرة', en: 'Little girl' },
