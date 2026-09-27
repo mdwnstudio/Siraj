@@ -1426,6 +1426,19 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 @keyframes face-think{0%,100%{transform:rotate(0)}50%{transform:rotate(-10deg) translateY(-2px)}}
 .ask__face--talk{animation:face-talk .5s var(--e-in-out) infinite}
 .ask__face--think{animation:face-think 1.4s var(--e-in-out) infinite}
+/* the spot Siraj is flying down into: held still and empty until he lands */
+.ask__face.is-away{opacity:0;animation:none}
+
+/* Siraj on the way down from the header (AskSiraj's Flier). Every
+   property it moves is written per frame: transform, opacity, clip-path. */
+.ask__flier{position:absolute;z-index:3;pointer-events:none;transform-origin:0 0;will-change:transform,clip-path}
+.ask__flier img{position:absolute;inset:0;width:100%;height:100%;transform-origin:50% 100%}
+.ask__flier-disc{position:absolute;inset:0;background:var(--orange-soft);opacity:0}
+.ask__flier-ring{position:absolute;border-radius:50%;border:2px solid var(--paper-edge);opacity:0}
+/* the speech bubble goes as he leaves; the drawing is the flier now */
+.ask__head .ask__say{transition:opacity .2s var(--e-in)}
+.ask__head.is-flying .ask__say{opacity:0}
+.ask__head.is-flying .pose{visibility:hidden}
 
 .msg__body{white-space:pre-wrap;overflow-wrap:anywhere}
 /* typing: the finished text (hidden) and the typed text share one cell */

@@ -7,7 +7,7 @@ import { buildAskContext, lessonNodes } from '../../core/ai/context'
 import { GENERAL, chatTitle, newChatId, type ChatMsg, type SavedChat, type SubjectId } from '../../core/ai/chats'
 import { getLesson } from '../../core/content/lessons'
 import { chatStore } from '../chats'
-import { SirajPose, usePreloadPoses, type Pose } from '../components/SirajPose'
+import { POSE_SRC, SirajPose, usePreloadPoses, type Pose } from '../components/SirajPose'
 import { Button } from '../components/Button'
 import { useApp, useCalmMotion, useT } from '../state'
 import { sfx, primeAudio } from '../../platform/sound'
@@ -33,6 +33,30 @@ interface Msg {
    the real stream (searching, then writing); the later lines only appear
    if a search genuinely runs long, so the wait always has a voice. */
 type Stage = 'reading' | 'searching' | 'digging' | 'patient' | 'writing'
+
+/* One Siraj, never two. An empty chat has him standing large at the top;
+   the first question makes him think, then he glides down into the
+   thread, cropped to a circle on the way, and from then on he is the
+   little face beside every answer. A saved chat opens already solo. */
+type Place = 'head' | 'flying' | 'solo'
+
+/** where the flight starts and lands, in the chat's own coordinates */
+interface Flight {
+  /** the big drawing in the header, and its tilt from the rig at that moment */
+  from: { x: number; y: number; w: number; tilt: string }
+  /** the chat's box, and the face beside the thinking bubble. The face is
+   *  followed every frame: a used pill can still be closing up below it */
+  box: HTMLElement
+  face: HTMLElement
+}
+
+/** the face's corner and size in the chat's coordinates, without the fade-up its row may still carry */
+function faceSpot(box: HTMLElement, face: HTMLElement) {
+  const o = box.getBoundingClientRect()
+  const b = face.getBoundingClientRect()
+  const lift = new DOMMatrix(getComputedStyle(face.parentElement!).transform).m42
+  return { x: b.left - o.left, y: b.top - lift - o.top, d: b.width }
+}
 
 export function AskSiraj({
   subject, chat, draft, onFinish, onSaved,
@@ -61,12 +85,17 @@ export function AskSiraj({
   const [used, setUsed] = useState<string[]>(() => (chat?.msgs ?? []).filter((m) => m.who === 'me').map((m) => m.text))
   const [pose, setPose] = useState<Pose>('listen')
   const [say, setSay] = useState<string | null>(null)
-  // picked up from the saved chats, rather than started here
-  const [resumed] = useState(!!chat)
+  const [where, setWhere] = useState<Place>(() => (chat?.msgs.length ? 'solo' : 'head'))
+  const [flight, setFlight] = useState<Flight | null>(null)
   const thread = useRef<HTMLDivElement>(null)
   const thinkBubble = useRef<HTMLDivElement>(null)
+  const headPose = useRef<HTMLDivElement>(null)
+  const thinkFace = useRef<HTMLSpanElement>(null)
   const seq = useRef(chat?.msgs.length ?? 0)
-  const moodTimer = useRef<number>(0)
+  const flyTimer = useRef(0)
+  /** settles when Siraj has landed in the thread; a reply waits for it */
+  const arrival = useRef<Promise<void>>(Promise.resolve())
+  const land = useRef<(() => void) | null>(null)
 
   // the lesson's own questions, or for the whole course a few from what was learned
   const suggestions = useMemo(
@@ -107,16 +136,38 @@ export function AskSiraj({
   }, [msgs, busy, stage])
 
   useEffect(() => {
-    return () => { window.clearTimeout(moodTimer.current); window.clearTimeout(typer.current) }
+    return () => { window.clearTimeout(flyTimer.current); window.clearTimeout(typer.current); land.current?.() }
   }, [])
 
   usePreloadPoses()
 
-  /** strike a pose; with `back`, return to listening after that long */
-  const react = (p: Pose, back?: number) => {
-    window.clearTimeout(moodTimer.current)
-    setPose(p)
-    if (back) moodTimer.current = window.setTimeout(() => setPose('listen'), back)
+  /** The first question: Siraj has just changed to his thinking face in
+   *  the header; a beat later he flies down to the thinking bubble. */
+  const descend = () => {
+    if (where !== 'head') return
+    setWhere('flying')
+    arrival.current = new Promise((resolve) => {
+      land.current = () => {
+        land.current = null
+        setFlight(null)
+        setWhere('solo')
+        resolve()
+      }
+      // a beat for the new face to show
+      flyTimer.current = window.setTimeout(() => {
+        const box = thread.current?.parentElement
+        const head = headPose.current
+        const face = thinkFace.current
+        if (calm || !box || !head || !face) return land.current?.()
+        const o = box.getBoundingClientRect()
+        const a = head.getBoundingClientRect()
+        const img = head.querySelector('img')
+        setFlight({
+          from: { x: a.left - o.left, y: a.top - o.top, w: a.width, tilt: img ? getComputedStyle(img).transform : 'none' },
+          box, face,
+        })
+      }, 220)
+    })
   }
 
   // Long waits get a new line from Siraj, so it never looks frozen.
@@ -183,9 +234,7 @@ export function AskSiraj({
       grow: r ? { w: r.width, h: r.height } : { w: 64, h: 46 },
     })
     setBusy(false)
-    setSay(t.hereIsAnswer)
     sfx.chirp(); haptic('tap')
-    react('answer')
   }
 
   // stable, so a typed character re-renders only the live row (MsgRow is memoised)
@@ -215,16 +264,15 @@ export function AskSiraj({
 
   const answered = () => {
     sfx.snap()
-    react('celebrate', 1500)
-    setSay(t.after[Math.floor(Math.random() * t.after.length)])
     if (!progress.achievements.includes('curious')) dispatch({ type: 'grant', id: 'curious' })
   }
 
   const thinking = () => {
     setStage('reading')
     setBusy(true)
-    react('think')
+    setPose('think')
     setSay(t.letMeCheck)
+    descend()
   }
 
   /* A suggested question answers instantly from bundled text - no
@@ -236,6 +284,7 @@ export function AskSiraj({
     push({ who: 'me', text: q })
     thinking()
     window.setTimeout(async () => {
+      await arrival.current
       startReply(a)
       await finishReply()
       answered()
@@ -259,6 +308,7 @@ export function AskSiraj({
       onStatus: (s) => setStage((cur) => (s === 'writing' ? 'writing' : cur === 'reading' ? 'searching' : cur)),
       onText: () => setStage('writing'),
     }, history)
+    await arrival.current
 
     if (res.ok && res.answer) {
       startReply(res.answer, res.sources, res.sig)
@@ -268,8 +318,6 @@ export function AskSiraj({
       setBusy(false)
       push({ who: 'err', text: res.message ?? t.askFailed })
       sfx.wrong()
-      react('oops', 2800)
-      setSay(t.askSorry)
     }
   }
 
@@ -279,20 +327,24 @@ export function AskSiraj({
 
   return (
     <>
-      <div className="ask__head">
-        <SirajPose pose={pose} size={80} />
-        <div className="bubble bubble--side ask__say">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.span key={say ?? 'intro'} style={{ display: 'block' }}
-              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18 }}>
-              {say ?? (resumed ? t.askResume
-                : lesson ? <>{t.askIntro.before}<b style={{ color: 'var(--orange)' }}>{lesson.title}</b>{t.askIntro.after}</>
-                : t.askIntroGeneral)}
-            </motion.span>
-          </AnimatePresence>
+      {/* gone from the layout once he lands: the thread is pinned to the
+          bottom, so it only grows upward and nothing in it moves */}
+      {where !== 'solo' && (
+        <div className={`ask__head${flight ? ' is-flying' : ''}`}>
+          <div ref={headPose}><SirajPose pose={pose} size={80} /></div>
+          <div className="bubble bubble--side ask__say">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span key={say ?? 'intro'} style={{ display: 'block' }}
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18 }}>
+                {say ?? (lesson ? <>{t.askIntro.before}<b style={{ color: 'var(--orange)' }}>{lesson.title}</b>{t.askIntro.after}</>
+                  : t.askIntroGeneral)}
+              </motion.span>
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
+      )}
+      {flight && <Flier f={flight} onLanded={() => land.current?.()} />}
 
       <span className="ask__fade" aria-hidden />
 
@@ -306,7 +358,8 @@ export function AskSiraj({
           <motion.div className="msg-row msg-row--siraj"
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}>
-            <span className="ask__face ask__face--think" aria-hidden />
+            {/* hidden until Siraj flies down into it */}
+            <span ref={thinkFace} className={`ask__face ask__face--think${where !== 'solo' ? ' is-away' : ''}`} aria-hidden />
             <div className="thinking" ref={thinkBubble}>
               <span className="thinking__dots"><span /><span /><span /></span>
               <AnimatePresence mode="wait" initial={false}>
@@ -373,6 +426,86 @@ export function AskSiraj({
         </div>
       )}
     </>
+  )
+}
+
+/* The face's crop, as .ask__face--think draws it: a 2px border, the
+   drawing at 170% of the inner circle, placed at 48% 55%. */
+const FACE_BORDER = 2
+const FACE_ZOOM = 1.7
+const FACE_AT = [0.48, 0.55] as const
+
+const ease = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2)
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
+
+/** Siraj on his way down. The box is the drawing exactly as the face
+ *  crops it, so the flight is one transform from the header's size and
+ *  place down to scale 1, while a circle closes in around his head and
+ *  the face's disc and ring fade up inside it. At the end he is pixel
+ *  for pixel the face, which takes over in the same frame. */
+function Flier({ f, onLanded }: { f: Flight; onLanded: () => void }) {
+  const el = useRef<HTMLDivElement>(null)
+  const [to] = useState(() => faceSpot(f.box, f.face))
+  const inner = to.d - 2 * FACE_BORDER
+  const w = inner * FACE_ZOOM
+  const h = (w * 490) / 420
+  // the drawing's corner, measured from the face's corner
+  const ox = FACE_BORDER + (inner - w) * FACE_AT[0]
+  const oy = FACE_BORDER + (inner - h) * FACE_AT[1]
+  const left = to.x + ox
+  const top = to.y + oy
+  // the face's centre inside the box, and a radius that clips nothing
+  const cx = to.d / 2 - ox
+  const cy = to.d / 2 - oy
+  const r1 = to.d / 2
+  const r0 = Math.hypot(Math.max(cx, w - cx), Math.max(cy, h - cy)) + 2
+
+  useLayoutEffect(() => {
+    const node = el.current
+    if (!node) return
+    const img = node.querySelector('img')!
+    const disc = node.querySelector<HTMLElement>('.ask__flier-disc')!
+    const ring = node.querySelector<HTMLElement>('.ask__flier-ring')!
+    const s0 = f.from.w / w
+    const x0 = f.from.x - left
+    const y0 = f.from.y - top
+    // the rig's tilt at take-off, eased away in flight (its shift is in header pixels)
+    const m = new DOMMatrix(f.from.tilt === 'none' ? undefined : f.from.tilt)
+    let landed = false
+    const frame = (t: number) => {
+      const p = ease(t)
+      // a touch of arc: across a little ahead of down
+      const px = ease(Math.min(1, t * 1.15))
+      const s = s0 + (1 - s0) * p
+      // wherever the face is now, relative to where it was at take-off
+      const now = t > 0 ? faceSpot(f.box, f.face) : to
+      const x = x0 * (1 - px) + (now.x - to.x) * px
+      const y = y0 * (1 - p) + (now.y - to.y) * p
+      node.style.transform = `translate(${x}px,${y}px) scale(${s})`
+      const c = ease(clamp01((t - 0.1) / 0.8))
+      const r = r0 + (r1 - r0) * c
+      node.style.clipPath = `circle(${r}px at ${cx}px ${cy}px)`
+      const k = 1 - p
+      img.style.transform = `matrix(${1 + (m.a - 1) * k},${m.b * k},${m.c * k},${1 + (m.d - 1) * k},${(m.e / s0) * k},${(m.f / s0) * k})`
+      const fade = String(clamp01((t - 0.3) / 0.55))
+      disc.style.opacity = fade
+      ring.style.opacity = fade
+      ring.style.transform = `scale(${r / r1})`
+    }
+    frame(0)
+    const run = animate(0, 1, {
+      duration: 0.48, ease: 'linear', onUpdate: frame,
+      onComplete: () => { if (!landed) { landed = true; onLanded() } },
+    })
+    return () => run.stop()
+  }, [])
+
+  return (
+    <div ref={el} className="ask__flier" aria-hidden style={{ left, top, width: w, height: h }}>
+      <span className="ask__flier-disc" />
+      <img src={POSE_SRC.think} alt="" width={420} height={490} draggable={false} />
+      <span className="ask__flier-ring" style={{ left: cx - r1, top: cy - r1, width: to.d, height: to.d }} />
+    </div>
   )
 }
 

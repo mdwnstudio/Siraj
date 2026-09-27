@@ -144,6 +144,13 @@ to ask Siraj about it. A practice session is the lesson screen with
 exercises only (`practice` prop on `Lesson`): it earns XP and keeps the
 streak, but finishes no step on the stair. It replaced the old مراجعة tab.
 
+**One Siraj in a chat, never two.** An empty chat (the Ask tab or the
+end of a lesson) shows him large at the top beside his intro. The first
+question turns him to his thinking face, then he flies down into the
+thinking bubble's avatar spot, cropped to a circle on the way (`Flier` in
+`screens/AskSiraj.tsx`), and the header leaves the layout. From then on he
+is only the small face beside each answer; a saved chat opens that way.
+
 **The end-of-lesson chat.** Its تابع button ends the lesson, so it is
 disabled (and a line under the input says why) while a question is typed
 or a reply is on its way: learners kept pressing it to send.
