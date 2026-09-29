@@ -1,41 +1,32 @@
-<div align="center">
+<div align="center" dir="rtl">
 
-# سراج: Siraj
+# سراج
 
-**The Duolingo for learning Islam.** A staircase you climb, one step at a time.
+**تعلّم الإسلام درجةً درجة.**
+
+[جرّب التطبيق](https://sleem-cyber.github.io/Siraj/)
 
 </div>
 
----
+<div dir="rtl">
 
-Siraj teaches the five pillars of Islam the way a good teacher would: it **shows
-you something first**, then asks questions that make it stick. Not a quiz app
-with a mascot bolted on.
+سراج تطبيق تفاعلي يعرّف بالإسلام ويعلّمه على طريقة الألعاب التعليمية: درجٌ يصعده المتعلم خطوةً بعد خطوة، كل خطوة درسٌ قصير. يغطي العرض الحالي **أركان الإسلام الخمسة**، بالعربية، وبالإنجليزية (تجريبي).
 
-Built for a hackathon on the track
-**«التجارب التفاعلية والرحلة المعرفية للتعريف بالإسلام وتعلمه»**.
+بُني لمسار **«التجارب التفاعلية والرحلة المعرفية للتعريف بالإسلام وتعلمه»**.
 
-## What makes it different
+## ما الذي يميّزه
 
-- **The stair.** The learning path runs bottom to top. Finished steps are solid
-  slabs beneath you; the road ahead ghosts upward into the distance. Progress is
-  literally climbing.
-- **Learn, then solidify.** Every level is بطاقات تعلّم followed by exercises
-  drawn only from what those cards taught.
-- **Five real mechanics**, not one: order the steps of wudu, sort what breaks a
-  fast, match terms to meanings, multiple choice, true/false.
-- **اسأل سراج.** After each lesson, ask the thing you did not understand. The
-  assistant answers **only by quoting four trusted sources** and refuses to
-  improvise or stray off topic.
-- **No lives to lose.** A wrong answer costs only the XP it would have earned;
-  the lesson shows its XP climbing as you go.
-- **Arabic and English (beta).** A first visit opens in Arabic and asks for the language first.
-  The layout stays as it is; English text reads left to right. English Quran
-  and hadith come from quran.com and sunnah.com.
-- **No audio files.** Every sound is synthesised in the browser. The correct
-  answer chime rises in pitch with your streak.
+- **الدرج:** طريق التعلم يصعد من الأسفل إلى الأعلى، فالتقدم صعودٌ حقيقي، والوجهة ظاهرة دائمًا.
+- **تعلّم ثم رسّخ:** كل درس يبدأ ببطاقات تشرح، ثم تمارين لا تسأل إلا عمّا شرحته البطاقات.
+- **خمسة أنواع من التمارين:** رتّب الخطوات، اختر الصحيح، صح أم خطأ، طابِق، صنّف.
+- **جولة مراجعة:** كل سؤال أخطأ فيه المتعلم يعود إليه حتى يجيبه صوابًا، وتُحفظ أخطاؤه في «أخطائي» ليتدرّب عليها لاحقًا.
+- **اسأل سراج:** مساعد ذكي يجيب عن أسئلة الدرس، ولا يستقي إلا من أربعة مصادر موثوقة (islamqa.info و dorar.net و quran.com و sunnah.com)، ويذكر مصدره، ويعتذر عمّا لا يجد له جوابًا بدل أن يخمّن.
+- **كل آية وحديث موثّق:** الآية بسورتها ورقمها، والحديث بمصدره. والنصوص الإنجليزية للقرآن والحديث مأخوذة من quran.com و sunnah.com، لا مكتوبة بأيدينا.
+- **خفيف وسريع:** يعمل على الهواتف المتواضعة، ويُثبَّت كتطبيق، ويعمل دون اتصال. لا ملفات صوتية فيه: كل صوت يُولَّد في المتصفح.
 
-## Run it
+## التشغيل
+
+</div>
 
 ```bash
 cd app
@@ -43,63 +34,48 @@ npm install
 npm run dev
 ```
 
-Node 20+. Opens at `http://localhost:5173`. No backend required.
+<div dir="rtl">
 
-## Build
+يتطلب Node 20 أو أحدث، ويفتح على `http://localhost:5173`. لا حاجة إلى خادم: التطبيق يعمل كاملًا، وأسئلة «اسأل سراج» المقترحة تُجاب من نصوص مضمّنة فيه.
 
-```bash
-cd app && npm run build     # -> app/dist
-```
+## النشر
 
-~147 KB gzipped, fonts subset to woff2, artwork in WebP.
+- **الموقع** يُبنى ويُنشر على GitHub Pages تلقائيًا عند كل دفع إلى `main` (`.github/workflows/deploy.yml`).
+- **اسأل سراج** يعمل على Cloudflare Worker في مجلد `worker`، لأن مفتاح OpenAI لا يجوز أن يصل إلى المتصفح:
 
-## Deploying
-
-The site is static and goes to **GitHub Pages**. Ask Siraj needs a secret, and
-Pages cannot hold one, so the assistant runs on a small **Cloudflare Worker**
-(free tier). Pushing to `main` deploys the site automatically.
+</div>
 
 ```bash
-# 1. the assistant
 cd worker
 npm ci
+npx wrangler secret put OPENAI_API_KEY
 npm run deploy
-npx wrangler secret put OPENAI_API_KEY      # paste the key, it never touches the repo
-
-# 2. tell the site where it lives
-#    repo Settings > Secrets and variables > Actions > Variables
-#    CHAT_ENDPOINT = https://siraj-chat.<subdomain>.workers.dev
-
-# 3. Settings > Pages > Source: GitHub Actions, then push
 ```
 
-Without step 1 the app still works end to end; the suggested-question pills
-answer from bundled text with no network call.
+<div dir="rtl">
 
-> Do **not** put `OPENAI_API_KEY` in an Actions secret expecting it to work.
-> Actions secrets never reach a deployed function or a browser, and baking one
-> into a static build publishes it. The key belongs on the Worker only.
+ثم يُضاف رابط الـ Worker في إعدادات المستودع (Settings > Secrets and variables > Actions > Variables) باسم `CHAT_ENDPOINT`.
 
-## Structure
+## البنية
+
+</div>
 
 ```
-app/src/core/       pure TypeScript, zero DOM  <- ports to native as-is
-app/src/platform/   storage, sound, haptics    <- the only files a port rewrites
-app/src/ui/         React + Framer Motion
-api/chat.ts         the Ask Siraj proxy
-AGENTS.md           full project contract, read before contributing
+app/src/core/       منطق التطبيق والمحتوى، بلا واجهة: ينتقل إلى تطبيق أصلي كما هو
+app/src/platform/   التخزين والصوت والاهتزاز
+app/src/ui/         الواجهة (React)
+server/             خادم «اسأل سراج» وضوابطه
+worker/             نشره على Cloudflare
 ```
 
-The `core/` boundary is deliberate: porting to React Native means copying
-`core/`, writing three `platform/` files, and rebuilding the views. Capacitor can
-also wrap this exact build into a native binary with no rewrite at all.
+<div dir="rtl">
 
-## Contributing
+## قبل المساهمة
 
-Read [AGENTS.md](AGENTS.md) first. In particular: no em-dashes anywhere,
-`core/` never touches the DOM, and religious content must be reviewed by a
-qualified person before public release.
+اقرأ [AGENTS.md](AGENTS.md) أولًا. وأهم ما فيه: **المحتوى الشرعي يُراجَع ولا يُرتجَل**، ولا بد أن يراجعه أهل الاختصاص قبل الإطلاق العام.
 
-## License
+## الترخيص
 
-MIT. See [LICENSE](LICENSE).
+MIT. انظر [LICENSE](LICENSE).
+
+</div>

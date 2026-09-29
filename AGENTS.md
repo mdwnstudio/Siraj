@@ -376,6 +376,14 @@ an exposed OpenAI key gets drained within hours. So the deployment is split:
 | the site (`app/dist`) | GitHub Pages | no |
 | Ask Siraj (`server/chatHandler.ts`) | Cloudflare Worker | **yes** |
 
+The repo is **sleem-cyber/Siraj**, so the site is
+https://sleem-cyber.github.io/Siraj/. Pages must deploy with
+`.github/workflows/deploy.yml`, which builds `app/dist`. GitHub's "static
+content" template uploads the raw repo, which has no `index.html` at its root,
+and the site 404s. The Android app (package `io.github.sleemcyber.siraj`)
+needs `/.well-known/assetlinks.json` served from the sleem-cyber.github.io
+root, or it opens with a browser bar.
+
 The handler lives in `server/chatHandler.ts` and is shared verbatim by two thin
 entries: `worker/src/index.ts` (Cloudflare) and `api/chat.ts` (Vercel/Netlify,
 kept for portability). Only one needs to be deployed.
