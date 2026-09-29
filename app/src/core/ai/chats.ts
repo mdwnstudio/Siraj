@@ -22,7 +22,12 @@ export interface ChatMsg {
   /** the server's signature on a live reply, sent back with the history
    *  so the server can tell its own words from edited ones */
   sig?: string
+  /** where a reply came from, shown under it (transparency): written by
+   *  the AI just now, or one of the bundled answers prepared in advance */
+  origin?: ReplyOrigin
 }
+
+export type ReplyOrigin = 'ai' | 'prepared'
 
 export interface SavedChat {
   id: string
@@ -104,6 +109,10 @@ export function reviveChats(raw: string | null): SavedChat[] {
               !!s && typeof (s as { url?: unknown }).url === 'string' && typeof (s as { title?: unknown }).title === 'string')
           : undefined,
         sig: typeof mm.sig === 'string' ? mm.sig : undefined,
+        // a reply saved before origins were kept: only a signed one is known
+        // to be the AI's; an unsigned one is left unlabelled, never guessed
+        origin: mm.origin === 'ai' || mm.origin === 'prepared' ? mm.origin
+          : mm.who === 'siraj' && typeof mm.sig === 'string' ? 'ai' : undefined,
       })
     }
     if (!msgs.length) continue

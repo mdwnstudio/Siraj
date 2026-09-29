@@ -4,10 +4,10 @@
    1. A link that is already listed under the answer's sources is noise in
       the text, so it is dropped (with the brackets and parens around it).
    2. Any other link is kept, but shown as a short label, e.g.
-      "sunnah.com/bukhari…", never as a raw 120-character URL.
-   3. A trusted site named in the text ("ارجع إلى islamqa.info") becomes a
+      "dorar.net/hadith…", never as a raw 120-character URL.
+   3. A trusted site named in the text ("ارجع إلى dorar.net") becomes a
       link too: to the page on that site the answer actually cites, or
-      else to the site itself. Only the four trusted domains are linked. */
+      else to the site itself. Only the approved domains are linked. */
 
 import { ALLOWED_DOMAINS } from './systemPrompt'
 
@@ -28,7 +28,7 @@ export function urlKey(raw: string): string {
   }
 }
 
-/** "https://www.islamqa.info/ar/answers/12345/some-long-slug?x=1" -> "islamqa.info/ar/answers…" */
+/** "https://www.dorar.net/hadith/sharh/12345?x=1" -> "dorar.net/hadith/sharh…" */
 export function shortUrl(raw: string, max = 24): string {
   try {
     const u = new URL(raw)
@@ -37,7 +37,7 @@ export function shortUrl(raw: string, max = 24): string {
     if (!path) return host
     const full = host + path
     if (full.length <= max) return full
-    // keep whole path segments while they fit: "sunnah.com/bukhari…"
+    // keep whole path segments while they fit: "dorar.net/hadith…"
     let label = host
     for (const seg of path.split('/').filter(Boolean)) {
       if ((label + '/' + seg).length > max) break
@@ -60,7 +60,7 @@ function tidy(raw: string): string {
 const SITES = ALLOWED_DOMAINS.map((d) => d.replace(/\./g, '\\.')).join('|')
 
 // [label](url) with optional wrapping parens, or a bare url, or **bold**,
-// or a trusted site named without its scheme (islamqa.info, sunnah.com/...)
+// or a trusted site named without its scheme (dorar.net, quranpedia.net/...)
 const TOKEN = new RegExp(
   String.raw`\(?\[([^\]\n]*)\]\((https?:\/\/[^\s)]+)\)\)?|(https?:\/\/[^\s<>()"'،؛]+[^\s<>()"'،؛.,:!?])|\*\*([^*\n]+)\*\*` +
   String.raw`|(?<![\w.@/-])((?:www\.)?(?:${SITES})(?:\/[^\s<>()"'،؛]*[^\s<>()"'،؛.,:!?])?)(?![\w-])`,

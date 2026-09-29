@@ -1568,8 +1568,19 @@ a.quote__src--link{display:inline-block;text-decoration:underline;text-decoratio
 .msg__body--typing{display:grid}
 .msg__ghost,.msg__typed{grid-area:1/1}
 .msg__ghost{visibility:hidden}
-.msg__src{transition:opacity .3s var(--e-out)}
-.msg__src.is-waiting{opacity:0}
+/* ملفي: the privacy policy */
+.privacy__intro{font-size:.86rem;font-weight:700;color:var(--ink-2);line-height:1.7}
+.privacy__list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.privacy__list li{font-size:.8rem;font-weight:600;color:var(--ink-2);line-height:1.7;
+  padding-inline-start:12px;border-inline-start:3px solid var(--paper-edge)}
+.privacy__list b{color:var(--ink);font-weight:800}
+
+/* where the reply came from: an AI answer, or one prepared in advance.
+   In the layout from the first frame, faded in with the sources, so the
+   bubble never grows when the typing ends */
+.msg__origin{margin-top:9px;font-size:.72rem;line-height:1.55;font-weight:700;color:var(--ink-3)}
+.msg__src,.msg__origin{transition:opacity .3s var(--e-out)}
+.msg__src.is-waiting,.msg__origin.is-waiting{opacity:0}
 .msg__link{color:var(--info-ink);font-weight:800;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px;unicode-bidi:isolate}
 @keyframes caret-blink{0%,100%{opacity:1}50%{opacity:0}}
 .msg__caret{display:inline-block;width:3px;height:1.05em;margin-inline-start:3px;vertical-align:-.15em;
@@ -2330,6 +2341,8 @@ html[lang="en"] :is(.kcard__kicker,.ex__kicker){align-self:flex-end;direction:lt
 html[lang="en"] :is(.mcard__btn,.askbar__topic){direction:ltr}
 /* a list row reads like an English list: icon first on the left, the text beside it */
 html[lang="en"] .klist__row{direction:ltr}
+/* the privacy rows: the rule line leads the text, on the left in English */
+html[lang="en"] .privacy__list li{direction:ltr}
 html[lang="en"] .verdict__head{direction:ltr}
 /* the streak flag sits at the reading end: left in Arabic, right in English */
 /* physical, because direction:ltr (icon first) would turn a logical inset too */

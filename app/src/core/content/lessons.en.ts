@@ -11,14 +11,14 @@ export { GLOSSES_EN } from './glosses.en'
    holds them to that.
 
    Quran and hadith are NOT translated here. They come from
-   quran.com (Saheeh International) and sunnah.com through
+   quranpedia.net (Saheeh International) and sunnah.com through
    scripts/fetch-quotes.mjs, and are read from quotes.en.ts by id.
 
    NOTE FOR REVIEWERS - like the Arabic, this must be reviewed by
    a qualified person before it ships to the public. See AGENTS.md.
    ============================================================ */
 
-/** a quote card's text and source, straight from quran.com or sunnah.com */
+/** a quote card's text and source, straight from quranpedia.net or sunnah.com */
 const q = (id: QuoteId): Pick<Extract<Card, { kind: 'quote' }>, 'text' | 'source' | 'url'> => QUOTES_EN[id]
 
 /** an inline quotation with its reference */
@@ -1630,7 +1630,7 @@ const suhoorIftar: Lesson = {
   ask: [
     {
       q: 'What should I break my fast with?',
-      a: 'The Sunnah is to break your fast with fresh dates, and if there are none then dried dates, and if there are none then a few sips of water. This is what the Prophet ﷺ did (Sunan Abi Dawud and Jami at-Tirmidhi). Then eat what you like, in moderation.',
+      a: 'The Sunnah is to break your fast with fresh dates, and if there are none then dried dates, and if there are none then a few sips of water. This is what the Prophet ﷺ did (Sunan Abi Dawud and Jami at-Tirmidhi; graded hasan by al-Albani). Then eat what you like, in moderation.',
     },
     {
       q: 'What if I miss suhoor?',

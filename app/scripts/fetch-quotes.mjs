@@ -4,15 +4,20 @@
 
      node scripts/fetch-quotes.mjs
 
-   Every English ayah comes from quran.com (Saheeh International,
-   its default English translation, via api.quran.com). Every
-   English hadith comes from its sunnah.com page. Each entry below
+   Every English ayah is the Saheeh International translation as
+   quranpedia.net serves it (api.quranpedia.net, book 13638): the
+   challenge's approved reference for Quran translations is the King
+   Fahd Complex prints or the translations on quranpedia.net. Only
+   the English surah names come from api.quran.com. Every English
+   hadith comes from its sunnah.com page, and each one outside
+   al-Bukhari and Muslim carries its grade (`grade`, from dorar.net). Each entry below
    names the reference and the first and last words of the part the
    Arabic card quotes; the script cuts that part out and writes
    src/core/content/quotes.en.ts, which lessons.en.ts reads.
 
    The only changes made to the source text:
-   - quran.com footnote markers are removed
+   - footnote markers are removed, and quranpedia's stray spaces inside
+     brackets and before 's are closed up
    - transliteration marks are folded to plain letters (Allāh ->
      Allah), because the brand fonts carry no glyphs for them
    - an excerpt that starts or stops mid-sentence gets an ellipsis
@@ -30,8 +35,8 @@ import puppeteer from 'puppeteer-core'
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const OUT = path.join(HERE, '../src/core/content/quotes.en.ts')
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-/** Saheeh International on api.quran.com */
-const TRANSLATION = 20
+/** Saheeh International on api.quranpedia.net */
+const TRANSLATION = 13638
 
 /* ---------------- the Quran ---------------- */
 
@@ -45,11 +50,11 @@ const QURAN = [
   { id: 'q2_43', key: '2:43' },
   { id: 'q2_43_short', key: '2:43', from: 'And establish prayer', to: 'give zakah' },
   { id: 'q9_60', key: '9:60', from: 'Zakah expenditures', to: '[stranded] traveler' },
-  { id: 'q9_103', key: '9:103', from: 'Take, [O Muhammad]', to: 'cause them increase' },
+  { id: 'q9_103', key: '9:103', from: 'Take, [O, Muhammad]', to: 'cause them increase' },
   { id: 'q2_183', key: '2:183' },
   { id: 'q2_183_end', key: '2:183', from: 'that you may become righteous', to: 'become righteous' },
   { id: 'q2_184', key: '2:184', from: 'So whoever among you', to: '[are to be made up].' },
-  { id: 'q2_187', key: '2:187', from: 'And eat and drink', to: 'until the night [i.e., sunset].' },
+  { id: 'q2_187', key: '2:187', from: 'And eat and drink', to: 'until the sunset.' },
   { id: 'q3_97', key: '3:97', from: 'And [due] to Allah', to: 'thereto a way.' },
   { id: 'q2_127', key: '2:127' },
   { id: 'q2_127_short', key: '2:127', from: 'when Abraham was raising', to: '[with him] Ishmael' },
@@ -63,7 +68,9 @@ const QURAN = [
 
 /* ---------------- the Sunnah ----------------
    `also` names the other collection when the Arabic card says متفق عليه
-   or cites two books. */
+   or cites two books. `grade` is the grading of a hadith outside the
+   two Sahihs, as dorar.net gives it (the Arabic card carries the same):
+   no hadith is shown without its source and a grade. */
 
 const HADITH = [
   { id: 'h_islam', ref: 'muslim:8a', from: 'Al-Islam implies', to: 'the journey.' },
@@ -96,8 +103,8 @@ const HADITH = [
     edit: (t) => t.replace(/'$/, ''),
   },
   { id: 'h_fatiha', ref: 'bukhari:756', from: 'Whoever does not recite', to: 'is invalid.', also: 'Sahih Muslim 394' },
-  { id: 'h_istiftah', ref: 'tirmidhi:243', from: 'Glorious You are O Allah', to: 'but You.', also: 'Sunan Abi Dawud 776' },
-  { id: 'h_tasbih', ref: 'abudawud:832', from: 'Glory be to Allah, and praise', to: 'but in Allah.' },
+  { id: 'h_istiftah', ref: 'tirmidhi:243', from: 'Glorious You are O Allah', to: 'but You.', also: 'Sunan Abi Dawud 776', grade: 'graded sahih by al-Albani' },
+  { id: 'h_tasbih', ref: 'abudawud:832', from: 'Glory be to Allah, and praise', to: 'but in Allah.', grade: 'graded hasan by al-Albani' },
   { id: 'h_sadaqah', ref: 'muslim:2588', from: 'Charity does not decrease wealth', to: 'decrease wealth', close: '.' },
   { id: 'h_half_date', ref: 'bukhari:1417', from: 'Save yourself', to: 'in charity.', also: 'Sahih Muslim 1016' },
   { id: 'h_no_zakah_horse', ref: 'bukhari:1464', from: 'There is no Zakat', to: 'to a Muslim.', also: 'Sahih Muslim 982' },
@@ -108,7 +115,7 @@ const HADITH = [
   { id: 'h_rubayyi', ref: 'bukhari:1960', from: 'Since then we used to fast', to: 'make our boys fast.', also: 'Sahih Muslim 1136' },
   { id: 'h_talbiyah', ref: 'bukhari:1549', from: 'I respond to Your call O Allah', to: 'no partners with you.', also: 'Sahih Muslim 1184' },
   { id: 'h_hajj_reborn', ref: 'bukhari:1521', from: 'Whoever performs Hajj', to: 'born anew.', also: 'Sahih Muslim 1350' },
-  { id: 'h_arafah', ref: 'tirmidhi:889', from: 'The Hajj is Arafah', to: 'is Arafah.' },
+  { id: 'h_arafah', ref: 'tirmidhi:889', from: 'The Hajj is Arafah', to: 'is Arafah.', grade: 'graded sahih by al-Albani' },
   { id: 'h_rites', ref: 'muslim:1297', from: 'Learn your rituals', to: 'performing them)' },
   {
     id: 'h_tashriq', ref: 'muslim:1141a', from: 'The days of Tashriq', to: 'eating and drinking',
@@ -129,6 +136,8 @@ function plain(s) {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '').normalize('NFC')
     .replace(/[\u02bf\u02be`]/g, "'")
     .replace(/\s*[\u2013\u2014]\s*/g, ' - ')
+    // quranpedia's copy spaces the brackets and the possessive: "[ Allah 's"
+    .replace(/\[\s+/g, '[').replace(/\s+\]/g, ']').replace(/\s+'s\b/g, "'s")
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -154,12 +163,14 @@ function frame(t, close) {
 /* ---------------- fetch ---------------- */
 
 async function quranText(key) {
-  const res = await fetch(`https://api.quran.com/api/v4/verses/by_key/${key}?translations=${TRANSLATION}`)
-  if (!res.ok) throw new Error(`quran.com ${key}: HTTP ${res.status}`)
-  const data = await res.json()
-  const tr = data.verse.translations.find((t) => t.resource_id === TRANSLATION)
-  if (!tr) throw new Error(`quran.com ${key}: no translation ${TRANSLATION}`)
-  return plain(tr.text)
+  const [s, a] = key.split(':')
+  const res = await fetch(`https://api.quranpedia.net/v1/translations/${s}/${a}/en`, {
+    headers: { 'user-agent': 'Siraj curriculum fetch (github.com/sleem-cyber/Siraj)' },
+  })
+  if (!res.ok) throw new Error(`quranpedia.net ${key}: HTTP ${res.status}`)
+  const tr = (await res.json()).find((t) => t.book?.id === TRANSLATION)
+  if (!tr) throw new Error(`quranpedia.net ${key}: no translation ${TRANSLATION}`)
+  return plain(tr['translation-content'])
 }
 
 async function surahNames() {
@@ -178,7 +189,9 @@ async function main() {
     out[q.id] = {
       text: frame(text),
       source: `${names.get(Number(s))} ${q.key}`,
-      url: `https://quran.com/${s}/${a}`,
+      // the surah's page in this translation; the hash names the ayah
+      // (scripts/fetch-glosses.mjs reads the key back from it)
+      url: `https://quranpedia.net/surah/1/${s}/book/${TRANSLATION}#${a}`,
     }
   }
 
@@ -210,10 +223,10 @@ async function main() {
         ? h.parts.map((x) => cut(p.en, x.from, x.to, h.id)).join(h.join ?? ' ')
         : cut(p.en, h.from, h.to, h.id)
       if (h.edit) text = h.edit(text)
-      const source = h.source ?? p.ref
+      const source = h.also ? `${h.source ?? p.ref}; ${h.also}` : (h.source ?? p.ref)
       out[h.id] = {
         text: frame(text, h.close),
-        source: h.also ? `${source}; ${h.also}` : source,
+        source: h.grade ? `${source}, ${h.grade}` : source,
         url: `https://sunnah.com/${h.ref}`,
       }
     }
@@ -224,8 +237,8 @@ async function main() {
   const body = Object.entries(out)
     .map(([id, q]) => `  ${id}: {\n    text: ${JSON.stringify(q.text)},\n    source: ${JSON.stringify(q.source)},\n    url: ${JSON.stringify(q.url)},\n  },`)
     .join('\n')
-  fs.writeFileSync(OUT, `/* GENERATED by scripts/fetch-quotes.mjs from quran.com (Saheeh International)
-   and sunnah.com. Do not edit by hand: change the entry in the script and run it again. */
+  fs.writeFileSync(OUT, `/* GENERATED by scripts/fetch-quotes.mjs from quranpedia.net (Saheeh
+   International) and sunnah.com, with dorar.net grades. Do not edit by hand: change the entry in the script and run it again. */
 
 export interface SourcedQuote {
   text: string

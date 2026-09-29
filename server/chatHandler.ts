@@ -330,6 +330,10 @@ function callOpenAI(
       // reasons far more than 5.6 did at low. The prompt keeps the answer
       // itself short; this only stops a runaway.
       max_output_tokens: 1500,
+      // Privacy: OpenAI keeps no copy of the conversation (it stores
+      // responses by default). Nothing here names the learner either: the
+      // request carries the question, the recent turns and the lesson id.
+      store: false,
       stream,
     }),
   })

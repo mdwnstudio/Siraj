@@ -307,22 +307,6 @@ export function MePage() {
       </div>
 
       <div className="section">
-        <div className="section__label">{t.about}</div>
-        <div className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-          <Lantern size={30} style={{ color: 'var(--orange)', flex: '0 0 auto' }} />
-          <p style={{ fontSize: '.86rem', color: 'var(--ink-2)', fontWeight: 650, lineHeight: 1.7 }}>
-            {t.aboutText}
-            <span style={{ display: 'block', marginTop: 4, fontSize: '.72rem', color: 'var(--ink-3)' }}>
-              {t.version} <span className="num">{__BUILD__}</span>
-            </span>
-          </p>
-        </div>
-      </div>
-
-      </div>
-
-      <div className="me-grid__col2">
-      <div className="section">
         <div className="section__label">{t.settings}</div>
         <div className="rows">
           <Row label={t.sound} note={t.soundNote}>
@@ -363,6 +347,36 @@ export function MePage() {
           ))}
         </div>
         <p className="section__note">{progress.language === 'en' ? t.languageBeta : t.languageNote}</p>
+      </div>
+
+      </div>
+
+      <div className="me-grid__col2">
+      <div className="section">
+        <div className="section__label">{t.about}</div>
+        <div className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <Lantern size={30} style={{ color: 'var(--orange)', flex: '0 0 auto' }} />
+          <p style={{ fontSize: '.86rem', color: 'var(--ink-2)', fontWeight: 650, lineHeight: 1.7 }}>
+            {t.aboutText}
+            <span style={{ display: 'block', marginTop: 4, fontSize: '.72rem', color: 'var(--ink-3)' }}>
+              {t.version} <span className="num">{__BUILD__}</span>
+            </span>
+          </p>
+        </div>
+      </div>
+
+      {/* the declared policy the reference pack asks for: what is kept,
+          where, and what leaves the device */}
+      <div className="section">
+        <div className="section__label">{t.privacy}</div>
+        <div className="card privacy">
+          <p className="privacy__intro">{t.privacyIntro}</p>
+          <ul className="privacy__list">
+            {t.privacyItems.map(([head, body]) => (
+              <li key={head}><b>{head}</b> {body}</li>
+            ))}
+          </ul>
+        </div>
       </div>
 
       <div className="section">

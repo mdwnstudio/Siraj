@@ -47,7 +47,7 @@ export type Card =
       text: string
       source: string
       note?: string
-      /** a translation's source page (quran.com, sunnah.com) */
+      /** a translation's source page (quranpedia.net, sunnah.com) */
       url?: string
       /** in a translated lesson: the Arabic wording, shown above the translation */
       original?: string

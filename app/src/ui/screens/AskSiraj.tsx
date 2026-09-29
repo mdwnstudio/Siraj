@@ -4,7 +4,8 @@ import type { AskSuggestion, Lang, Progress } from '../../core/types'
 import { askSirajStream, recentHistory } from '../../core/ai/askSiraj'
 import { parseAnswer } from '../../core/ai/answerText'
 import { buildAskContext, lessonNodes } from '../../core/ai/context'
-import { GENERAL, chatTitle, newChatId, type ChatMsg, type SavedChat, type SubjectId } from '../../core/ai/chats'
+import { GENERAL, chatTitle, newChatId, type ChatMsg, type ReplyOrigin, type SavedChat, type SubjectId } from '../../core/ai/chats'
+import { quoteRuns } from '../../core/quoteRuns'
 import { getLesson } from '../../core/content/lessons'
 import { chatStore } from '../chats'
 import { POSE_SRC, SirajPose, usePreloadPoses, type Pose } from '../components/SirajPose'
@@ -21,6 +22,8 @@ interface Msg {
   sources?: { title: string; url: string }[]
   /** the server's signature on a live reply, kept for the history */
   sig?: string
+  /** written by the AI, or a bundled answer prepared in advance */
+  origin?: ReplyOrigin
   /** still being written: hide half-finished markdown, show a caret */
   live?: boolean
   /** the whole reply, known before typing starts, so the bubble takes
@@ -118,7 +121,7 @@ export function AskSiraj({
     const keep: ChatMsg[] = []
     for (const m of msgs) {
       if (m.who === 'err') continue
-      keep.push({ who: m.who, text: m.text, ...(m.sources?.length ? { sources: m.sources } : {}), ...(m.sig ? { sig: m.sig } : {}) })
+      keep.push({ who: m.who, text: m.text, ...(m.sources?.length ? { sources: m.sources } : {}), ...(m.sig ? { sig: m.sig } : {}), ...(m.origin ? { origin: m.origin } : {}) })
     }
     if (!keep.length) return
     const now = Date.now()
@@ -223,14 +226,14 @@ export function AskSiraj({
   /** Open a live Siraj bubble. It is born at the thinking bubble's size,
    *  in the same spot, springs out to its final size, and only then
    *  does the typewriter start (GrowBubble calls startTyping). */
-  const startReply = (full: string, sources?: Msg['sources'], sig?: string) => {
+  const startReply = (full: string, origin: ReplyOrigin, sources?: Msg['sources'], sig?: string) => {
     if (liveId.current !== null) return
     const r = thinkBubble.current?.getBoundingClientRect()
     target.current = full
     shown.current = 0
     ended.current = false
     liveId.current = push({
-      who: 'siraj', text: '', full, sources, sig, live: true,
+      who: 'siraj', text: '', full, sources, sig, origin, live: true,
       grow: r ? { w: r.width, h: r.height } : { w: 64, h: 46 },
     })
     setBusy(false)
@@ -284,7 +287,7 @@ export function AskSiraj({
     thinking()
     window.setTimeout(async () => {
       await arrival.current
-      startReply(a)
+      startReply(a, 'prepared')
       await finishReply()
       answered()
     }, 700)
@@ -310,7 +313,7 @@ export function AskSiraj({
     await arrival.current
 
     if (res.ok && res.answer) {
-      startReply(res.answer, res.sources, res.sig)
+      startReply(res.answer, 'ai', res.sources, res.sig)
       await finishReply()
       answered()
     } else {
@@ -558,6 +561,7 @@ const MsgRow = memo(function MsgRow({ m, calm, onStep, onGrown }: {
       <GrowBubble className={`msg msg--${m.who}`} from={m.live ? m.grow : undefined} calm={calm}
         onStep={onStep} onGrown={onGrown}>
         {m.who === 'siraj' ? <Answer text={m.text} full={m.full} sources={m.sources} live={m.live} /> : m.text}
+        {m.who === 'siraj' && m.origin && <Origin origin={m.origin} text={m.full ?? m.text} waiting={m.live} />}
         {!!m.sources?.length && (
           <div className={`msg__src${m.live ? ' is-waiting' : ''}`}>
             {m.sources.map((s) => (
@@ -662,6 +666,20 @@ const Segments = memo(function Segments({ text, sources, live }: { text: string;
     </>
   )
 })
+
+/** Says where a reply came from, as the reference pack requires: an AI
+ *  answer says it is one, and when it quotes a verse or hadith, that the
+ *  coloured text is the quotation and the rest is explanation. A bundled
+ *  answer says it was prepared in advance. */
+function Origin({ origin, text, waiting }: { origin: ReplyOrigin; text: string; waiting?: boolean }) {
+  const t = useT()
+  const quotes = origin === 'ai' && quoteRuns(text).some((r) => r.quote)
+  return (
+    <p className={`msg__origin${waiting ? ' is-waiting' : ''}`}>
+      {origin === 'prepared' ? t.originPrepared : quotes ? t.originAiQuoted : t.originAi}
+    </p>
+  )
+}
 
 /** "Sahih al-Bukhari 8 - Belief - Sunnah.com - Sayings and..." -> "Sahih al-Bukhari 8" */
 function sourceLabel(title: string): string {

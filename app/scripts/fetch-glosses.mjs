@@ -119,8 +119,8 @@ for (const [id, lesson] of Object.entries(LESSONS)) {
   for (const card of lesson.cards) {
     if (card.kind !== 'quote' || card.of !== 'ayah') continue
     const twin = LESSONS_EN[id]?.cards.find((c) => c.id === card.id)
-    const m = twin?.url?.match(/quran\.com\/(\d+)\/(\d+)/)
-    if (!m) throw new Error(`${id} ${card.id}: the English card has no quran.com link`)
+    const m = twin?.url?.match(/quranpedia\.net\/surah\/\d+\/(\d+)\/book\/\d+#(\d+)/)
+    if (!m) throw new Error(`${id} ${card.id}: the English card has no quranpedia.net ayah link`)
     const ours = words(card.text)
     const theirs = await verse(`${m[1]}:${m[2]}`)
     // where in the verse our excerpt starts: the offset whose words differ least

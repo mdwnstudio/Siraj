@@ -3,8 +3,8 @@
    list in; a native port passes the device locale list.
 
    Arabic is the reviewed original. English is a translation in
-   beta: its Quran and hadith text comes from quran.com and
-   sunnah.com (scripts/fetch-quotes.mjs), but the rest has not
+   beta: its Quran text comes from quranpedia.net and its hadith
+   from sunnah.com (scripts/fetch-quotes.mjs), but the rest has not
    had its own review yet. The picker says so.
    ============================================================ */
 
